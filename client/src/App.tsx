@@ -11,6 +11,7 @@ import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import Dashboard from "@/pages/Dashboard";
 import Analytics from "@/pages/Analytics";
+import Import from "@/pages/Import";
 
 function Router() {
   return (
@@ -20,6 +21,7 @@ function Router() {
       <Route path="/register" component={Register} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/analytics" component={Analytics} />
+      <Route path="/import" component={Import} />
       <Route component={NotFound} />
     </Switch>
   );
