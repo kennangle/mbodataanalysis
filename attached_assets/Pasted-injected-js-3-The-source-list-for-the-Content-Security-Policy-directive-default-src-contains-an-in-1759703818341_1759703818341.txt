@@ -1,0 +1,75 @@
+injected.js:3 The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+Xe @ injected.js:3
+addShadowHostToDOM @ injected.js:109
+draw @ injected.js:95
+Pr._attach @ injected.js:109
+handleInlineMenuPosition @ injected.js:19
+(anonymous) @ injected.js:5
+n @ injected.js:5
+injected.js:3 The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+Xe @ injected.js:3
+addShadowHostToDOM @ injected.js:109
+draw @ injected.js:95
+Pr._attach @ injected.js:109
+handleInlineMenuPosition @ injected.js:19
+(anonymous) @ injected.js:5
+n @ injected.js:5
+injected.js:3 The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+Xe @ injected.js:3
+addShadowHostToDOM @ injected.js:109
+draw @ injected.js:95
+Pr._attach @ injected.js:109
+handleInlineMenuPosition @ injected.js:19
+(anonymous) @ injected.js:5
+n @ injected.js:5
+injected.js:3 The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+Xe @ injected.js:3
+addShadowHostToDOM @ injected.js:109
+draw @ injected.js:95
+Pr._attach @ injected.js:109
+handleInlineMenuPosition @ injected.js:19
+(anonymous) @ injected.js:5
+n @ injected.js:5
+injected.js:3 The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+Xe @ injected.js:3
+addShadowHostToDOM @ injected.js:109
+draw @ injected.js:95
+Pr._attach @ injected.js:109
+handleInlineMenuPosition @ injected.js:19
+(anonymous) @ injected.js:5
+n @ injected.js:5
+injected.js:3 The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+Xe @ injected.js:3
+addShadowHostToDOM @ injected.js:109
+draw @ injected.js:95
+Pr._attach @ injected.js:109
+handleInlineMenuPosition @ injected.js:19
+(anonymous) @ injected.js:5
+n @ injected.js:5
+injected.js:3 The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+Xe @ injected.js:3
+addShadowHostToDOM @ injected.js:19
+Zo.draw @ injected.js:19
+Er._drawNotification @ injected.js:47
+Er._handleShowOrReplaceNotification @ injected.js:47
+(anonymous) @ injected.js:47
+(anonymous) @ injected.js:5
+n @ injected.js:5
+injected.js:3 The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+Xe @ injected.js:3
+addShadowHostToDOM @ injected.js:19
+Zo.draw @ injected.js:19
+Er._drawNotification @ injected.js:47
+Er._handleShowOrReplaceNotification @ injected.js:47
+(anonymous) @ injected.js:47
+(anonymous) @ injected.js:5
+n @ injected.js:5
+injected.js:3 The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+Xe @ injected.js:3
+addShadowHostToDOM @ injected.js:19
+Zo.draw @ injected.js:19
+Er._drawNotification @ injected.js:47
+Er._handleShowOrReplaceNotification @ injected.js:47
+(anonymous) @ injected.js:47
+(anonymous) @ injected.js:5
+n @ injected.js:5
