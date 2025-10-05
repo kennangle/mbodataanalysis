@@ -1,30 +1,70 @@
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Upload, CheckCircle, AlertCircle } from "lucide-react";
+import { Upload, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+
+interface ImportStats {
+  students: number;
+  classes: number;
+  attendance: number;
+  revenue: number;
+}
 
 export function DataImportCard() {
-  const [isImporting, setIsImporting] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [status, setStatus] = useState<"idle" | "importing" | "success" | "error">("idle");
+  const [importStats, setImportStats] = useState<ImportStats | null>(null);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      setProgress(0);
+      const interval = setInterval(() => {
+        setProgress((prev) => Math.min(prev + 10, 90));
+      }, 500);
+
+      const result = await apiRequest<{ success: boolean; message: string; stats: ImportStats }>(
+        "/api/mindbody/import",
+        {
+          method: "POST",
+        }
+      );
+
+      clearInterval(interval);
+      setProgress(100);
+      return result;
+    },
+    onSuccess: (data) => {
+      setImportStats(data.stats);
+      queryClient.invalidateQueries();
+      toast({
+        title: "Import successful",
+        description: data.message,
+      });
+    },
+    onError: (error: Error) => {
+      setProgress(0);
+      toast({
+        variant: "destructive",
+        title: "Import failed",
+        description: error.message,
+      });
+    },
+  });
 
   const handleImport = () => {
-    setIsImporting(true);
-    setStatus("importing");
-    setProgress(0);
+    setImportStats(null);
+    mutation.mutate();
+  };
 
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsImporting(false);
-          setStatus("success");
-          return 100;
-        }
-        return prev + 10;
-      });
-    }, 300);
+  const handleReset = () => {
+    setImportStats(null);
+    setProgress(0);
+    mutation.reset();
   };
 
   return (
@@ -35,16 +75,16 @@ export function DataImportCard() {
             <CardTitle>Mindbody Data Import</CardTitle>
             <CardDescription>Connect and sync your Mindbody account data</CardDescription>
           </div>
-          {status === "success" && (
-            <CheckCircle className="h-5 w-5 text-green-600" />
+          {importStats && (
+            <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
           )}
-          {status === "error" && (
+          {mutation.isError && (
             <AlertCircle className="h-5 w-5 text-destructive" />
           )}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {status === "idle" && (
+        {!mutation.isPending && !importStats && (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
               Import your students, classes, schedules, attendance records, and revenue data.
@@ -60,7 +100,7 @@ export function DataImportCard() {
           </div>
         )}
 
-        {status === "importing" && (
+        {mutation.isPending && (
           <div className="space-y-4">
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
@@ -69,25 +109,27 @@ export function DataImportCard() {
               </div>
               <Progress value={progress} />
             </div>
-            <p className="text-xs text-muted-foreground">
-              Please don't close this window. This may take a few minutes.
-            </p>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span>Please don't close this window. This may take a few minutes.</span>
+            </div>
           </div>
         )}
 
-        {status === "success" && (
+        {importStats && (
           <div className="space-y-4">
             <div className="rounded-lg bg-green-50 dark:bg-green-950/20 p-4">
               <p className="text-sm font-medium text-green-900 dark:text-green-100">
                 Import completed successfully!
               </p>
               <p className="text-xs text-green-700 dark:text-green-300 mt-1">
-                Imported 2,350 students, 156 classes, and 12 months of data.
+                Imported {importStats.students} students, {importStats.classes} classes, 
+                {importStats.attendance} attendance records, and {importStats.revenue} revenue transactions.
               </p>
             </div>
             <Button 
               variant="outline" 
-              onClick={() => setStatus("idle")}
+              onClick={handleReset}
               className="w-full"
               data-testid="button-import-again"
             >

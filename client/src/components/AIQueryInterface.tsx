@@ -1,32 +1,45 @@
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, Send } from "lucide-react";
+import { Sparkles, Send, Loader2 } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export function AIQueryInterface() {
   const [query, setQuery] = useState("");
   const [response, setResponse] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
+  const mutation = useMutation({
+    mutationFn: async (query: string) => {
+      const result = await apiRequest<{ response: string; tokensUsed: number }>(
+        "/api/ai/query",
+        {
+          method: "POST",
+          body: JSON.stringify({ query }),
+        }
+      );
+      return result;
+    },
+    onSuccess: (data) => {
+      setResponse(data.response);
+      setQuery("");
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Query failed",
+        description: error.message,
+      });
+    },
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!query.trim()) return;
-
-    setIsLoading(true);
-    console.log("AI Query:", query);
-
-    // Simulate AI response
-    setTimeout(() => {
-      setResponse(
-        `Based on your data, here's what I found:\n\n` +
-        `• Your highest attendance is on Friday evenings with an average of 70 students\n` +
-        `• Revenue increased by 23% in the last quarter\n` +
-        `• Top performing class: "HIIT Training" with 89% retention rate\n` +
-        `• Recommended action: Consider adding another Friday evening class`
-      );
-      setIsLoading(false);
-    }, 1500);
+    if (!query.trim() || mutation.isPending) return;
+    mutation.mutate(query);
   };
 
   return (
@@ -47,16 +60,21 @@ export function AIQueryInterface() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="min-h-[100px] resize-none"
+            maxLength={500}
+            disabled={mutation.isPending}
             data-testid="input-ai-query"
           />
           <Button 
             type="submit" 
-            disabled={isLoading || !query.trim()}
+            disabled={mutation.isPending || !query.trim()}
             className="w-full gap-2"
             data-testid="button-submit-query"
           >
-            {isLoading ? (
-              <>Analyzing...</>
+            {mutation.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Analyzing...
+              </>
             ) : (
               <>
                 <Send className="h-4 w-4" />

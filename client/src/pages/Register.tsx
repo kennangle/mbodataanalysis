@@ -9,12 +9,14 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { BarChart3, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-export default function Login() {
+export default function Register() {
   const [, setLocation] = useLocation();
-  const { login } = useAuth();
+  const { register } = useAuth();
   const { toast } = useToast();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [organizationName, setOrganizationName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -22,13 +24,17 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      await login(email, password);
+      await register(email, password, name, organizationName);
+      toast({
+        title: "Account created!",
+        description: "Welcome to Mindbody Analytics",
+      });
       setLocation("/dashboard");
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Login failed",
-        description: error instanceof Error ? error.message : "Please check your credentials",
+        title: "Registration failed",
+        description: error instanceof Error ? error.message : "Please try again",
       });
     } finally {
       setIsLoading(false);
@@ -50,13 +56,25 @@ export default function Login() {
       <div className="flex-1 flex items-center justify-center p-6 bg-muted/30">
         <Card className="w-full max-w-md">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
+            <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
             <CardDescription>
-              Enter your credentials to access your account
+              Enter your details to get started with Mindbody Analytics
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="John Doe"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  data-testid="input-name"
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -70,16 +88,7 @@ export default function Login() {
                 />
               </div>
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
-                  <a
-                    href="/forgot-password"
-                    className="text-sm text-primary hover:underline"
-                    data-testid="link-forgot-password"
-                  >
-                    Forgot password?
-                  </a>
-                </div>
+                <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
                   type="password"
@@ -87,25 +96,37 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  minLength={6}
                   data-testid="input-password"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="organization">Organization Name (Optional)</Label>
+                <Input
+                  id="organization"
+                  type="text"
+                  placeholder="My Fitness Studio"
+                  value={organizationName}
+                  onChange={(e) => setOrganizationName(e.target.value)}
+                  data-testid="input-organization"
                 />
               </div>
               <Button
                 type="submit"
                 className="w-full"
                 disabled={isLoading}
-                data-testid="button-login"
+                data-testid="button-register"
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Sign In
+                Create Account
               </Button>
             </form>
           </CardContent>
           <CardFooter className="flex-col gap-2">
             <div className="text-sm text-muted-foreground">
-              Don't have an account?{" "}
-              <a href="/register" className="text-primary hover:underline" data-testid="link-register">
-                Sign up
+              Already have an account?{" "}
+              <a href="/login" className="text-primary hover:underline" data-testid="link-login">
+                Sign in
               </a>
             </div>
           </CardFooter>

@@ -1,3 +1,6 @@
+import { useEffect } from "react";
+import { useLocation } from "wouter";
+import { useAuth } from "@/lib/auth";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -9,6 +12,27 @@ import { AIQueryInterface } from "@/components/AIQueryInterface";
 import { StudentsTable } from "@/components/StudentsTable";
 
 export default function Dashboard() {
+  const { user, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      setLocation("/login");
+    }
+  }, [user, isLoading, setLocation]);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
   const style = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",

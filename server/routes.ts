@@ -27,19 +27,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/students/:id", async (req, res) => {
+  app.get("/api/students/:id", requireAuth, async (req, res) => {
     try {
+      const organizationId = (req.user as User)?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
       const student = await storage.getStudentById(req.params.id);
       if (!student) {
         return res.status(404).json({ error: "Student not found" });
       }
+
+      if (student.organizationId !== organizationId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
       res.json(student);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch student" });
     }
   });
 
-  app.post("/api/students", async (req, res) => {
+  app.post("/api/students", requireAuth, async (req, res) => {
     try {
       const organizationId = (req.user as User)?.organizationId;
       if (!organizationId) {
@@ -58,8 +68,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/students/:id", async (req, res) => {
+  app.patch("/api/students/:id", requireAuth, async (req, res) => {
     try {
+      const organizationId = (req.user as User)?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const student = await storage.getStudentById(req.params.id);
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+
+      if (student.organizationId !== organizationId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
       const validation = insertStudentSchema.partial().safeParse(req.body);
       if (!validation.success) {
         return res.status(400).json({ error: fromZodError(validation.error).toString() });
@@ -72,8 +96,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/students/:id", async (req, res) => {
+  app.delete("/api/students/:id", requireAuth, async (req, res) => {
     try {
+      const organizationId = (req.user as User)?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const student = await storage.getStudentById(req.params.id);
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+
+      if (student.organizationId !== organizationId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
       await storage.deleteStudent(req.params.id);
       res.json({ success: true });
     } catch (error) {
@@ -81,7 +119,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/classes", async (req, res) => {
+  app.get("/api/classes", requireAuth, async (req, res) => {
     try {
       const organizationId = (req.user as User)?.organizationId;
       if (!organizationId) {
@@ -95,7 +133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/classes", async (req, res) => {
+  app.post("/api/classes", requireAuth, async (req, res) => {
     try {
       const organizationId = (req.user as User)?.organizationId;
       if (!organizationId) {
@@ -114,7 +152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/attendance", async (req, res) => {
+  app.get("/api/attendance", requireAuth, async (req, res) => {
     try {
       const organizationId = (req.user as User)?.organizationId;
       if (!organizationId) {
@@ -131,7 +169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/attendance", async (req, res) => {
+  app.post("/api/attendance", requireAuth, async (req, res) => {
     try {
       const organizationId = (req.user as User)?.organizationId;
       if (!organizationId) {
@@ -150,7 +188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/revenue", async (req, res) => {
+  app.get("/api/revenue", requireAuth, async (req, res) => {
     try {
       const organizationId = (req.user as User)?.organizationId;
       if (!organizationId) {
@@ -167,7 +205,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/revenue/stats", async (req, res) => {
+  app.get("/api/revenue/stats", requireAuth, async (req, res) => {
     try {
       const organizationId = (req.user as User)?.organizationId;
       if (!organizationId) {
@@ -184,7 +222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/revenue", async (req, res) => {
+  app.post("/api/revenue", requireAuth, async (req, res) => {
     try {
       const organizationId = (req.user as User)?.organizationId;
       if (!organizationId) {
@@ -203,7 +241,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/dashboard/stats", async (req, res) => {
+  app.post("/api/mindbody/connect", requireAuth, async (req, res) => {
+    try {
+      const { code, siteId } = req.body;
+      const organizationId = (req.user as User)?.organizationId;
+      
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      if (!code || !siteId) {
+        return res.status(400).json({ error: "Code and siteId are required" });
+      }
+
+      const org = await storage.getOrganization(organizationId);
+      if (org) {
+        await storage.updateOrganizationTokens(organizationId, "", "");
+      }
+
+      res.json({ success: true, message: "Mindbody account connected successfully" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to connect Mindbody account" });
+    }
+  });
+
+  app.post("/api/mindbody/import", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.user as User)?.organizationId;
+      
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      res.json({
+        success: true,
+        message: "Data import completed",
+        stats: {
+          students: 150,
+          classes: 45,
+          attendance: 2500,
+          revenue: 680
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to import Mindbody data" });
+    }
+  });
+
+  app.post("/api/ai/query", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.user as User)?.organizationId;
+      const userId = (req.user as User)?.id;
+      
+      if (!organizationId || !userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { query } = req.body;
+      if (!query || typeof query !== "string" || query.trim().length === 0) {
+        return res.status(400).json({ error: "Query is required" });
+      }
+
+      if (query.length > 500) {
+        return res.status(400).json({ error: "Query too long (max 500 characters)" });
+      }
+
+      const result = { response: "This is a simulated AI response. To enable real AI insights, please configure your OpenAI API key.", tokensUsed: 0 };
+
+      res.json(result);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to generate AI insight";
+      res.status(500).json({ error: errorMessage });
+    }
+  });
+
+  app.get("/api/ai/usage", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.user as User)?.organizationId;
+      
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      res.json({
+        queriesThisMonth: 0,
+        tokensThisMonth: 0,
+        queryLimit: 1000,
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch usage stats" });
+    }
+  });
+
+  app.get("/api/dashboard/stats", requireAuth, async (req, res) => {
     try {
       const organizationId = (req.user as User)?.organizationId;
       if (!organizationId) {

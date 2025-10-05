@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Table,
   TableBody,
@@ -19,21 +20,24 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-//todo: remove mock functionality
-const students = [
-  { id: 1, name: "Sarah Johnson", email: "sarah.j@email.com", membership: "Premium", status: "active", classes: 24 },
-  { id: 2, name: "Michael Chen", email: "m.chen@email.com", membership: "Basic", status: "active", classes: 12 },
-  { id: 3, name: "Emma Davis", email: "emma.d@email.com", membership: "Premium", status: "active", classes: 31 },
-  { id: 4, name: "James Wilson", email: "j.wilson@email.com", membership: "Premium", status: "inactive", classes: 8 },
-  { id: 5, name: "Olivia Brown", email: "olivia.b@email.com", membership: "Basic", status: "active", classes: 15 },
-];
+interface Student {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  status: string;
+  membershipType: string | null;
+}
 
 export function StudentsTable() {
   const [search, setSearch] = useState("");
+  const { data, isLoading } = useQuery<{ students: Student[]; count: number }>({
+    queryKey: ["/api/students"],
+  });
 
-  const filteredStudents = students.filter((student) =>
-    student.name.toLowerCase().includes(search.toLowerCase()) ||
-    student.email.toLowerCase().includes(search.toLowerCase())
+  const filteredStudents = (data?.students || []).filter((student) =>
+    `${student.firstName} ${student.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
+    student.email?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -57,53 +61,68 @@ export function StudentsTable() {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Membership</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Classes Attended</TableHead>
-                <TableHead className="w-12"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredStudents.map((student) => (
-                <TableRow key={student.id} data-testid={`row-student-${student.id}`}>
-                  <TableCell className="font-medium">{student.name}</TableCell>
-                  <TableCell className="text-muted-foreground">{student.email}</TableCell>
-                  <TableCell>
-                    <Badge variant={student.membership === "Premium" ? "default" : "secondary"}>
-                      {student.membership}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={student.status === "active" ? "default" : "secondary"}>
-                      {student.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">{student.classes}</TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" data-testid={`button-actions-${student.id}`}>
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>View Details</DropdownMenuItem>
-                        <DropdownMenuItem>Edit</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-muted-foreground">Loading students...</div>
+          </div>
+        ) : filteredStudents.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <p className="text-muted-foreground mb-2">No students found</p>
+            <p className="text-sm text-muted-foreground">Import your Mindbody data to get started</p>
+          </div>
+        ) : (
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Membership</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-12"></TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {filteredStudents.map((student) => (
+                  <TableRow key={student.id} data-testid={`row-student-${student.id}`}>
+                    <TableCell className="font-medium">
+                      {student.firstName} {student.lastName}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {student.email || "—"}
+                    </TableCell>
+                    <TableCell>
+                      {student.membershipType ? (
+                        <Badge variant="default">{student.membershipType}</Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={student.status === "active" ? "default" : "secondary"}>
+                        {student.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" data-testid={`button-actions-${student.id}`}>
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem>View Details</DropdownMenuItem>
+                          <DropdownMenuItem>Edit</DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

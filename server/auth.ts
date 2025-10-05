@@ -15,8 +15,12 @@ const hashPassword = (password: string, salt: string) => {
 };
 
 export const setupAuth = (app: Express) => {
+  if (!process.env.SESSION_SECRET) {
+    throw new Error("SESSION_SECRET environment variable must be set");
+  }
+
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || "mindbody-analytics-secret-key",
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     store: new PgSession({
