@@ -5,6 +5,7 @@ import { requireAuth } from "./auth";
 import { insertStudentSchema, insertClassSchema, insertAttendanceSchema, insertRevenueSchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import type { User } from "@shared/schema";
+import { MindbodyService } from "./mindbody";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -273,18 +274,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
+      const mindbodyService = new MindbodyService();
+      
+      const [studentsImported, classesImported, visitsImported, salesImported] = await Promise.all([
+        mindbodyService.importClients(organizationId),
+        mindbodyService.importClasses(organizationId),
+        mindbodyService.importVisits(organizationId),
+        mindbodyService.importSales(organizationId)
+      ]);
+
       res.json({
         success: true,
         message: "Data import completed",
         stats: {
-          students: 150,
-          classes: 45,
-          attendance: 2500,
-          revenue: 680
+          students: studentsImported,
+          classes: classesImported,
+          attendance: visitsImported,
+          revenue: salesImported
         }
       });
     } catch (error) {
-      res.status(500).json({ error: "Failed to import Mindbody data" });
+      const errorMessage = error instanceof Error ? error.message : "Failed to import Mindbody data";
+      res.status(500).json({ error: errorMessage });
     }
   });
 
