@@ -27,12 +27,8 @@ export function DataImportCard() {
         setProgress((prev) => Math.min(prev + 10, 90));
       }, 500);
 
-      const result = await apiRequest<{ success: boolean; message: string; stats: ImportStats }>(
-        "/api/mindbody/import",
-        {
-          method: "POST",
-        }
-      );
+      const response = await apiRequest("POST", "/api/mindbody/import");
+      const result = await response.json() as { success: boolean; message: string; stats: ImportStats };
 
       clearInterval(interval);
       setProgress(100);

@@ -14,13 +14,8 @@ export function AIQueryInterface() {
 
   const mutation = useMutation({
     mutationFn: async (query: string) => {
-      const result = await apiRequest<{ response: string; tokensUsed: number }>(
-        "/api/ai/query",
-        {
-          method: "POST",
-          body: JSON.stringify({ query }),
-        }
-      );
+      const response = await apiRequest("POST", "/api/ai/query", { query });
+      const result = await response.json() as { response: string; tokensUsed: number };
       return result;
     },
     onSuccess: (data) => {
