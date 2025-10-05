@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, BarChart3, TrendingUp, Users } from "lucide-react";
+import { Link } from "wouter";
 
 export function LandingHero() {
   return (
@@ -48,13 +49,17 @@ export function LandingHero() {
 
           {/* CTA buttons */}
           <div className="flex flex-wrap items-center justify-center gap-4">
-            <Button size="lg" className="gap-2" data-testid="button-get-started">
-              Get Started Free
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-            <Button size="lg" variant="outline" data-testid="button-watch-demo">
-              Watch Demo
-            </Button>
+            <Link href="/register">
+              <Button size="lg" className="gap-2" data-testid="button-get-started">
+                Get Started Free
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+            <Link href="/login">
+              <Button size="lg" variant="outline" data-testid="button-watch-demo">
+                Sign In
+              </Button>
+            </Link>
           </div>
 
           {/* Trust indicators */}

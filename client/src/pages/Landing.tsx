@@ -3,6 +3,7 @@ import { FeaturesSection } from "@/components/FeaturesSection";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { BarChart3 } from "lucide-react";
+import { Link } from "wouter";
 
 export default function Landing() {
   return (
@@ -27,9 +28,11 @@ export default function Landing() {
               </a>
             </nav>
             <ThemeToggle />
-            <Button variant="outline" size="sm" data-testid="button-login">
-              Sign In
-            </Button>
+            <Link href="/login">
+              <Button variant="outline" size="sm" data-testid="button-login">
+                Sign In
+              </Button>
+            </Link>
           </div>
         </div>
       </header>
@@ -52,9 +55,11 @@ export default function Landing() {
                 Join thousands of fitness professionals who trust our platform to grow their business.
               </p>
               <div className="flex flex-wrap items-center justify-center gap-4">
-                <Button size="lg" data-testid="button-get-started-footer">
-                  Get Started Free
-                </Button>
+                <Link href="/register">
+                  <Button size="lg" data-testid="button-get-started-footer">
+                    Get Started Free
+                  </Button>
+                </Link>
                 <Button size="lg" variant="outline" data-testid="button-contact-sales">
                   Contact Sales
                 </Button>
