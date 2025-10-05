@@ -1,4 +1,4 @@
-import { db } from "@db";
+import { db } from "./db";
 import { 
   users, 
   organizations,
@@ -154,19 +154,21 @@ export class DbStorage implements IStorage {
   }
 
   async getClassSchedules(organizationId: string, startDate?: Date, endDate?: Date): Promise<ClassSchedule[]> {
-    let query = db.select().from(classSchedules).where(eq(classSchedules.organizationId, organizationId));
-    
     if (startDate && endDate) {
-      query = query.where(
-        and(
-          eq(classSchedules.organizationId, organizationId),
-          gte(classSchedules.startTime, startDate),
-          lte(classSchedules.startTime, endDate)
-        )
-      );
+      return await db.select()
+        .from(classSchedules)
+        .where(
+          and(
+            eq(classSchedules.organizationId, organizationId),
+            gte(classSchedules.startTime, startDate),
+            lte(classSchedules.startTime, endDate)
+          )
+        );
     }
     
-    return await query;
+    return await db.select()
+      .from(classSchedules)
+      .where(eq(classSchedules.organizationId, organizationId));
   }
 
   async createClassSchedule(schedule: InsertClassSchedule): Promise<ClassSchedule> {
@@ -175,19 +177,23 @@ export class DbStorage implements IStorage {
   }
 
   async getAttendance(organizationId: string, startDate?: Date, endDate?: Date): Promise<Attendance[]> {
-    let query = db.select().from(attendance).where(eq(attendance.organizationId, organizationId));
-    
     if (startDate && endDate) {
-      query = query.where(
-        and(
-          eq(attendance.organizationId, organizationId),
-          gte(attendance.attendedAt, startDate),
-          lte(attendance.attendedAt, endDate)
+      return await db.select()
+        .from(attendance)
+        .where(
+          and(
+            eq(attendance.organizationId, organizationId),
+            gte(attendance.attendedAt, startDate),
+            lte(attendance.attendedAt, endDate)
+          )
         )
-      );
+        .orderBy(desc(attendance.attendedAt));
     }
     
-    return await query.orderBy(desc(attendance.attendedAt));
+    return await db.select()
+      .from(attendance)
+      .where(eq(attendance.organizationId, organizationId))
+      .orderBy(desc(attendance.attendedAt));
   }
 
   async getAttendanceByStudent(studentId: string): Promise<Attendance[]> {
@@ -203,19 +209,23 @@ export class DbStorage implements IStorage {
   }
 
   async getRevenue(organizationId: string, startDate?: Date, endDate?: Date): Promise<Revenue[]> {
-    let query = db.select().from(revenue).where(eq(revenue.organizationId, organizationId));
-    
     if (startDate && endDate) {
-      query = query.where(
-        and(
-          eq(revenue.organizationId, organizationId),
-          gte(revenue.transactionDate, startDate),
-          lte(revenue.transactionDate, endDate)
+      return await db.select()
+        .from(revenue)
+        .where(
+          and(
+            eq(revenue.organizationId, organizationId),
+            gte(revenue.transactionDate, startDate),
+            lte(revenue.transactionDate, endDate)
+          )
         )
-      );
+        .orderBy(desc(revenue.transactionDate));
     }
     
-    return await query.orderBy(desc(revenue.transactionDate));
+    return await db.select()
+      .from(revenue)
+      .where(eq(revenue.organizationId, organizationId))
+      .orderBy(desc(revenue.transactionDate));
   }
 
   async createRevenue(revenueData: InsertRevenue): Promise<Revenue> {
