@@ -12,6 +12,7 @@ import Register from "@/pages/Register";
 import Dashboard from "@/pages/Dashboard";
 import Analytics from "@/pages/Analytics";
 import Import from "@/pages/Import";
+import Students from "@/pages/Students";
 
 function Router() {
   return (
@@ -21,6 +22,7 @@ function Router() {
       <Route path="/register" component={Register} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/analytics" component={Analytics} />
+      <Route path="/students" component={Students} />
       <Route path="/import" component={Import} />
       <Route component={NotFound} />
     </Switch>
