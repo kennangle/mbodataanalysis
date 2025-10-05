@@ -13,6 +13,7 @@ import Dashboard from "@/pages/Dashboard";
 import Analytics from "@/pages/Analytics";
 import Import from "@/pages/Import";
 import Students from "@/pages/Students";
+import Settings from "@/pages/Settings";
 
 function Router() {
   return (
@@ -24,6 +25,7 @@ function Router() {
       <Route path="/analytics" component={Analytics} />
       <Route path="/students" component={Students} />
       <Route path="/import" component={Import} />
+      <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>
   );
