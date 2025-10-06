@@ -6,6 +6,7 @@ import { insertStudentSchema, insertClassSchema, insertAttendanceSchema, insertR
 import { fromZodError } from "zod-validation-error";
 import type { User } from "@shared/schema";
 import { MindbodyService } from "./mindbody";
+import { createSampleData } from "./sample-data";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -256,13 +257,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const org = await storage.getOrganization(organizationId);
-      if (org) {
-        await storage.updateOrganizationTokens(organizationId, "", "");
+      if (!org) {
+        return res.status(404).json({ error: "Organization not found" });
       }
+
+      const mindbodyService = new MindbodyService();
+      await mindbodyService.exchangeCodeForTokens(code, organizationId);
 
       res.json({ success: true, message: "Mindbody account connected successfully" });
     } catch (error) {
-      res.status(500).json({ error: "Failed to connect Mindbody account" });
+      const errorMessage = error instanceof Error ? error.message : "Failed to connect Mindbody account";
+      res.status(500).json({ error: errorMessage });
     }
   });
 
@@ -272,6 +277,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!organizationId) {
         return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const useSampleData = req.body.useSampleData === true;
+
+      if (useSampleData) {
+        const stats = await createSampleData(organizationId);
+        return res.json({
+          success: true,
+          message: "Sample data imported successfully",
+          stats
+        });
       }
 
       const mindbodyService = new MindbodyService();

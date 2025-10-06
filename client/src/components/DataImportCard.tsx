@@ -21,13 +21,13 @@ export function DataImportCard() {
   const { toast } = useToast();
 
   const mutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (useSampleData: boolean = false) => {
       setProgress(0);
       const interval = setInterval(() => {
         setProgress((prev) => Math.min(prev + 10, 90));
       }, 500);
 
-      const response = await apiRequest("POST", "/api/mindbody/import");
+      const response = await apiRequest("POST", "/api/mindbody/import", { useSampleData });
       const result = await response.json() as { success: boolean; message: string; stats: ImportStats };
 
       clearInterval(interval);
@@ -52,9 +52,9 @@ export function DataImportCard() {
     },
   });
 
-  const handleImport = () => {
+  const handleImport = (useSampleData: boolean = false) => {
     setImportStats(null);
-    mutation.mutate();
+    mutation.mutate(useSampleData);
   };
 
   const handleReset = () => {
@@ -85,14 +85,28 @@ export function DataImportCard() {
             <p className="text-sm text-muted-foreground">
               Import your students, classes, schedules, attendance records, and revenue data.
             </p>
-            <Button 
-              onClick={handleImport} 
-              className="w-full gap-2"
-              data-testid="button-import-data"
-            >
-              <Upload className="h-4 w-4" />
-              Connect Mindbody Account
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => handleImport(true)} 
+                className="flex-1 gap-2"
+                variant="outline"
+                data-testid="button-import-sample"
+              >
+                <Upload className="h-4 w-4" />
+                Use Sample Data
+              </Button>
+              <Button 
+                onClick={() => handleImport(false)} 
+                className="flex-1 gap-2"
+                data-testid="button-import-data"
+              >
+                <Upload className="h-4 w-4" />
+                Connect Mindbody
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Use sample data to explore the platform, or connect your Mindbody account for real data.
+            </p>
           </div>
         )}
 
