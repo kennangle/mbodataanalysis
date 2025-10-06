@@ -280,9 +280,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const useSampleData = req.body.useSampleData === true;
+      console.log("Import request - useSampleData:", useSampleData, "body:", req.body);
 
       if (useSampleData) {
+        console.log("Creating sample data for org:", organizationId);
         const stats = await createSampleData(organizationId);
+        console.log("Sample data created:", stats);
         return res.json({
           success: true,
           message: "Sample data imported successfully",
