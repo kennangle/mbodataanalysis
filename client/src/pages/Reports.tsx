@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -7,10 +7,49 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, Download, TrendingUp, Users, DollarSign, Calendar } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Reports() {
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const [downloadingReport, setDownloadingReport] = useState<string | null>(null);
+
+  const downloadReport = async (endpoint: string, reportName: string) => {
+    setDownloadingReport(reportName);
+    try {
+      const response = await fetch(endpoint, {
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate report');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${reportName}-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Report Generated",
+        description: `${reportName} has been downloaded successfully.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to generate report. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloadingReport(null);
+    }
+  };
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -41,24 +80,32 @@ export default function Reports() {
       description: "Detailed breakdown of revenue by source, class, and time period",
       icon: DollarSign,
       color: "text-green-600 dark:text-green-400",
+      endpoint: "/api/reports/revenue",
+      filename: "revenue-report"
     },
     {
       title: "Attendance Report",
       description: "Student attendance patterns, trends, and class popularity",
       icon: Users,
       color: "text-blue-600 dark:text-blue-400",
+      endpoint: "/api/reports/attendance",
+      filename: "attendance-report"
     },
     {
       title: "Class Performance",
       description: "Compare class performance, retention rates, and profitability",
       icon: TrendingUp,
       color: "text-purple-600 dark:text-purple-400",
+      endpoint: "/api/reports/class-performance",
+      filename: "class-performance"
     },
     {
       title: "Monthly Summary",
       description: "Comprehensive monthly overview of all key metrics",
       icon: Calendar,
       color: "text-orange-600 dark:text-orange-400",
+      endpoint: "/api/reports/monthly-summary",
+      filename: "monthly-summary"
     },
   ];
 
@@ -108,9 +155,11 @@ export default function Reports() {
                           variant="outline"
                           className="w-full gap-2"
                           data-testid={`button-generate-${index}`}
+                          onClick={() => downloadReport(report.endpoint, report.filename)}
+                          disabled={downloadingReport === report.filename}
                         >
                           <Download className="h-4 w-4" />
-                          Generate Report
+                          {downloadingReport === report.filename ? "Generating..." : "Generate Report"}
                         </Button>
                       </CardContent>
                     </Card>

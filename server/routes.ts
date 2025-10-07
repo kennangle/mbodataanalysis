@@ -432,9 +432,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const revenueData = await storage.getRevenue(organizationId);
       
       const csv = [
-        "Date,Description,Amount,Payment Method",
+        "Date,Description,Amount,Type",
         ...revenueData.map(r => 
-          `${r.transactionDate.toISOString().split('T')[0]},"${r.description}",${r.amount},"${r.paymentMethod}"`
+          `${r.transactionDate.toISOString().split('T')[0]},"${r.description || 'N/A'}",${r.amount},"${r.type}"`
         )
       ].join('\n');
 
@@ -456,19 +456,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const attendanceData = await storage.getAttendance(organizationId);
       const studentsMap = new Map();
       const classesMap = new Map();
+      const scheduleToClassMap = new Map();
 
       const students = await storage.getStudents(organizationId);
       const classes = await storage.getClasses(organizationId);
+      const schedules = await storage.getClassSchedules(organizationId);
       
       students.forEach(s => studentsMap.set(s.id, `${s.firstName} ${s.lastName}`));
       classes.forEach(c => classesMap.set(c.id, c.name));
+      schedules.forEach(sch => scheduleToClassMap.set(sch.id, sch.classId));
 
       const csv = [
-        "Date,Student,Class,Status,Sign In Time",
+        "Date,Student,Class,Status",
         ...attendanceData.map(a => {
           const studentName = studentsMap.get(a.studentId) || 'Unknown';
-          const className = classesMap.get(a.classId) || 'Unknown';
-          return `${a.attendedAt.toISOString().split('T')[0]},"${studentName}","${className}","${a.status}","${a.signInTime || ''}"`;
+          const classId = scheduleToClassMap.get(a.scheduleId);
+          const className = classId ? (classesMap.get(classId) || 'Unknown') : 'Unknown';
+          return `${a.attendedAt.toISOString().split('T')[0]},"${studentName}","${className}","${a.status}"`;
         })
       ].join('\n');
 
@@ -489,9 +493,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const classes = await storage.getClasses(organizationId);
       const attendanceData = await storage.getAttendance(organizationId);
+      const schedules = await storage.getClassSchedules(organizationId);
+      
+      const scheduleToClassMap = new Map();
+      schedules.forEach(sch => scheduleToClassMap.set(sch.id, sch.classId));
       
       const classStats = classes.map(c => {
-        const classAttendance = attendanceData.filter(a => a.classId === c.id);
+        const classAttendance = attendanceData.filter(a => {
+          const classId = scheduleToClassMap.get(a.scheduleId);
+          return classId === c.id;
+        });
         const attended = classAttendance.filter(a => a.status === 'attended').length;
         const noShow = classAttendance.filter(a => a.status === 'no-show').length;
         const totalSessions = classAttendance.length;
@@ -499,7 +510,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         return {
           name: c.name,
-          instructor: c.instructor || 'N/A',
+          instructor: c.instructorName || 'N/A',
           capacity: c.capacity || 0,
           totalSessions,
           attended,
