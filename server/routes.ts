@@ -7,6 +7,7 @@ import { fromZodError } from "zod-validation-error";
 import type { User } from "@shared/schema";
 import { MindbodyService } from "./mindbody";
 import { createSampleData } from "./sample-data";
+import { openaiService } from "./openai";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -336,7 +337,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Query too long (max 500 characters)" });
       }
 
-      const result = { response: "This is a simulated AI response. To enable real AI insights, please configure your OpenAI API key.", tokensUsed: 0 };
+      const result = await openaiService.generateInsight(organizationId, userId, query);
 
       res.json(result);
     } catch (error) {
