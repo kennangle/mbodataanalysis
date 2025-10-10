@@ -55,22 +55,39 @@ interface MindbodySale {
 
 const MINDBODY_API_BASE = "https://api.mindbodyonline.com/public/v6";
 
+function getRedirectUri(): string {
+  if (process.env.REPLIT_DOMAINS) {
+    const domains = process.env.REPLIT_DOMAINS.split(',');
+    return `https://${domains[0]}/api/mindbody/callback`;
+  }
+  return 'http://localhost:5000/api/mindbody/callback';
+}
+
 export class MindbodyService {
   async exchangeCodeForTokens(code: string, organizationId: string): Promise<void> {
-    const response = await fetch(`${MINDBODY_API_BASE}/usertoken/issue`, {
-      method: "POST",
+    const redirectUri = getRedirectUri();
+
+    const params = new URLSearchParams({
+      grant_type: 'authorization_code',
+      code: code,
+      client_id: process.env.MINDBODY_CLIENT_ID || '',
+      client_secret: process.env.MINDBODY_CLIENT_SECRET || '',
+      redirect_uri: redirectUri,
+      scope: 'email profile openid offline_access Mindbody.Api.Public.v6'
+    });
+
+    const response = await fetch('https://signin.mindbodyonline.com/connect/token', {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        "Api-Key": process.env.MINDBODY_API_KEY || "",
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: JSON.stringify({
-        code,
-        grant_type: "authorization_code",
-      }),
+      body: params.toString(),
     });
 
     if (!response.ok) {
-      throw new Error("Failed to exchange authorization code");
+      const errorText = await response.text();
+      console.error('Token exchange failed:', errorText);
+      throw new Error(`Failed to exchange authorization code: ${response.status}`);
     }
 
     const data: MindbodyTokenResponse = await response.json();

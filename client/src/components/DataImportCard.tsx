@@ -20,7 +20,7 @@ interface ImportStats {
 export function DataImportCard() {
   const [progress, setProgress] = useState(0);
   const [importStats, setImportStats] = useState<ImportStats | null>(null);
-  const [siteId, setSiteId] = useState("");
+  const [siteId, setSiteId] = useState("133");
   const [showSiteIdInput, setShowSiteIdInput] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();

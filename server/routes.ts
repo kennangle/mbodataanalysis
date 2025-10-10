@@ -259,13 +259,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: "MINDBODY_CLIENT_ID not configured" });
       }
 
-      const redirectUri = `${req.protocol}://${req.get('host')}/api/mindbody/callback`;
+      let redirectUri = 'http://localhost:5000/api/mindbody/callback';
+      if (process.env.REPLIT_DOMAINS) {
+        const domains = process.env.REPLIT_DOMAINS.split(',');
+        redirectUri = `https://${domains[0]}/api/mindbody/callback`;
+      }
+      
+      const nonce = Math.random().toString(36).substring(7);
       const authUrl = `https://signin.mindbodyonline.com/connect/authorize?` +
-        `client_id=${clientId}` +
-        `&response_type=code` +
+        `response_mode=form_post` +
+        `&response_type=code%20id_token` +
+        `&client_id=${clientId}` +
         `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-        `&scope=openid%20profile%20email` +
-        `&state=${siteId}`;
+        `&scope=email%20profile%20openid%20offline_access%20Mindbody.Api.Public.v6` +
+        `&nonce=${nonce}` +
+        `&subscriberId=${siteId}`;
 
       res.json({ authUrl });
     } catch (error) {
@@ -274,32 +282,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/mindbody/callback", async (req, res) => {
+  app.post("/api/mindbody/callback", async (req, res) => {
     try {
-      const code = req.query.code as string;
-      const siteId = req.query.state as string;
+      const code = req.body.code as string;
+      const idToken = req.body.id_token as string;
       
-      if (!code || !siteId) {
-        return res.status(400).send("Missing authorization code or site ID");
+      if (!code) {
+        console.error("Missing authorization code in callback");
+        return res.redirect("/import?error=missing_code");
       }
 
       const user = req.user as User;
       if (!user?.organizationId) {
+        console.error("User not authenticated in callback");
         return res.redirect("/login?error=unauthorized");
       }
 
       const org = await storage.getOrganization(user.organizationId);
       if (!org) {
+        console.error("Organization not found in callback");
         return res.redirect("/import?error=org_not_found");
       }
 
       const mindbodyService = new MindbodyService();
       await mindbodyService.exchangeCodeForTokens(code, user.organizationId);
 
-      await db.update(organizations)
-        .set({ mindbodySiteId: siteId })
-        .where(eq(organizations.id, user.organizationId));
-
+      console.log("Mindbody OAuth successful for organization:", user.organizationId);
       res.redirect("/import?success=connected");
     } catch (error) {
       console.error("Mindbody OAuth callback error:", error);
