@@ -2,12 +2,14 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { requireAuth } from "./auth";
-import { insertStudentSchema, insertClassSchema, insertAttendanceSchema, insertRevenueSchema } from "@shared/schema";
+import { insertStudentSchema, insertClassSchema, insertAttendanceSchema, insertRevenueSchema, organizations } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import type { User } from "@shared/schema";
 import { MindbodyService } from "./mindbody";
 import { createSampleData } from "./sample-data";
 import { openaiService } from "./openai";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -241,6 +243,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(revenue);
     } catch (error) {
       res.status(500).json({ error: "Failed to create revenue record" });
+    }
+  });
+
+  app.get("/api/mindbody/auth-url", requireAuth, async (req, res) => {
+    try {
+      const siteId = req.query.siteId as string;
+      
+      if (!siteId) {
+        return res.status(400).json({ error: "siteId is required" });
+      }
+
+      const clientId = process.env.MINDBODY_CLIENT_ID;
+      if (!clientId) {
+        return res.status(500).json({ error: "MINDBODY_CLIENT_ID not configured" });
+      }
+
+      const redirectUri = `${req.protocol}://${req.get('host')}/api/mindbody/callback`;
+      const authUrl = `https://signin.mindbodyonline.com/connect/authorize?` +
+        `client_id=${clientId}` +
+        `&response_type=code` +
+        `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+        `&scope=openid%20profile%20email` +
+        `&state=${siteId}`;
+
+      res.json({ authUrl });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to generate auth URL";
+      res.status(500).json({ error: errorMessage });
+    }
+  });
+
+  app.get("/api/mindbody/callback", async (req, res) => {
+    try {
+      const code = req.query.code as string;
+      const siteId = req.query.state as string;
+      
+      if (!code || !siteId) {
+        return res.status(400).send("Missing authorization code or site ID");
+      }
+
+      const user = req.user as User;
+      if (!user?.organizationId) {
+        return res.redirect("/login?error=unauthorized");
+      }
+
+      const org = await storage.getOrganization(user.organizationId);
+      if (!org) {
+        return res.redirect("/import?error=org_not_found");
+      }
+
+      const mindbodyService = new MindbodyService();
+      await mindbodyService.exchangeCodeForTokens(code, user.organizationId);
+
+      await db.update(organizations)
+        .set({ mindbodySiteId: siteId })
+        .where(eq(organizations.id, user.organizationId));
+
+      res.redirect("/import?success=connected");
+    } catch (error) {
+      console.error("Mindbody OAuth callback error:", error);
+      res.redirect("/import?error=connection_failed");
     }
   });
 
