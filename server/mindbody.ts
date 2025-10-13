@@ -137,46 +137,26 @@ export class MindbodyService {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<any> {
-    const org = await storage.getOrganization(organizationId);
-    if (!org || !org.mindbodyAccessToken) {
-      throw new Error("Organization not connected to Mindbody");
+    const apiKey = process.env.MINDBODY_API_KEY;
+    const siteId = "133"; // Your site ID
+    
+    if (!apiKey) {
+      throw new Error("MINDBODY_API_KEY not configured");
     }
-
-    let accessToken = org.mindbodyAccessToken;
 
     const response = await fetch(`${MINDBODY_API_BASE}${endpoint}`, {
       ...options,
       headers: {
         ...options.headers,
         "Content-Type": "application/json",
-        "Api-Key": process.env.MINDBODY_API_KEY || "",
-        "SiteId": org.mindbodySiteId || "",
-        Authorization: `Bearer ${accessToken}`,
+        "Api-Key": apiKey,
+        "SiteId": siteId,
       },
     });
 
-    if (response.status === 401) {
-      accessToken = await this.refreshAccessToken(organizationId);
-      
-      const retryResponse = await fetch(`${MINDBODY_API_BASE}${endpoint}`, {
-        ...options,
-        headers: {
-          ...options.headers,
-          "Content-Type": "application/json",
-          "Api-Key": process.env.MINDBODY_API_KEY || "",
-          "SiteId": org.mindbodySiteId || "",
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
-      if (!retryResponse.ok) {
-        throw new Error(`Mindbody API error: ${retryResponse.statusText}`);
-      }
-
-      return await retryResponse.json();
-    }
-
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Mindbody API error: ${response.status} - ${errorText}`);
       throw new Error(`Mindbody API error: ${response.statusText}`);
     }
 
