@@ -211,6 +211,11 @@ export class MindbodyService {
 
     for (const mbClass of classes) {
       try {
+        // Skip if missing required fields
+        if (!mbClass.ClassDescription?.Id || !mbClass.ClassScheduleId || !mbClass.StartDateTime || !mbClass.EndDateTime) {
+          continue;
+        }
+
         const existingClass = await storage.getClasses(organizationId);
         let classRecord = existingClass.find(
           c => c.mindbodyClassId === mbClass.ClassDescription.Id.toString()
@@ -220,7 +225,7 @@ export class MindbodyService {
           classRecord = await storage.createClass({
             organizationId,
             mindbodyClassId: mbClass.ClassDescription.Id.toString(),
-            name: mbClass.ClassDescription.Name,
+            name: mbClass.ClassDescription.Name || 'Unknown Class',
             description: mbClass.ClassDescription.Description || null,
             instructorName: mbClass.Staff?.Name || null,
             capacity: mbClass.MaxCapacity || null,
@@ -260,6 +265,11 @@ export class MindbodyService {
 
     for (const visit of visits) {
       try {
+        // Skip if missing required fields
+        if (!visit.ClientId || !visit.ClassId || !visit.VisitDateTime) {
+          continue;
+        }
+
         const students = await storage.getStudents(organizationId, 1000);
         const student = students.find(s => s.mindbodyClientId === visit.ClientId);
         
@@ -307,12 +317,17 @@ export class MindbodyService {
         const student = students.find(s => s.mindbodyClientId === sale.ClientId);
 
         for (const item of sale.PurchasedItems) {
+          // Skip items without amount information
+          if (!item.AmountPaid && item.AmountPaid !== 0) {
+            continue;
+          }
+          
           await storage.createRevenue({
             organizationId,
             studentId: student?.id || null,
             amount: item.AmountPaid.toString(),
-            type: item.Type,
-            description: item.Description,
+            type: item.Type || 'Unknown',
+            description: item.Description || 'No description',
             transactionDate: new Date(sale.SaleDateTime),
           });
           imported++;
