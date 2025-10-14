@@ -391,57 +391,62 @@ export class MindbodyService {
     const schedules = await storage.getClassSchedules(organizationId);
     const scheduleMap = new Map(schedules.map(s => [s.mindbodyScheduleId, s]));
 
-    let imported = 0;
-    let processedClients = 0;
-
-    // Mindbody API requires ClientId parameter, so we fetch visits per client
-    console.log(`Fetching visits for ${students.length} clients...`);
+    let totalImported = 0;
+    const BATCH_SIZE = 50; // Process 50 clients in parallel
     
-    for (const student of students) {
-      try {
-        // Fetch all visits for this specific client
-        const visits = await this.fetchAllPages<MindbodyVisit>(
-          organizationId,
-          `/client/clientvisits?ClientId=${student.mindbodyClientId}&StartDate=${visitStartDate.toISOString()}`,
-          `Visits for client ${student.mindbodyClientId}`,
-          200
-        );
+    console.log(`Processing ${students.length} clients in batches of ${BATCH_SIZE}...`);
 
-        for (const visit of visits) {
+    // Process students in parallel batches
+    for (let i = 0; i < students.length; i += BATCH_SIZE) {
+      const batch = students.slice(i, i + BATCH_SIZE);
+      
+      const batchResults = await Promise.all(
+        batch.map(async (student) => {
           try {
-            // Skip if missing required fields
-            if (!visit.ClassId || !visit.VisitDateTime) {
-              continue;
-            }
-
-            const schedule = scheduleMap.get(visit.ClassId.toString());
-            if (!schedule) continue;
-
-            await storage.createAttendance({
+            const visits = await this.fetchAllPages<MindbodyVisit>(
               organizationId,
-              studentId: student.id,
-              scheduleId: schedule.id,
-              attendedAt: new Date(visit.VisitDateTime),
-              status: visit.SignedIn ? "attended" : "noshow",
-            });
+              `/client/clientvisits?ClientId=${student.mindbodyClientId}&StartDate=${visitStartDate.toISOString()}`,
+              `Visits for client ${student.mindbodyClientId}`,
+              200
+            );
 
-            imported++;
+            let imported = 0;
+            for (const visit of visits) {
+              try {
+                if (!visit.ClassId || !visit.VisitDateTime) continue;
+
+                const schedule = scheduleMap.get(visit.ClassId.toString());
+                if (!schedule) continue;
+
+                await storage.createAttendance({
+                  organizationId,
+                  studentId: student.id,
+                  scheduleId: schedule.id,
+                  attendedAt: new Date(visit.VisitDateTime),
+                  status: visit.SignedIn ? "attended" : "noshow",
+                });
+
+                imported++;
+              } catch (error) {
+                console.error(`Failed to import visit:`, error);
+              }
+            }
+            return imported;
           } catch (error) {
-            console.error(`Failed to import visit for client ${student.mindbodyClientId}:`, error);
+            console.error(`Failed to fetch visits for client ${student.mindbodyClientId}:`, error);
+            return 0;
           }
-        }
+        })
+      );
 
-        processedClients++;
-        if (processedClients % 100 === 0) {
-          console.log(`Processed ${processedClients}/${students.length} clients, ${imported} visits imported so far`);
-        }
-      } catch (error) {
-        console.error(`Failed to fetch visits for client ${student.mindbodyClientId}:`, error);
-      }
+      const batchImported = batchResults.reduce((sum, count) => sum + count, 0);
+      totalImported += batchImported;
+      
+      console.log(`Batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(students.length / BATCH_SIZE)}: ${batchImported} visits imported (Total: ${totalImported})`);
     }
 
-    console.log(`Visit import complete: ${imported} visits from ${processedClients} clients`);
-    return imported;
+    console.log(`Visit import complete: ${totalImported} visits imported from ${students.length} clients`);
+    return totalImported;
   }
 
   async importSales(organizationId: string, startDate?: Date, endDate?: Date): Promise<number> {
@@ -455,57 +460,61 @@ export class MindbodyService {
     console.log('Loading students for sales import...');
     const students = await storage.getStudents(organizationId, 100000);
 
-    let imported = 0;
-    let processedClients = 0;
+    let totalImported = 0;
+    const BATCH_SIZE = 50; // Process 50 clients in parallel
+    
+    console.log(`Processing ${students.length} clients in batches of ${BATCH_SIZE}...`);
 
-    // Note: Unlike visits, sales API might allow fetching all at once
-    // Try fetching all sales first, then fall back to per-client if needed
-    console.log(`Fetching sales for ${students.length} clients...`);
-
-    for (const student of students) {
-      try {
-        // Fetch all sales for this specific client
-        const sales = await this.fetchAllPages<MindbodySale>(
-          organizationId,
-          `/sale/sales?ClientId=${student.mindbodyClientId}&StartSaleDateTime=${saleStartDate.toISOString()}`,
-          `Sales for client ${student.mindbodyClientId}`,
-          200
-        );
-
-        for (const sale of sales) {
+    // Process students in parallel batches
+    for (let i = 0; i < students.length; i += BATCH_SIZE) {
+      const batch = students.slice(i, i + BATCH_SIZE);
+      
+      const batchResults = await Promise.all(
+        batch.map(async (student) => {
           try {
-            for (const item of sale.PurchasedItems) {
-              // Skip items without amount information
-              if (!item.AmountPaid && item.AmountPaid !== 0) {
-                continue;
-              }
-              
-              await storage.createRevenue({
-                organizationId,
-                studentId: student.id,
-                amount: item.AmountPaid.toString(),
-                type: item.Type || 'Unknown',
-                description: item.Description || 'No description',
-                transactionDate: new Date(sale.SaleDateTime),
-              });
-              imported++;
-            }
-          } catch (error) {
-            console.error(`Failed to import sale ${sale.Id}:`, error);
-          }
-        }
+            const sales = await this.fetchAllPages<MindbodySale>(
+              organizationId,
+              `/sale/sales?ClientId=${student.mindbodyClientId}&StartSaleDateTime=${saleStartDate.toISOString()}`,
+              `Sales for client ${student.mindbodyClientId}`,
+              200
+            );
 
-        processedClients++;
-        if (processedClients % 100 === 0) {
-          console.log(`Processed ${processedClients}/${students.length} clients, ${imported} revenue items imported so far`);
-        }
-      } catch (error) {
-        console.error(`Failed to fetch sales for client ${student.mindbodyClientId}:`, error);
-      }
+            let imported = 0;
+            for (const sale of sales) {
+              for (const item of sale.PurchasedItems) {
+                try {
+                  if (!item.AmountPaid && item.AmountPaid !== 0) continue;
+                  
+                  await storage.createRevenue({
+                    organizationId,
+                    studentId: student.id,
+                    amount: item.AmountPaid.toString(),
+                    type: item.Type || 'Unknown',
+                    description: item.Description || 'No description',
+                    transactionDate: new Date(sale.SaleDateTime),
+                  });
+                  imported++;
+                } catch (error) {
+                  console.error(`Failed to import sale item:`, error);
+                }
+              }
+            }
+            return imported;
+          } catch (error) {
+            console.error(`Failed to fetch sales for client ${student.mindbodyClientId}:`, error);
+            return 0;
+          }
+        })
+      );
+
+      const batchImported = batchResults.reduce((sum, count) => sum + count, 0);
+      totalImported += batchImported;
+      
+      console.log(`Batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(students.length / BATCH_SIZE)}: ${batchImported} revenue items imported (Total: ${totalImported})`);
     }
 
-    console.log(`Sales import complete: ${imported} revenue items from ${processedClients} clients`);
-    return imported;
+    console.log(`Sales import complete: ${totalImported} revenue items imported from ${students.length} clients`);
+    return totalImported;
   }
 
   async importAllData(
