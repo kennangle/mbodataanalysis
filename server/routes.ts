@@ -497,6 +497,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/dashboard/revenue-trend", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.user as User)?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const data = await storage.getMonthlyRevenueTrend(organizationId);
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch revenue trend" });
+    }
+  });
+
+  app.get("/api/dashboard/attendance-by-time", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.user as User)?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const data = await storage.getAttendanceByTimeSlot(organizationId);
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch attendance by time" });
+    }
+  });
+
   // Report Generation Endpoints
   app.get("/api/reports/revenue", requireAuth, async (req, res) => {
     try {
