@@ -119,7 +119,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (password) {
         const salt = randomBytes(16).toString("hex");
         const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-        dataToUpdate.passwordHash = `${buf.toString("hex")}.${salt}`;
+        // Use same format as registration: salt:hash
+        dataToUpdate.passwordHash = `${salt}:${buf.toString("hex")}`;
       }
 
       const validation = insertUserSchema.partial().omit({ organizationId: true }).safeParse(dataToUpdate);

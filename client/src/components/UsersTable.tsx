@@ -139,12 +139,12 @@ export function UsersTable() {
 
   const updateMutation = useMutation({
     mutationFn: async (data: EditUserFormValues & { id: string }) => {
-      const { id, ...updateData } = data;
-      // Remove empty password
-      if (!updateData.password) {
-        delete updateData.password;
-      }
-      return await apiRequest("PATCH", `/api/users/${id}`, updateData);
+      const { id, password, ...updateData } = data;
+      // Only include password if it's not empty
+      const finalData = password 
+        ? { ...updateData, password } 
+        : updateData;
+      return await apiRequest("PATCH", `/api/users/${id}`, finalData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
