@@ -157,6 +157,7 @@ export class MindbodyService {
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`Mindbody API error: ${response.status} - ${errorText}`);
+      console.error(`Request URL: ${MINDBODY_API_BASE}${endpoint}`);
       throw new Error(`Mindbody API error: ${response.statusText}`);
     }
 
@@ -164,11 +165,14 @@ export class MindbodyService {
   }
 
   async importClients(organizationId: string): Promise<number> {
-    // Use searchText with wildcard to get all clients
-    // The API requires at least one search parameter
+    // Get clients modified in the last 12 months
+    // IMPORTANT: Mindbody API uses PascalCase parameters (LastModifiedDate, not lastModifiedDate)
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - 12);
+    
     const data = await this.makeAuthenticatedRequest(
       organizationId,
-      `/client/clients?limit=200&offset=0&searchText=`
+      `/client/clients?Limit=200&Offset=0&LastModifiedDate=${startDate.toISOString()}`
     );
 
     const clients: MindbodyClient[] = data.Clients || [];
