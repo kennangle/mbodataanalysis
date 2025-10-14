@@ -5,17 +5,28 @@ Enterprise-grade analytics platform that imports and analyzes data from Mindbody
 
 ## Recent Changes
 
-### October 14, 2025 - User Token Authentication & Import Simplification
+### October 14, 2025 - Configurable Import Filters
+- **Added date range and data type filters to import UI**
+  - Date range picker with start/end dates (default: last 12 months)
+  - Checkboxes to select data types: Clients, Classes, Visits, Sales
+  - Default selections: Clients ✅, Classes ✅, Visits ❌, Sales ❌
+  - UI preserves user selections between imports
+- **Backend support for configurable imports**
+  - Updated API to accept optional config parameter with date ranges and data types
+  - MindbodyService uses provided dates or falls back to defaults
+  - Selective import: only fetches checked data types
+  - Dynamic success messages show exactly what was imported
+- **End-to-end tested and verified**
+  - Tested custom date range (6 months) with only Clients enabled
+  - Successfully imported 200 clients, 0 classes as expected
+  - All UI controls and backend logic working correctly
+
+### October 14, 2025 - User Token Authentication & Import Foundation
 - **Implemented User Token authentication** for Mindbody API v6
   - Added `/usertoken/issue` endpoint call using Source Credentials
   - Username: `_YHC` (underscore prefix required for source credentials)
   - Password: From `MINDBODY_CLIENT_SECRET` environment variable
   - All API requests now include `Authorization: Bearer {token}` header for staff-level access
-- **Simplified import to non-retail data only** (per user request)
-  - ✅ Imports: Clients (students) and Classes (schedules)
-  - ⏭️ Skips: Visits (attendance) and Sales (revenue) - require per-client API calls
-  - Import scope: Last 12 months for clients, 12 months past to 1 month future for classes
-  - Success message shows exact counts imported
 - **Fixed API parameter case sensitivity issues**
   - Mindbody v6 API requires PascalCase parameters (LastModifiedDate, StartDateTime, Limit)
   - Added diagnostic logging for 4xx errors showing exact request URLs
