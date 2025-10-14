@@ -5,18 +5,32 @@ Enterprise-grade analytics platform that imports and analyzes data from Mindbody
 
 ## Recent Changes
 
-### October 13, 2025 - Mindbody Integration Simplified
+### October 14, 2025 - User Token Authentication & Import Simplification
+- **Implemented User Token authentication** for Mindbody API v6
+  - Added `/usertoken/issue` endpoint call using Source Credentials
+  - Username: `_YHC` (underscore prefix required for source credentials)
+  - Password: From `MINDBODY_CLIENT_SECRET` environment variable
+  - All API requests now include `Authorization: Bearer {token}` header for staff-level access
+- **Simplified import to non-retail data only** (per user request)
+  - ✅ Imports: Clients (students) and Classes (schedules)
+  - ⏭️ Skips: Visits (attendance) and Sales (revenue) - require per-client API calls
+  - Import scope: Last 12 months for clients, 12 months past to 1 month future for classes
+  - Success message shows exact counts imported
+- **Fixed API parameter case sensitivity issues**
+  - Mindbody v6 API requires PascalCase parameters (LastModifiedDate, StartDateTime, Limit)
+  - Added diagnostic logging for 4xx errors showing exact request URLs
+- Import confirmed working: 200 response in ~35 seconds with real Mindbody data
+
+### October 13, 2025 - Mindbody Integration Foundation
 - **Switched from OAuth to API Key authentication** for Mindbody integration
   - OAuth access not available in user's account (requires manual enablement from Mindbody support)
   - Implemented direct API Key authentication using existing credentials
   - Simplified UI - removed OAuth connection flow
-  - Users can now directly import data without authorization step
 - **Configured Mindbody credentials:**
   - API Key: `437fe06dae7e40c2933f06d56edee009`
   - Site ID: `133` (Yoga Health Center)
-  - Using Public API Source Credentials for authentication
-- Updated MindbodyService to use header-based authentication (Api-Key, SiteId)
-- Removed OAuth endpoints and redirect URI configuration requirements
+  - Source Credentials: `_YHC` with password
+- Updated MindbodyService to use header-based authentication (Api-Key, SiteId, Authorization)
 
 ### October 5, 2025 - Initial Platform Setup
 
@@ -103,13 +117,16 @@ Required secrets (all configured):
 - Password: Admin123!
 
 ## Next Steps
-1. Test Mindbody API data import with real credentials
-2. Add data visualization components (revenue charts, attendance graphs)
-3. Implement role-based access control and API rate limiting
-4. Add scheduled reports and email notifications
-5. Implement backup/recovery system
-6. Add export functionality for all reports
-7. Create admin dashboard for user management
+1. ✅ ~~Test Mindbody API data import with real credentials~~ - COMPLETED
+2. Add configurable import settings (data types, date ranges, limits)
+3. Implement per-client import for Visits/Sales data (if needed in future)
+4. Add data visualization components (revenue charts, attendance graphs)
+5. Implement role-based access control and API rate limiting
+6. Add scheduled reports and email notifications
+7. Implement backup/recovery system
+8. Create admin dashboard for user management
+9. Cache user tokens to reduce redundant /usertoken/issue calls
+10. Support multi-site deployments with per-organization SiteId
 
 ## Development Commands
 - `npm run dev` - Start development server (port 5000)
