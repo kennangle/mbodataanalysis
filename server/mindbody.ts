@@ -201,15 +201,17 @@ export class MindbodyService {
     return await response.json();
   }
 
-  async importClients(organizationId: string): Promise<number> {
-    // Get clients modified in the last 12 months
-    // IMPORTANT: Mindbody API uses PascalCase parameters (LastModifiedDate, not lastModifiedDate)
-    const startDate = new Date();
-    startDate.setMonth(startDate.getMonth() - 12);
+  async importClients(organizationId: string, startDate?: Date, endDate?: Date): Promise<number> {
+    // Use provided startDate or default to last 12 months
+    const lastModifiedDate = startDate || (() => {
+      const date = new Date();
+      date.setMonth(date.getMonth() - 12);
+      return date;
+    })();
     
     const data = await this.makeAuthenticatedRequest(
       organizationId,
-      `/client/clients?Limit=200&Offset=0&LastModifiedDate=${startDate.toISOString()}`
+      `/client/clients?Limit=200&Offset=0&LastModifiedDate=${lastModifiedDate.toISOString()}`
     );
 
     const clients: MindbodyClient[] = data.Clients || [];
@@ -237,16 +239,23 @@ export class MindbodyService {
     return imported;
   }
 
-  async importClasses(organizationId: string): Promise<number> {
-    const startDate = new Date();
-    startDate.setMonth(startDate.getMonth() - 12);
+  async importClasses(organizationId: string, startDate?: Date, endDate?: Date): Promise<number> {
+    // Use provided dates or default to 12 months past, 1 month future
+    const classStartDate = startDate || (() => {
+      const date = new Date();
+      date.setMonth(date.getMonth() - 12);
+      return date;
+    })();
     
-    const endDate = new Date();
-    endDate.setMonth(endDate.getMonth() + 1);
+    const classEndDate = endDate || (() => {
+      const date = new Date();
+      date.setMonth(date.getMonth() + 1);
+      return date;
+    })();
 
     const data = await this.makeAuthenticatedRequest(
       organizationId,
-      `/class/classes?StartDateTime=${startDate.toISOString()}&EndDateTime=${endDate.toISOString()}&Limit=500`
+      `/class/classes?StartDateTime=${classStartDate.toISOString()}&EndDateTime=${classEndDate.toISOString()}&Limit=500`
     );
 
     const classes: MindbodyClass[] = data.Classes || [];
@@ -294,13 +303,16 @@ export class MindbodyService {
     return imported;
   }
 
-  async importVisits(organizationId: string): Promise<number> {
-    const startDate = new Date();
-    startDate.setMonth(startDate.getMonth() - 12);
+  async importVisits(organizationId: string, startDate?: Date, endDate?: Date): Promise<number> {
+    const visitStartDate = startDate || (() => {
+      const date = new Date();
+      date.setMonth(date.getMonth() - 12);
+      return date;
+    })();
 
     const data = await this.makeAuthenticatedRequest(
       organizationId,
-      `/client/clientvisits?StartDate=${startDate.toISOString()}&Limit=1000`
+      `/client/clientvisits?StartDate=${visitStartDate.toISOString()}&Limit=1000`
     );
 
     const visits: MindbodyVisit[] = data.Visits || [];
@@ -342,13 +354,16 @@ export class MindbodyService {
     return imported;
   }
 
-  async importSales(organizationId: string): Promise<number> {
-    const startDate = new Date();
-    startDate.setMonth(startDate.getMonth() - 12);
+  async importSales(organizationId: string, startDate?: Date, endDate?: Date): Promise<number> {
+    const saleStartDate = startDate || (() => {
+      const date = new Date();
+      date.setMonth(date.getMonth() - 12);
+      return date;
+    })();
 
     const data = await this.makeAuthenticatedRequest(
       organizationId,
-      `/sale/sales?StartSaleDateTime=${startDate.toISOString()}&Limit=1000`
+      `/sale/sales?StartSaleDateTime=${saleStartDate.toISOString()}&Limit=1000`
     );
 
     const sales: MindbodySale[] = data.Sales || [];
@@ -383,19 +398,54 @@ export class MindbodyService {
     return imported;
   }
 
-  async importAllData(organizationId: string): Promise<{
+  async importAllData(
+    organizationId: string, 
+    config?: {
+      startDate?: string;
+      endDate?: string;
+      dataTypes?: {
+        clients?: boolean;
+        classes?: boolean;
+        visits?: boolean;
+        sales?: boolean;
+      };
+    }
+  ): Promise<{
     clients: number;
     classes: number;
     visits: number;
     sales: number;
   }> {
-    const clients = await this.importClients(organizationId);
-    const classes = await this.importClasses(organizationId);
-    
-    // Skip visits and sales for now - these endpoints require individual ClientIds
-    // TODO: Implement per-client import for visits and sales
-    const visits = 0;
-    const sales = 0;
+    const startDate = config?.startDate ? new Date(config.startDate) : undefined;
+    const endDate = config?.endDate ? new Date(config.endDate) : undefined;
+
+    const dataTypes = config?.dataTypes || {
+      clients: true,
+      classes: true,
+      visits: false,
+      sales: false,
+    };
+
+    let clients = 0;
+    let classes = 0;
+    let visits = 0;
+    let sales = 0;
+
+    if (dataTypes.clients) {
+      clients = await this.importClients(organizationId, startDate, endDate);
+    }
+
+    if (dataTypes.classes) {
+      classes = await this.importClasses(organizationId, startDate, endDate);
+    }
+
+    if (dataTypes.visits) {
+      visits = await this.importVisits(organizationId, startDate, endDate);
+    }
+
+    if (dataTypes.sales) {
+      sales = await this.importSales(organizationId, startDate, endDate);
+    }
 
     return { clients, classes, visits, sales };
   }

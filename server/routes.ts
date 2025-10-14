@@ -351,8 +351,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const useSampleData = req.body.useSampleData === true;
-      console.log("Import request - useSampleData:", useSampleData, "body:", req.body);
+      const { useSampleData, config } = req.body;
+      console.log("Import request - useSampleData:", useSampleData, "config:", config);
 
       if (useSampleData) {
         console.log("Creating sample data for org:", organizationId);
@@ -366,11 +366,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const mindbodyService = new MindbodyService();
-      const stats = await mindbodyService.importAllData(organizationId);
+      const stats = await mindbodyService.importAllData(organizationId, config);
+
+      const importedTypes = [];
+      if (stats.clients > 0) importedTypes.push(`${stats.clients} clients`);
+      if (stats.classes > 0) importedTypes.push(`${stats.classes} classes`);
+      if (stats.visits > 0) importedTypes.push(`${stats.visits} visits`);
+      if (stats.sales > 0) importedTypes.push(`${stats.sales} sales`);
+
+      const message = importedTypes.length > 0 
+        ? `Successfully imported ${importedTypes.join(', ')} from Mindbody`
+        : 'No data imported - please select at least one data type';
 
       res.json({
         success: true,
-        message: `Successfully imported ${stats.clients} clients and ${stats.classes} classes from Mindbody`,
+        message,
         stats: {
           students: stats.clients,
           classes: stats.classes,
