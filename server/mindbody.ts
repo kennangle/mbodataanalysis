@@ -164,9 +164,13 @@ export class MindbodyService {
   }
 
   async importClients(organizationId: string): Promise<number> {
+    // Get clients modified in the last 12 months
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - 12);
+    
     const data = await this.makeAuthenticatedRequest(
       organizationId,
-      "/client/clients?limit=200"
+      `/client/clients?limit=200&offset=0&lastModifiedDate=${startDate.toISOString()}`
     );
 
     const clients: MindbodyClient[] = data.Clients || [];
