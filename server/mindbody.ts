@@ -209,7 +209,7 @@ export class MindbodyService {
 
     const data = await this.makeAuthenticatedRequest(
       organizationId,
-      `/class/classes?StartDateTime=${startDate.toISOString()}&EndDateTime=${endDate.toISOString()}&limit=500`
+      `/class/classes?StartDateTime=${startDate.toISOString()}&EndDateTime=${endDate.toISOString()}&Limit=500`
     );
 
     const classes: MindbodyClass[] = data.Classes || [];
@@ -263,7 +263,7 @@ export class MindbodyService {
 
     const data = await this.makeAuthenticatedRequest(
       organizationId,
-      `/client/clientvisits?StartDate=${startDate.toISOString()}&limit=1000`
+      `/client/clientvisits?StartDate=${startDate.toISOString()}&Limit=1000`
     );
 
     const visits: MindbodyVisit[] = data.Visits || [];
@@ -311,7 +311,7 @@ export class MindbodyService {
 
     const data = await this.makeAuthenticatedRequest(
       organizationId,
-      `/sale/sales?StartSaleDateTime=${startDate.toISOString()}&limit=1000`
+      `/sale/sales?StartSaleDateTime=${startDate.toISOString()}&Limit=1000`
     );
 
     const sales: MindbodySale[] = data.Sales || [];
