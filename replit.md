@@ -5,6 +5,30 @@ Enterprise-grade analytics platform that imports and analyzes data from Mindbody
 
 ## Recent Changes
 
+### October 14, 2025 - User Management System
+- **Complete admin-only user management interface**
+  - Users page with searchable table view showing all organization users
+  - Add/Edit/Delete functionality with form validation
+  - Role-based access control (admin and user roles)
+  - Password optional in edit mode (leave blank to keep current)
+- **Security hardening**
+  - All user management endpoints require admin role
+  - Tenant isolation enforced - users can only manage their organization
+  - OrganizationId cannot be changed during updates
+  - Self-deletion prevented for logged-in admin
+- **Frontend access control**
+  - Users menu hidden from non-admin users in sidebar
+  - Proper error handling and loading states
+  - Toast notifications for all actions
+- **End-to-end tested and verified** ✅
+  - Successful create/edit/delete workflow tested
+  - Form validation verified (required password on create, optional on edit)
+  - All security measures confirmed working
+- **Architect reviewed and approved** ✅
+  - Authorization gaps closed
+  - Tenant boundaries enforced
+  - Production-ready implementation
+
 ### October 14, 2025 - Automatic Pagination for Mindbody Imports
 - **Implemented bulletproof pagination system** to fetch ALL records from Mindbody API
   - Generic `fetchAllPages<T>()` helper method handles pagination automatically
