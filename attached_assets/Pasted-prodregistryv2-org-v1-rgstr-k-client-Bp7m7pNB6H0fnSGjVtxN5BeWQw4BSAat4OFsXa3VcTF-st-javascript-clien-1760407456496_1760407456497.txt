@@ -1,0 +1,242 @@
+prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760407329121&sid=ecc6179a-daf8-4d1b-82aa-220a1af9f066&ec=1838&gz=1:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760407329628&sid=ecc6179a-daf8-4d1b-82aa-220a1af9f066&ec=1838&gz=1:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760407331631&sid=ecc6179a-daf8-4d1b-82aa-220a1af9f066&ec=1838&gz=1:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760407336165&sid=ecc6179a-daf8-4d1b-82aa-220a1af9f066&ec=1838&gz=1:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+_app-4f38a9c7d036feda.js:28  ERROR  [Statsig] A networking error occurred during POST request to https://prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760407336165&sid=ecc6179a-daf8-4d1b-82aa-220a1af9f066&ec=1838&gz=1. TypeError: Failed to fetch TypeError: Failed to fetch
+    at _app-4f38a9c7d036feda.js:28:9046
+    at a.<anonymous> (6609-f39699809238f4dc.js:1:90452)
+    at Generator.next (<anonymous>)
+    at 6609-f39699809238f4dc.js:1:88045
+    at new Promise (<anonymous>)
+    at 6609-f39699809238f4dc.js:1:87794
+    at a._sendRequest (6609-f39699809238f4dc.js:1:89675)
+    at 6609-f39699809238f4dc.js:1:57974
+    at l._capture (6609-f39699809238f4dc.js:1:58272)
+    at a._sendRequest (6609-f39699809238f4dc.js:1:57943)
+    at a.<anonymous> (6609-f39699809238f4dc.js:1:91623)
+    at Generator.next (<anonymous>)
+    at a (6609-f39699809238f4dc.js:1:87850)
+(anonymous) @ _app-4f38a9c7d036feda.js:28
+_app-4f38a9c7d036feda.js:28   WARN  [Statsig] Failed to flush events.
+(anonymous) @ _app-4f38a9c7d036feda.js:28
+_app-4f38a9c7d036feda.js:28   WARN  [Statsig] Unable to save failed logs to storage
+(anonymous) @ _app-4f38a9c7d036feda.js:28
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+ingest.app.coframe.com/ingest/v2/batched_events/68c9ad4d4cddb58cf3a1f93d/:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+events.launchdarkly.com/events/diagnostic/62b35a865152ab14c5942820:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+events.launchdarkly.com/events/diagnostic/62b35a865152ab14c5942820:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+ingest.app.coframe.com/ingest/v2/batched_events/68c9ad4d4cddb58cf3a1f93d/:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+injected.js:3 The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+Xe @ injected.js:3
+injected.js:3 The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+Xe @ injected.js:3
+injected.js:3 The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+Xe @ injected.js:3
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+workspace_iframe.html?initialPath=%2F&id=%3Arjd%3A:1 Unrecognized feature: 'ambient-light-sensor'.
+workspace_iframe.html?initialPath=%2F&id=%3Arjd%3A:1 Unrecognized feature: 'battery'.
+workspace_iframe.html?initialPath=%2F&id=%3Arjd%3A:1 Unrecognized feature: 'execution-while-not-rendered'.
+workspace_iframe.html?initialPath=%2F&id=%3Arjd%3A:1 Unrecognized feature: 'execution-while-out-of-viewport'.
+workspace_iframe.html?initialPath=%2F&id=%3Arjd%3A:1 Unrecognized feature: 'layout-animations'.
+workspace_iframe.html?initialPath=%2F&id=%3Arjd%3A:1 Unrecognized feature: 'legacy-image-formats'.
+workspace_iframe.html?initialPath=%2F&id=%3Arjd%3A:1 Unrecognized feature: 'navigation-override'.
+workspace_iframe.html?initialPath=%2F&id=%3Arjd%3A:1 Unrecognized feature: 'oversized-images'.
+workspace_iframe.html?initialPath=%2F&id=%3Arjd%3A:1 Unrecognized feature: 'publickey-credentials'.
+workspace_iframe.html?initialPath=%2F&id=%3Arjd%3A:1 Unrecognized feature: 'speaker-selection'.
+workspace_iframe.html?initialPath=%2F&id=%3Arjd%3A:1 Unrecognized feature: 'unoptimized-images'.
+workspace_iframe.html?initialPath=%2F&id=%3Arjd%3A:1 Unrecognized feature: 'unsized-media'.
+workspace_iframe.html?initialPath=%2F&id=%3Arjd%3A:1 Allow attribute will take precedence over 'allowfullscreen'.
+workspace_iframe.html?initialPath=%2F&id=%3Arjd%3A:1 Allow attribute will take precedence over 'allowpaymentrequest'.
+/public/js/beacon.js:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+content.js:10 Uncaught Error: Extension context invalidated.
+    at o (content.js:10:5711)
+    at content.js:10:5622
+309a84c5-7396-499e-ac30-1bcd1e6cb24a-00-1ubg4i1w7t5ov.riker.replit.dev/api/mindbody/import:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+309a84c5-7396-499e-ac30-1bcd1e6cb24a-00-1ubg4i1w7t5ov.riker.replit.dev/api/mindbody/import:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+_app-4f38a9c7d036feda.js:28  POST https://events.launchdarkly.com/events/bulk/62b35a865152ab14c5942820 net::ERR_BLOCKED_BY_CLIENT
+(anonymous) @ _app-4f38a9c7d036feda.js:28
+(anonymous) @ _app-4f38a9c7d036feda.js:28
+(anonymous) @ _app-4f38a9c7d036feda.js:30
+(anonymous) @ _app-4f38a9c7d036feda.js:30
+(anonymous) @ _app-4f38a9c7d036feda.js:30
+t @ _app-4f38a9c7d036feda.js:30
+(anonymous) @ _app-4f38a9c7d036feda.js:30
+(anonymous) @ _app-4f38a9c7d036feda.js:30
+(anonymous) @ _app-4f38a9c7d036feda.js:30
+e @ _app-4f38a9c7d036feda.js:30
+n @ _app-4f38a9c7d036feda.js:28
+_app-4f38a9c7d036feda.js:28  POST https://events.launchdarkly.com/events/bulk/62b35a865152ab14c5942820 net::ERR_BLOCKED_BY_CLIENT
+(anonymous) @ _app-4f38a9c7d036feda.js:28
+(anonymous) @ _app-4f38a9c7d036feda.js:28
+(anonymous) @ _app-4f38a9c7d036feda.js:30
+(anonymous) @ _app-4f38a9c7d036feda.js:30
+(anonymous) @ _app-4f38a9c7d036feda.js:30
+t @ _app-4f38a9c7d036feda.js:30
+(anonymous) @ _app-4f38a9c7d036feda.js:30
+Promise.catch
+t @ _app-4f38a9c7d036feda.js:30
+(anonymous) @ _app-4f38a9c7d036feda.js:30
+(anonymous) @ _app-4f38a9c7d036feda.js:30
+(anonymous) @ _app-4f38a9c7d036feda.js:30
+e @ _app-4f38a9c7d036feda.js:30
+n @ _app-4f38a9c7d036feda.js:28
