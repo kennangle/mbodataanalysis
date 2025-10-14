@@ -257,36 +257,52 @@ export class DbStorage implements IStorage {
 
   async getMonthlyRevenueTrend(organizationId: string): Promise<Array<{ month: string; revenue: number; students: number }>> {
     const now = new Date();
+    const oneYearAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+    
+    const revenueByMonth = await db.select({
+      monthNum: sql<number>`extract(month from ${revenue.transactionDate})`,
+      yearNum: sql<number>`extract(year from ${revenue.transactionDate})`,
+      total: sql<number>`sum(${revenue.amount})`
+    })
+    .from(revenue)
+    .where(
+      and(
+        eq(revenue.organizationId, organizationId),
+        gte(revenue.transactionDate, oneYearAgo)
+      )
+    )
+    .groupBy(
+      sql`extract(month from ${revenue.transactionDate})`,
+      sql`extract(year from ${revenue.transactionDate})`
+    );
+    
+    const studentCount = await db.select({
+      count: sql<number>`count(distinct ${students.id})`
+    })
+    .from(students)
+    .where(eq(students.organizationId, organizationId));
+    
+    const totalStudents = Number(studentCount[0]?.count || 0);
+    const revenueMap = new Map(
+      revenueByMonth.map(r => [`${r.yearNum}-${r.monthNum}`, Number(r.total || 0)])
+    );
+    
     const monthsData = [];
+    const currentYear = now.getFullYear();
     
     for (let i = 11; i >= 0; i--) {
       const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const nextMonthDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
-      
-      const revenueResult = await db.select({
-        total: sql<number>`sum(${revenue.amount})`
-      })
-      .from(revenue)
-      .where(
-        and(
-          eq(revenue.organizationId, organizationId),
-          gte(revenue.transactionDate, monthDate),
-          lte(revenue.transactionDate, nextMonthDate)
-        )
-      );
-      
-      const studentResult = await db.select({
-        count: sql<number>`count(distinct ${students.id})`
-      })
-      .from(students)
-      .where(eq(students.organizationId, organizationId));
+      const year = monthDate.getFullYear();
+      const month = monthDate.getMonth() + 1;
+      const key = `${year}-${month}`;
       
       const monthName = monthDate.toLocaleString('en-US', { month: 'short' });
+      const displayMonth = year !== currentYear ? `${monthName} ${year}` : monthName;
       
       monthsData.push({
-        month: monthName,
-        revenue: Number(revenueResult[0]?.total || 0),
-        students: Number(studentResult[0]?.count || 0)
+        month: displayMonth,
+        revenue: revenueMap.get(key) || 0,
+        students: totalStudents
       });
     }
     
@@ -295,11 +311,36 @@ export class DbStorage implements IStorage {
 
   async getAttendanceByTimeSlot(organizationId: string): Promise<Array<{ day: string; morning: number; afternoon: number; evening: number }>> {
     const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const attendanceData = await this.getAttendance(organizationId);
-    const scheduleData = await this.getClassSchedules(organizationId);
     
-    const scheduleMap = new Map();
-    scheduleData.forEach(s => scheduleMap.set(s.id, s));
+    const result = await db.select({
+      dayOfWeek: sql<number>`extract(dow from ${classSchedules.startTime})`,
+      timeSlot: sql<string>`
+        CASE 
+          WHEN extract(hour from ${classSchedules.startTime}) < 12 THEN 'morning'
+          WHEN extract(hour from ${classSchedules.startTime}) < 17 THEN 'afternoon'
+          ELSE 'evening'
+        END
+      `,
+      count: sql<number>`count(*)`
+    })
+    .from(attendance)
+    .innerJoin(classSchedules, eq(attendance.scheduleId, classSchedules.id))
+    .where(
+      and(
+        eq(attendance.organizationId, organizationId),
+        eq(classSchedules.organizationId, organizationId)
+      )
+    )
+    .groupBy(
+      sql`extract(dow from ${classSchedules.startTime})`,
+      sql`
+        CASE 
+          WHEN extract(hour from ${classSchedules.startTime}) < 12 THEN 'morning'
+          WHEN extract(hour from ${classSchedules.startTime}) < 17 THEN 'afternoon'
+          ELSE 'evening'
+        END
+      `
+    );
     
     const dayData = daysOfWeek.map(day => ({
       day,
@@ -308,23 +349,14 @@ export class DbStorage implements IStorage {
       evening: 0
     }));
     
-    attendanceData.forEach(att => {
-      const schedule = scheduleMap.get(att.scheduleId);
-      if (!schedule) return;
+    result.forEach(r => {
+      const dayIndex = Number(r.dayOfWeek);
+      const timeSlot = r.timeSlot as 'morning' | 'afternoon' | 'evening';
+      const count = Number(r.count);
       
-      const dayOfWeek = schedule.startTime.getDay();
-      const hour = schedule.startTime.getHours();
-      
-      let timeSlot: 'morning' | 'afternoon' | 'evening';
-      if (hour < 12) {
-        timeSlot = 'morning';
-      } else if (hour < 17) {
-        timeSlot = 'afternoon';
-      } else {
-        timeSlot = 'evening';
+      if (dayIndex >= 0 && dayIndex < 7 && timeSlot) {
+        dayData[dayIndex][timeSlot] = count;
       }
-      
-      dayData[dayOfWeek][timeSlot]++;
     });
     
     return dayData;

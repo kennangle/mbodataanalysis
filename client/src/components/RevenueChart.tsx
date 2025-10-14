@@ -23,7 +23,7 @@ export function RevenueChart() {
     );
   }
 
-  const hasData = data && data.length > 0 && data.some(d => d.revenue > 0 || d.students > 0);
+  const hasData = data && data.length > 0 && data.some(d => d.revenue > 0);
 
   return (
     <Card>
