@@ -53,6 +53,13 @@ interface MindbodySale {
   }>;
 }
 
+interface MindbodyPaginationResponse {
+  RequestedLimit: number;
+  RequestedOffset: number;
+  PageSize: number;
+  TotalResults: number;
+}
+
 const MINDBODY_API_BASE = "https://api.mindbodyonline.com/public/v6";
 
 function getRedirectUri(): string {
@@ -201,6 +208,64 @@ export class MindbodyService {
     return await response.json();
   }
 
+  private async fetchAllPages<T>(
+    organizationId: string,
+    baseEndpoint: string,
+    resultsKey: string,
+    pageSize: number = 200
+  ): Promise<T[]> {
+    let allResults: T[] = [];
+    let offset = 0;
+    let hasMorePages = true;
+
+    console.log(`Starting paginated fetch from ${baseEndpoint} with page size ${pageSize}`);
+
+    while (hasMorePages) {
+      const separator = baseEndpoint.includes('?') ? '&' : '?';
+      const endpoint = `${baseEndpoint}${separator}Limit=${pageSize}&Offset=${offset}`;
+      
+      console.log(`Fetching page at offset ${offset}...`);
+      const data = await this.makeAuthenticatedRequest(organizationId, endpoint);
+
+      const results = data[resultsKey] || [];
+      allResults = allResults.concat(results);
+
+      const pagination: MindbodyPaginationResponse | undefined = data.PaginationResponse;
+      
+      if (pagination) {
+        console.log(`Page received: ${results.length} items (Total: ${pagination.TotalResults}, Retrieved so far: ${allResults.length})`);
+        
+        // Guard against offset exceeding total results
+        if (offset >= pagination.TotalResults) {
+          console.warn(`Offset ${offset} exceeds TotalResults ${pagination.TotalResults}, stopping pagination`);
+          hasMorePages = false;
+        }
+        // Check if we've retrieved all results
+        else if (allResults.length >= pagination.TotalResults || results.length === 0) {
+          hasMorePages = false;
+        } else {
+          // Use actual results length as the increment (PageSize may not reflect true count)
+          const actualPageSize = results.length > 0 ? results.length : (pagination.RequestedLimit || pageSize);
+          
+          // Verify offset won't skip records
+          if (pagination.PageSize > results.length && results.length > 0) {
+            console.warn(`PageSize (${pagination.PageSize}) > actual results (${results.length}), using results.length`);
+          }
+          
+          offset += actualPageSize;
+          console.log(`Next offset will be ${offset} (incremented by ${actualPageSize} actual items returned)`);
+        }
+      } else {
+        // No pagination info, assume single page
+        console.log(`No pagination info, treating as single page: ${results.length} items`);
+        hasMorePages = false;
+      }
+    }
+
+    console.log(`Pagination complete: ${allResults.length} total items fetched`);
+    return allResults;
+  }
+
   async importClients(organizationId: string, startDate?: Date, endDate?: Date): Promise<number> {
     // Use provided startDate or default to last 12 months
     const lastModifiedDate = startDate || (() => {
@@ -209,12 +274,14 @@ export class MindbodyService {
       return date;
     })();
     
-    const data = await this.makeAuthenticatedRequest(
+    // Fetch all pages of clients using pagination
+    const clients = await this.fetchAllPages<MindbodyClient>(
       organizationId,
-      `/client/clients?Limit=200&Offset=0&LastModifiedDate=${lastModifiedDate.toISOString()}`
+      `/client/clients?LastModifiedDate=${lastModifiedDate.toISOString()}`,
+      'Clients',
+      200
     );
 
-    const clients: MindbodyClient[] = data.Clients || [];
     let imported = 0;
 
     for (const client of clients) {
@@ -253,12 +320,14 @@ export class MindbodyService {
       return date;
     })();
 
-    const data = await this.makeAuthenticatedRequest(
+    // Fetch all pages of classes using pagination
+    const classes = await this.fetchAllPages<MindbodyClass>(
       organizationId,
-      `/class/classes?StartDateTime=${classStartDate.toISOString()}&EndDateTime=${classEndDate.toISOString()}&Limit=500`
+      `/class/classes?StartDateTime=${classStartDate.toISOString()}&EndDateTime=${classEndDate.toISOString()}`,
+      'Classes',
+      200
     );
 
-    const classes: MindbodyClass[] = data.Classes || [];
     let imported = 0;
 
     for (const mbClass of classes) {
@@ -310,12 +379,23 @@ export class MindbodyService {
       return date;
     })();
 
-    const data = await this.makeAuthenticatedRequest(
+    // Fetch all pages of visits using pagination
+    const visits = await this.fetchAllPages<MindbodyVisit>(
       organizationId,
-      `/client/clientvisits?StartDate=${visitStartDate.toISOString()}&Limit=1000`
+      `/client/clientvisits?StartDate=${visitStartDate.toISOString()}`,
+      'Visits',
+      200
     );
 
-    const visits: MindbodyVisit[] = data.Visits || [];
+    // Load students and schedules once for efficient lookup
+    console.log('Loading students for visit import...');
+    const students = await storage.getStudents(organizationId, 100000);
+    const studentMap = new Map(students.map(s => [s.mindbodyClientId, s]));
+    
+    console.log('Loading class schedules for visit import...');
+    const schedules = await storage.getClassSchedules(organizationId);
+    const scheduleMap = new Map(schedules.map(s => [s.mindbodyScheduleId, s]));
+
     let imported = 0;
 
     for (const visit of visits) {
@@ -325,16 +405,10 @@ export class MindbodyService {
           continue;
         }
 
-        const students = await storage.getStudents(organizationId, 1000);
-        const student = students.find(s => s.mindbodyClientId === visit.ClientId);
-        
+        const student = studentMap.get(visit.ClientId);
         if (!student) continue;
 
-        const schedules = await storage.getClassSchedules(organizationId);
-        const schedule = schedules.find(
-          s => s.mindbodyScheduleId === visit.ClassId.toString()
-        );
-
+        const schedule = scheduleMap.get(visit.ClassId.toString());
         if (!schedule) continue;
 
         await storage.createAttendance({
@@ -361,18 +435,24 @@ export class MindbodyService {
       return date;
     })();
 
-    const data = await this.makeAuthenticatedRequest(
+    // Fetch all pages of sales using pagination
+    const sales = await this.fetchAllPages<MindbodySale>(
       organizationId,
-      `/sale/sales?StartSaleDateTime=${saleStartDate.toISOString()}&Limit=1000`
+      `/sale/sales?StartSaleDateTime=${saleStartDate.toISOString()}`,
+      'Sales',
+      200
     );
 
-    const sales: MindbodySale[] = data.Sales || [];
+    // Load students once for efficient lookup
+    console.log('Loading students for sales import...');
+    const students = await storage.getStudents(organizationId, 100000);
+    const studentMap = new Map(students.map(s => [s.mindbodyClientId, s]));
+
     let imported = 0;
 
     for (const sale of sales) {
       try {
-        const students = await storage.getStudents(organizationId, 1000);
-        const student = students.find(s => s.mindbodyClientId === sale.ClientId);
+        const student = studentMap.get(sale.ClientId);
 
         for (const item of sale.PurchasedItems) {
           // Skip items without amount information
