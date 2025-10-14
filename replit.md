@@ -5,6 +5,27 @@ Enterprise-grade analytics platform that imports and analyzes data from Mindbody
 
 ## Recent Changes
 
+### October 14, 2025 - Dashboard Charts Connected to Real Data
+- **Replaced mock data with live database queries**
+  - Revenue & Growth Trend chart now fetches real revenue and student data
+  - Class Attendance by Time chart now fetches real attendance patterns
+  - Both charts show proper loading states and empty states
+- **Optimized SQL performance for chart data**
+  - Revenue trend: Single GROUP BY query instead of 24 sequential queries
+  - Attendance by time: SQL JOIN with aggregation instead of loading all data
+  - Month labels include year when spanning multiple years (e.g., "Jan 2025", "Feb")
+- **Added new API endpoints**
+  - GET `/api/dashboard/revenue-trend` - Returns 12 months of revenue and student counts
+  - GET `/api/dashboard/attendance-by-time` - Returns attendance by day/time slot
+- **Empty state handling**
+  - Revenue chart shows "No revenue data available" when revenue is 0 (even if students exist)
+  - Attendance chart shows "No attendance data available" when no visits imported
+  - Both include helper text to guide users to import data
+- **Architect reviewed and approved** ✅
+  - All performance concerns addressed
+  - Unique month labeling verified
+  - Security reviewed (no issues found)
+
 ### October 14, 2025 - Configurable Import Filters
 - **Added date range and data type filters to import UI**
   - Date range picker with start/end dates (default: last 12 months)
