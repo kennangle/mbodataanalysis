@@ -66,14 +66,22 @@ interface User {
   createdAt: string;
 }
 
-const userFormSchema = z.object({
+const baseUserSchema = z.object({
   email: z.string().email("Invalid email address"),
   name: z.string().min(1, "Name is required"),
   role: z.enum(["user", "admin"]),
-  password: z.string().min(6, "Password must be at least 6 characters").optional(),
 });
 
-type UserFormValues = z.infer<typeof userFormSchema>;
+const createUserSchema = baseUserSchema.extend({
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+const editUserSchema = baseUserSchema.extend({
+  password: z.string().min(6, "Password must be at least 6 characters").or(z.literal("")),
+});
+
+type CreateUserFormValues = z.infer<typeof createUserSchema>;
+type EditUserFormValues = z.infer<typeof editUserSchema>;
 
 export function UsersTable() {
   const [search, setSearch] = useState("");
@@ -87,8 +95,8 @@ export function UsersTable() {
     queryKey: ["/api/users"],
   });
 
-  const createForm = useForm<UserFormValues>({
-    resolver: zodResolver(userFormSchema.extend({ password: z.string().min(6, "Password must be at least 6 characters") })),
+  const createForm = useForm<CreateUserFormValues>({
+    resolver: zodResolver(createUserSchema),
     defaultValues: {
       email: "",
       name: "",
@@ -97,8 +105,8 @@ export function UsersTable() {
     },
   });
 
-  const editForm = useForm<UserFormValues>({
-    resolver: zodResolver(userFormSchema),
+  const editForm = useForm<EditUserFormValues>({
+    resolver: zodResolver(editUserSchema),
     defaultValues: {
       email: "",
       name: "",
@@ -108,7 +116,7 @@ export function UsersTable() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data: UserFormValues) => {
+    mutationFn: async (data: CreateUserFormValues) => {
       return await apiRequest("POST", "/api/users", data);
     },
     onSuccess: () => {
@@ -130,7 +138,7 @@ export function UsersTable() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (data: UserFormValues & { id: string }) => {
+    mutationFn: async (data: EditUserFormValues & { id: string }) => {
       const { id, ...updateData } = data;
       // Remove empty password
       if (!updateData.password) {

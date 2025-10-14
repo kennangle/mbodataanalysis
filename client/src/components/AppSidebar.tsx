@@ -19,6 +19,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { useAuth } from "@/lib/auth";
 
 const menuItems = [
   {
@@ -40,7 +41,7 @@ const menuItems = [
   {
     title: "Settings",
     items: [
-      { title: "Users", url: "/users", icon: UserCog },
+      { title: "Users", url: "/users", icon: UserCog, adminOnly: true },
       { title: "Notifications", url: "/notifications", icon: Bell },
       { title: "Settings", url: "/settings", icon: Settings },
     ],
@@ -48,6 +49,9 @@ const menuItems = [
 ];
 
 export function AppSidebar() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+
   return (
     <Sidebar>
       <SidebarContent>
@@ -56,16 +60,18 @@ export function AppSidebar() {
             <SidebarGroupLabel>{section.title}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {section.items.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
-                      <a href={item.url}>
-                        <item.icon className="h-4 w-4" />
-                        <span>{item.title}</span>
-                      </a>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                {section.items
+                  .filter((item) => !item.adminOnly || isAdmin)
+                  .map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild>
+                        <a href={item.url}>
+                          <item.icon className="h-4 w-4" />
+                          <span>{item.title}</span>
+                        </a>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

@@ -17,12 +17,19 @@ import { eq } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
-  // User management routes
+  // User management routes (admin only)
   app.get("/api/users", requireAuth, async (req, res) => {
     try {
-      const organizationId = (req.user as User)?.organizationId;
+      const currentUser = req.user as User;
+      const organizationId = currentUser?.organizationId;
+      
       if (!organizationId) {
         return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      // Only admins can manage users
+      if (currentUser.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
       }
 
       const users = await storage.getUsers(organizationId);
@@ -34,9 +41,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/users", requireAuth, async (req, res) => {
     try {
-      const organizationId = (req.user as User)?.organizationId;
+      const currentUser = req.user as User;
+      const organizationId = currentUser?.organizationId;
+      
       if (!organizationId) {
         return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      // Only admins can create users
+      if (currentUser.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
       }
 
       const { password, ...userData } = req.body;
@@ -50,10 +64,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const buf = (await scryptAsync(password, salt, 64)) as Buffer;
       const passwordHash = `${buf.toString("hex")}.${salt}`;
 
+      // Force organizationId to match current user's organization (prevent tenant boundary violation)
       const validation = insertUserSchema.safeParse({ 
         ...userData, 
         passwordHash,
-        organizationId 
+        organizationId // Use authenticated user's organization, ignore client input
       });
       
       if (!validation.success) {
@@ -73,9 +88,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/users/:id", requireAuth, async (req, res) => {
     try {
-      const organizationId = (req.user as User)?.organizationId;
+      const currentUser = req.user as User;
+      const organizationId = currentUser?.organizationId;
+      
       if (!organizationId) {
         return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      // Only admins can update users
+      if (currentUser.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
       }
 
       const user = await storage.getUserById(req.params.id);
@@ -87,8 +109,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Forbidden" });
       }
 
-      const { password, ...updateData } = req.body;
+      const { password, organizationId: clientOrgId, ...updateData } = req.body;
       let dataToUpdate = { ...updateData };
+
+      // Prevent organizationId changes (tenant boundary protection)
+      // Explicitly ignore any organizationId in the request body
 
       // If password is provided, hash it
       if (password) {
@@ -97,7 +122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         dataToUpdate.passwordHash = `${buf.toString("hex")}.${salt}`;
       }
 
-      const validation = insertUserSchema.partial().safeParse(dataToUpdate);
+      const validation = insertUserSchema.partial().omit({ organizationId: true }).safeParse(dataToUpdate);
       if (!validation.success) {
         return res.status(400).json({ error: fromZodError(validation.error).toString() });
       }
@@ -111,11 +136,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/users/:id", requireAuth, async (req, res) => {
     try {
-      const organizationId = (req.user as User)?.organizationId;
-      const currentUserId = (req.user as User)?.id;
+      const currentUser = req.user as User;
+      const organizationId = currentUser?.organizationId;
+      const currentUserId = currentUser?.id;
       
       if (!organizationId) {
         return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      // Only admins can delete users
+      if (currentUser.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
       }
 
       // Prevent self-deletion
