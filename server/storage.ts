@@ -59,6 +59,8 @@ export interface IStorage {
   getRevenue(organizationId: string, startDate?: Date, endDate?: Date): Promise<Revenue[]>;
   createRevenue(revenue: InsertRevenue): Promise<Revenue>;
   getRevenueStats(organizationId: string, startDate: Date, endDate: Date): Promise<{ total: number; count: number }>;
+  getMonthlyRevenueTrend(organizationId: string): Promise<Array<{ month: string; revenue: number; students: number }>>;
+  getAttendanceByTimeSlot(organizationId: string): Promise<Array<{ day: string; morning: number; afternoon: number; evening: number }>>;
   
   createAIQuery(query: InsertAIQuery): Promise<AIQuery>;
   getAIQueries(organizationId: string, limit?: number): Promise<AIQuery[]>;
@@ -251,6 +253,81 @@ export class DbStorage implements IStorage {
       total: Number(result[0].total || 0),
       count: Number(result[0].count || 0)
     };
+  }
+
+  async getMonthlyRevenueTrend(organizationId: string): Promise<Array<{ month: string; revenue: number; students: number }>> {
+    const now = new Date();
+    const monthsData = [];
+    
+    for (let i = 11; i >= 0; i--) {
+      const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const nextMonthDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+      
+      const revenueResult = await db.select({
+        total: sql<number>`sum(${revenue.amount})`
+      })
+      .from(revenue)
+      .where(
+        and(
+          eq(revenue.organizationId, organizationId),
+          gte(revenue.transactionDate, monthDate),
+          lte(revenue.transactionDate, nextMonthDate)
+        )
+      );
+      
+      const studentResult = await db.select({
+        count: sql<number>`count(distinct ${students.id})`
+      })
+      .from(students)
+      .where(eq(students.organizationId, organizationId));
+      
+      const monthName = monthDate.toLocaleString('en-US', { month: 'short' });
+      
+      monthsData.push({
+        month: monthName,
+        revenue: Number(revenueResult[0]?.total || 0),
+        students: Number(studentResult[0]?.count || 0)
+      });
+    }
+    
+    return monthsData;
+  }
+
+  async getAttendanceByTimeSlot(organizationId: string): Promise<Array<{ day: string; morning: number; afternoon: number; evening: number }>> {
+    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const attendanceData = await this.getAttendance(organizationId);
+    const scheduleData = await this.getClassSchedules(organizationId);
+    
+    const scheduleMap = new Map();
+    scheduleData.forEach(s => scheduleMap.set(s.id, s));
+    
+    const dayData = daysOfWeek.map(day => ({
+      day,
+      morning: 0,
+      afternoon: 0,
+      evening: 0
+    }));
+    
+    attendanceData.forEach(att => {
+      const schedule = scheduleMap.get(att.scheduleId);
+      if (!schedule) return;
+      
+      const dayOfWeek = schedule.startTime.getDay();
+      const hour = schedule.startTime.getHours();
+      
+      let timeSlot: 'morning' | 'afternoon' | 'evening';
+      if (hour < 12) {
+        timeSlot = 'morning';
+      } else if (hour < 17) {
+        timeSlot = 'afternoon';
+      } else {
+        timeSlot = 'evening';
+      }
+      
+      dayData[dayOfWeek][timeSlot]++;
+    });
+    
+    return dayData;
   }
 
   async createAIQuery(query: InsertAIQuery): Promise<AIQuery> {
