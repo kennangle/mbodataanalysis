@@ -354,8 +354,11 @@ export class MindbodyService {
   }> {
     const clients = await this.importClients(organizationId);
     const classes = await this.importClasses(organizationId);
-    const visits = await this.importVisits(organizationId);
-    const sales = await this.importSales(organizationId);
+    
+    // Skip visits and sales for now - these endpoints require individual ClientIds
+    // TODO: Implement per-client import for visits and sales
+    const visits = 0;
+    const sales = 0;
 
     return { clients, classes, visits, sales };
   }

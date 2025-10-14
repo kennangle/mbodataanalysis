@@ -366,22 +366,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const mindbodyService = new MindbodyService();
-      
-      const [studentsImported, classesImported, visitsImported, salesImported] = await Promise.all([
-        mindbodyService.importClients(organizationId),
-        mindbodyService.importClasses(organizationId),
-        mindbodyService.importVisits(organizationId),
-        mindbodyService.importSales(organizationId)
-      ]);
+      const stats = await mindbodyService.importAllData(organizationId);
 
       res.json({
         success: true,
-        message: "Data import completed",
+        message: `Successfully imported ${stats.clients} clients and ${stats.classes} classes from Mindbody`,
         stats: {
-          students: studentsImported,
-          classes: classesImported,
-          attendance: visitsImported,
-          revenue: salesImported
+          students: stats.clients,
+          classes: stats.classes,
+          attendance: stats.visits,
+          revenue: stats.sales
         }
       });
     } catch (error) {
