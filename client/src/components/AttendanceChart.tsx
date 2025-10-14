@@ -1,18 +1,30 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-
-//todo: remove mock functionality
-const data = [
-  { day: "Mon", morning: 45, afternoon: 38, evening: 62 },
-  { day: "Tue", morning: 52, afternoon: 42, evening: 58 },
-  { day: "Wed", morning: 48, afternoon: 45, evening: 65 },
-  { day: "Thu", morning: 50, afternoon: 40, evening: 60 },
-  { day: "Fri", morning: 55, afternoon: 48, evening: 70 },
-  { day: "Sat", morning: 65, afternoon: 52, evening: 45 },
-  { day: "Sun", morning: 60, afternoon: 48, evening: 40 },
-];
+import { useQuery } from "@tanstack/react-query";
 
 export function AttendanceChart() {
+  const { data, isLoading } = useQuery<Array<{ day: string; morning: number; afternoon: number; evening: number }>>({
+    queryKey: ["/api/dashboard/attendance-by-time"],
+  });
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Class Attendance by Time</CardTitle>
+          <CardDescription>Average attendance distribution across different time slots</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[350px] flex items-center justify-center">
+            <div className="text-sm text-muted-foreground">Loading chart data...</div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const hasData = data && data.length > 0 && data.some(d => d.morning > 0 || d.afternoon > 0 || d.evening > 0);
+
   return (
     <Card>
       <CardHeader>
@@ -21,32 +33,41 @@ export function AttendanceChart() {
       </CardHeader>
       <CardContent>
         <div className="h-[350px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" opacity={0.3} />
-              <XAxis 
-                dataKey="day" 
-                className="text-xs" 
-                tick={{ fill: "hsl(var(--muted-foreground))" }}
-              />
-              <YAxis 
-                className="text-xs" 
-                tick={{ fill: "hsl(var(--muted-foreground))" }}
-              />
-              <Tooltip 
-                contentStyle={{
-                  backgroundColor: "hsl(var(--popover))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "0.5rem",
-                }}
-                labelStyle={{ color: "hsl(var(--foreground))" }}
-              />
-              <Legend />
-              <Bar dataKey="morning" fill="hsl(var(--chart-3))" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="afternoon" fill="hsl(var(--chart-4))" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="evening" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          {!hasData ? (
+            <div className="h-full flex items-center justify-center">
+              <div className="text-center text-sm text-muted-foreground">
+                <p>No attendance data available</p>
+                <p className="text-xs mt-1">Import visits data to see attendance patterns</p>
+              </div>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border" opacity={0.3} />
+                <XAxis 
+                  dataKey="day" 
+                  className="text-xs" 
+                  tick={{ fill: "hsl(var(--muted-foreground))" }}
+                />
+                <YAxis 
+                  className="text-xs" 
+                  tick={{ fill: "hsl(var(--muted-foreground))" }}
+                />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--popover))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "0.5rem",
+                  }}
+                  labelStyle={{ color: "hsl(var(--foreground))" }}
+                />
+                <Legend />
+                <Bar dataKey="morning" fill="hsl(var(--chart-3))" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="afternoon" fill="hsl(var(--chart-4))" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="evening" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </CardContent>
     </Card>
