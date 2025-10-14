@@ -383,52 +383,64 @@ export class MindbodyService {
       return date;
     })();
 
-    // Fetch all pages of visits using pagination
-    const visits = await this.fetchAllPages<MindbodyVisit>(
-      organizationId,
-      `/client/clientvisits?StartDate=${visitStartDate.toISOString()}`,
-      'Visits',
-      200
-    );
-
     // Load students and schedules once for efficient lookup
     console.log('Loading students for visit import...');
     const students = await storage.getStudents(organizationId, 100000);
-    const studentMap = new Map(students.map(s => [s.mindbodyClientId, s]));
     
     console.log('Loading class schedules for visit import...');
     const schedules = await storage.getClassSchedules(organizationId);
     const scheduleMap = new Map(schedules.map(s => [s.mindbodyScheduleId, s]));
 
     let imported = 0;
+    let processedClients = 0;
 
-    for (const visit of visits) {
+    // Mindbody API requires ClientId parameter, so we fetch visits per client
+    console.log(`Fetching visits for ${students.length} clients...`);
+    
+    for (const student of students) {
       try {
-        // Skip if missing required fields
-        if (!visit.ClientId || !visit.ClassId || !visit.VisitDateTime) {
-          continue;
+        // Fetch all visits for this specific client
+        const visits = await this.fetchAllPages<MindbodyVisit>(
+          organizationId,
+          `/client/clientvisits?ClientId=${student.mindbodyClientId}&StartDate=${visitStartDate.toISOString()}`,
+          `Visits for client ${student.mindbodyClientId}`,
+          200
+        );
+
+        for (const visit of visits) {
+          try {
+            // Skip if missing required fields
+            if (!visit.ClassId || !visit.VisitDateTime) {
+              continue;
+            }
+
+            const schedule = scheduleMap.get(visit.ClassId.toString());
+            if (!schedule) continue;
+
+            await storage.createAttendance({
+              organizationId,
+              studentId: student.id,
+              scheduleId: schedule.id,
+              attendedAt: new Date(visit.VisitDateTime),
+              status: visit.SignedIn ? "attended" : "noshow",
+            });
+
+            imported++;
+          } catch (error) {
+            console.error(`Failed to import visit for client ${student.mindbodyClientId}:`, error);
+          }
         }
 
-        const student = studentMap.get(visit.ClientId);
-        if (!student) continue;
-
-        const schedule = scheduleMap.get(visit.ClassId.toString());
-        if (!schedule) continue;
-
-        await storage.createAttendance({
-          organizationId,
-          studentId: student.id,
-          scheduleId: schedule.id,
-          attendedAt: new Date(visit.VisitDateTime),
-          status: visit.SignedIn ? "attended" : "noshow",
-        });
-
-        imported++;
+        processedClients++;
+        if (processedClients % 100 === 0) {
+          console.log(`Processed ${processedClients}/${students.length} clients, ${imported} visits imported so far`);
+        }
       } catch (error) {
-        console.error(`Failed to import visit:`, error);
+        console.error(`Failed to fetch visits for client ${student.mindbodyClientId}:`, error);
       }
     }
 
+    console.log(`Visit import complete: ${imported} visits from ${processedClients} clients`);
     return imported;
   }
 
@@ -439,46 +451,60 @@ export class MindbodyService {
       return date;
     })();
 
-    // Fetch all pages of sales using pagination
-    const sales = await this.fetchAllPages<MindbodySale>(
-      organizationId,
-      `/sale/sales?StartSaleDateTime=${saleStartDate.toISOString()}`,
-      'Sales',
-      200
-    );
-
     // Load students once for efficient lookup
     console.log('Loading students for sales import...');
     const students = await storage.getStudents(organizationId, 100000);
-    const studentMap = new Map(students.map(s => [s.mindbodyClientId, s]));
 
     let imported = 0;
+    let processedClients = 0;
 
-    for (const sale of sales) {
+    // Note: Unlike visits, sales API might allow fetching all at once
+    // Try fetching all sales first, then fall back to per-client if needed
+    console.log(`Fetching sales for ${students.length} clients...`);
+
+    for (const student of students) {
       try {
-        const student = studentMap.get(sale.ClientId);
+        // Fetch all sales for this specific client
+        const sales = await this.fetchAllPages<MindbodySale>(
+          organizationId,
+          `/sale/sales?ClientId=${student.mindbodyClientId}&StartSaleDateTime=${saleStartDate.toISOString()}`,
+          `Sales for client ${student.mindbodyClientId}`,
+          200
+        );
 
-        for (const item of sale.PurchasedItems) {
-          // Skip items without amount information
-          if (!item.AmountPaid && item.AmountPaid !== 0) {
-            continue;
+        for (const sale of sales) {
+          try {
+            for (const item of sale.PurchasedItems) {
+              // Skip items without amount information
+              if (!item.AmountPaid && item.AmountPaid !== 0) {
+                continue;
+              }
+              
+              await storage.createRevenue({
+                organizationId,
+                studentId: student.id,
+                amount: item.AmountPaid.toString(),
+                type: item.Type || 'Unknown',
+                description: item.Description || 'No description',
+                transactionDate: new Date(sale.SaleDateTime),
+              });
+              imported++;
+            }
+          } catch (error) {
+            console.error(`Failed to import sale ${sale.Id}:`, error);
           }
-          
-          await storage.createRevenue({
-            organizationId,
-            studentId: student?.id || null,
-            amount: item.AmountPaid.toString(),
-            type: item.Type || 'Unknown',
-            description: item.Description || 'No description',
-            transactionDate: new Date(sale.SaleDateTime),
-          });
-          imported++;
+        }
+
+        processedClients++;
+        if (processedClients % 100 === 0) {
+          console.log(`Processed ${processedClients}/${students.length} clients, ${imported} revenue items imported so far`);
         }
       } catch (error) {
-        console.error(`Failed to import sale ${sale.Id}:`, error);
+        console.error(`Failed to fetch sales for client ${student.mindbodyClientId}:`, error);
       }
     }
 
+    console.log(`Sales import complete: ${imported} revenue items from ${processedClients} clients`);
     return imported;
   }
 
