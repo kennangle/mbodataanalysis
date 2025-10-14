@@ -132,17 +132,53 @@ export class MindbodyService {
     return data.access_token;
   }
 
+  private async getUserToken(): Promise<string> {
+    const apiKey = process.env.MINDBODY_API_KEY;
+    const clientSecret = process.env.MINDBODY_CLIENT_SECRET;
+    const siteId = "133";
+    
+    if (!apiKey || !clientSecret) {
+      throw new Error("MINDBODY_API_KEY and MINDBODY_CLIENT_SECRET required");
+    }
+
+    // Source credentials username must be prefixed with underscore
+    const response = await fetch(`${MINDBODY_API_BASE}/usertoken/issue`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Api-Key": apiKey,
+        "SiteId": siteId,
+      },
+      body: JSON.stringify({
+        Username: "_YHC", // Source name with underscore prefix
+        Password: clientSecret,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Failed to get user token: ${response.status} - ${errorText}`);
+      throw new Error(`Failed to authenticate with Mindbody: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.AccessToken;
+  }
+
   async makeAuthenticatedRequest(
     organizationId: string,
     endpoint: string,
     options: RequestInit = {}
   ): Promise<any> {
     const apiKey = process.env.MINDBODY_API_KEY;
-    const siteId = "133"; // Your site ID
+    const siteId = "133";
     
     if (!apiKey) {
       throw new Error("MINDBODY_API_KEY not configured");
     }
+
+    // Get user token for staff-level access
+    const userToken = await this.getUserToken();
 
     const response = await fetch(`${MINDBODY_API_BASE}${endpoint}`, {
       ...options,
@@ -151,6 +187,7 @@ export class MindbodyService {
         "Content-Type": "application/json",
         "Api-Key": apiKey,
         "SiteId": siteId,
+        "Authorization": `Bearer ${userToken}`,
       },
     });
 
