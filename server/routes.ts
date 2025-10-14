@@ -2,9 +2,13 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { requireAuth } from "./auth";
-import { insertStudentSchema, insertClassSchema, insertAttendanceSchema, insertRevenueSchema, organizations } from "@shared/schema";
+import { insertStudentSchema, insertClassSchema, insertAttendanceSchema, insertRevenueSchema, insertUserSchema, organizations } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import type { User } from "@shared/schema";
+import { scrypt, randomBytes } from "crypto";
+import { promisify } from "util";
+
+const scryptAsync = promisify(scrypt);
 import { MindbodyService } from "./mindbody";
 import { createSampleData } from "./sample-data";
 import { openaiService } from "./openai";
@@ -12,6 +16,128 @@ import { db } from "./db";
 import { eq } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  
+  // User management routes
+  app.get("/api/users", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.user as User)?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const users = await storage.getUsers(organizationId);
+      res.json(users);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
+  app.post("/api/users", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.user as User)?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { password, ...userData } = req.body;
+      
+      if (!password) {
+        return res.status(400).json({ error: "Password is required" });
+      }
+
+      // Hash password
+      const salt = randomBytes(16).toString("hex");
+      const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+      const passwordHash = `${buf.toString("hex")}.${salt}`;
+
+      const validation = insertUserSchema.safeParse({ 
+        ...userData, 
+        passwordHash,
+        organizationId 
+      });
+      
+      if (!validation.success) {
+        return res.status(400).json({ error: fromZodError(validation.error).toString() });
+      }
+
+      const user = await storage.createUser(validation.data);
+      const { passwordHash: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error: any) {
+      if (error?.code === '23505') { // Unique constraint violation
+        return res.status(400).json({ error: "Email already exists" });
+      }
+      res.status(500).json({ error: "Failed to create user" });
+    }
+  });
+
+  app.patch("/api/users/:id", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.user as User)?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const user = await storage.getUserById(req.params.id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (user.organizationId !== organizationId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
+      const { password, ...updateData } = req.body;
+      let dataToUpdate = { ...updateData };
+
+      // If password is provided, hash it
+      if (password) {
+        const salt = randomBytes(16).toString("hex");
+        const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+        dataToUpdate.passwordHash = `${buf.toString("hex")}.${salt}`;
+      }
+
+      const validation = insertUserSchema.partial().safeParse(dataToUpdate);
+      if (!validation.success) {
+        return res.status(400).json({ error: fromZodError(validation.error).toString() });
+      }
+
+      await storage.updateUser(req.params.id, validation.data);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update user" });
+    }
+  });
+
+  app.delete("/api/users/:id", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.user as User)?.organizationId;
+      const currentUserId = (req.user as User)?.id;
+      
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      // Prevent self-deletion
+      if (req.params.id === currentUserId) {
+        return res.status(400).json({ error: "Cannot delete your own account" });
+      }
+
+      const user = await storage.getUserById(req.params.id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (user.organizationId !== organizationId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
+      await storage.deleteUser(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete user" });
+    }
+  });
   
   app.get("/api/students", requireAuth, async (req, res) => {
     try {
