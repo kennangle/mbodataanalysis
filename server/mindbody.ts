@@ -164,13 +164,11 @@ export class MindbodyService {
   }
 
   async importClients(organizationId: string): Promise<number> {
-    // Get clients modified in the last 12 months
-    const startDate = new Date();
-    startDate.setMonth(startDate.getMonth() - 12);
-    
+    // Use searchText with wildcard to get all clients
+    // The API requires at least one search parameter
     const data = await this.makeAuthenticatedRequest(
       organizationId,
-      `/client/clients?limit=200&offset=0&lastModifiedDate=${startDate.toISOString()}`
+      `/client/clients?limit=200&offset=0&searchText=`
     );
 
     const clients: MindbodyClient[] = data.Clients || [];
