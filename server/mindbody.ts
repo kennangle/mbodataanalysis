@@ -526,8 +526,37 @@ export class MindbodyService {
     visits: number;
     sales: number;
   }> {
-    const startDate = config?.startDate ? new Date(config.startDate) : undefined;
-    const endDate = config?.endDate ? new Date(config.endDate) : undefined;
+    console.log('Import config received:', JSON.stringify(config, null, 2));
+    
+    // Parse dates and ensure they're valid 4-digit years
+    let startDate: Date | undefined;
+    let endDate: Date | undefined;
+    
+    if (config?.startDate) {
+      // Add 'T00:00:00.000Z' to ensure correct parsing as UTC
+      const dateStr = config.startDate.includes('T') ? config.startDate : `${config.startDate}T00:00:00.000Z`;
+      startDate = new Date(dateStr);
+      console.log(`Parsed startDate: ${config.startDate} -> ${startDate.toISOString()}`);
+      
+      // Validate year is 4 digits
+      if (startDate.getFullYear() < 1000 || startDate.getFullYear() > 9999) {
+        console.error(`Invalid year in startDate: ${startDate.getFullYear()}`);
+        throw new Error(`Invalid start date year: ${startDate.getFullYear()}`);
+      }
+    }
+    
+    if (config?.endDate) {
+      // Add 'T00:00:00.000Z' to ensure correct parsing as UTC
+      const dateStr = config.endDate.includes('T') ? config.endDate : `${config.endDate}T00:00:00.000Z`;
+      endDate = new Date(dateStr);
+      console.log(`Parsed endDate: ${config.endDate} -> ${endDate.toISOString()}`);
+      
+      // Validate year is 4 digits
+      if (endDate.getFullYear() < 1000 || endDate.getFullYear() > 9999) {
+        console.error(`Invalid year in endDate: ${endDate.getFullYear()}`);
+        throw new Error(`Invalid end date year: ${endDate.getFullYear()}`);
+      }
+    }
 
     const dataTypes = config?.dataTypes || {
       clients: true,
