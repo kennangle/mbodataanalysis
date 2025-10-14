@@ -17,6 +17,7 @@ import Settings from "@/pages/Settings";
 import Notifications from "@/pages/Notifications";
 import Reports from "@/pages/Reports";
 import Classes from "@/pages/Classes";
+import Users from "@/pages/Users";
 
 function Router() {
   return (
@@ -28,6 +29,7 @@ function Router() {
       <Route path="/analytics" component={Analytics} />
       <Route path="/students" component={Students} />
       <Route path="/classes" component={Classes} />
+      <Route path="/users" component={Users} />
       <Route path="/reports" component={Reports} />
       <Route path="/import" component={Import} />
       <Route path="/notifications" component={Notifications} />

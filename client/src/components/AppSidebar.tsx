@@ -7,6 +7,7 @@ import {
   Settings,
   Database,
   Bell,
+  UserCog,
 } from "lucide-react";
 import {
   Sidebar,
@@ -39,6 +40,7 @@ const menuItems = [
   {
     title: "Settings",
     items: [
+      { title: "Users", url: "/users", icon: UserCog },
       { title: "Notifications", url: "/notifications", icon: Bell },
       { title: "Settings", url: "/settings", icon: Settings },
     ],
