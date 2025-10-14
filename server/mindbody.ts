@@ -328,6 +328,11 @@ export class MindbodyService {
       200
     );
 
+    // Load existing classes once for efficient lookup
+    console.log('Loading existing classes for import...');
+    const existingClasses = await storage.getClasses(organizationId);
+    const classMap = new Map(existingClasses.map(c => [c.mindbodyClassId, c]));
+
     let imported = 0;
 
     for (const mbClass of classes) {
@@ -337,10 +342,7 @@ export class MindbodyService {
           continue;
         }
 
-        const existingClass = await storage.getClasses(organizationId);
-        let classRecord = existingClass.find(
-          c => c.mindbodyClassId === mbClass.ClassDescription.Id.toString()
-        );
+        let classRecord = classMap.get(mbClass.ClassDescription.Id.toString());
 
         if (!classRecord) {
           classRecord = await storage.createClass({
@@ -352,6 +354,8 @@ export class MindbodyService {
             capacity: mbClass.MaxCapacity || null,
             duration: null,
           });
+          // Add to map for future lookups in this import session
+          classMap.set(classRecord.mindbodyClassId!, classRecord);
         }
 
         await storage.createClassSchedule({
