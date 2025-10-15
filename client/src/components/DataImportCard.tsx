@@ -1,21 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Upload, CheckCircle, AlertCircle, Loader2, Database } from "lucide-react";
+import { Upload, CheckCircle, AlertCircle, Loader2, Database, Play } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-
-interface ImportStats {
-  students: number;
-  classes: number;
-  attendance: number;
-  revenue: number;
-}
 
 interface ImportConfig {
   startDate: string;
@@ -28,13 +21,28 @@ interface ImportConfig {
   };
 }
 
+interface JobProgress {
+  clients?: { current: number; total: number; imported: number; updated: number; completed: boolean };
+  classes?: { current: number; total: number; imported: number; completed: boolean };
+  visits?: { current: number; total: number; imported: number; completed: boolean };
+  sales?: { current: number; total: number; imported: number; completed: boolean };
+}
+
+interface JobStatus {
+  id: string;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'paused';
+  dataTypes: string[];
+  progress: JobProgress;
+  currentDataType: string | null;
+  error: string | null;
+}
+
 export function DataImportCard() {
-  const [progress, setProgress] = useState(0);
-  const [importStats, setImportStats] = useState<ImportStats | null>(null);
+  const [currentJobId, setCurrentJobId] = useState<string | null>(null);
+  const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Default to last 12 months
   const getDefaultStartDate = () => {
     const date = new Date();
     date.setFullYear(date.getFullYear() - 1);
@@ -56,52 +64,129 @@ export function DataImportCard() {
     },
   });
 
-  const mutation = useMutation({
-    mutationFn: async (payload: { useSampleData?: boolean; config?: ImportConfig }) => {
-      setProgress(0);
-      const interval = setInterval(() => {
-        setProgress((prev) => Math.min(prev + 10, 90));
-      }, 500);
+  // Poll for job status
+  useEffect(() => {
+    if (!currentJobId) return;
 
-      const response = await apiRequest("POST", "/api/mindbody/import", payload);
-      const result = await response.json() as { success: boolean; message: string; stats: ImportStats };
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await apiRequest("GET", `/api/mindbody/import/${currentJobId}/status`);
+        const status = await response.json() as JobStatus;
+        setJobStatus(status);
 
-      clearInterval(interval);
-      setProgress(100);
+        if (status.status === 'completed') {
+          clearInterval(pollInterval);
+          queryClient.invalidateQueries();
+          toast({
+            title: "Import completed",
+            description: "All data has been imported successfully",
+          });
+        } else if (status.status === 'failed') {
+          clearInterval(pollInterval);
+          toast({
+            variant: "destructive",
+            title: "Import failed",
+            description: status.error || "Unknown error occurred",
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch job status:", error);
+      }
+    }, 2000); // Poll every 2 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [currentJobId, queryClient, toast]);
+
+  const startImportMutation = useMutation({
+    mutationFn: async (config: ImportConfig) => {
+      const response = await apiRequest("POST", "/api/mindbody/import/start", { config });
+      const result = await response.json() as { success: boolean; jobId: string; message: string };
       return result;
     },
     onSuccess: (data) => {
-      setImportStats(data.stats);
-      queryClient.invalidateQueries();
+      setCurrentJobId(data.jobId);
       toast({
-        title: "Import successful",
-        description: data.message,
+        title: "Import started",
+        description: "Your import is running in the background",
       });
     },
     onError: (error: Error) => {
-      setProgress(0);
       toast({
         variant: "destructive",
-        title: "Import failed",
+        title: "Failed to start import",
         description: error.message,
       });
     },
   });
 
-  const handleImport = (useSampleData: boolean = false) => {
-    setImportStats(null);
-    if (useSampleData) {
-      mutation.mutate({ useSampleData: true });
-    } else {
-      mutation.mutate({ config: importConfig });
+  const resumeImportMutation = useMutation({
+    mutationFn: async (jobId: string) => {
+      const response = await apiRequest("POST", `/api/mindbody/import/${jobId}/resume`);
+      const result = await response.json() as { success: boolean; message: string };
+      return result;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Import resumed",
+        description: "Your import is continuing in the background",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Failed to resume import",
+        description: error.message,
+      });
+    },
+  });
+
+  const handleStartImport = () => {
+    startImportMutation.mutate(importConfig);
+  };
+
+  const handleResumeImport = () => {
+    if (currentJobId) {
+      resumeImportMutation.mutate(currentJobId);
     }
   };
 
   const handleReset = () => {
-    setImportStats(null);
-    setProgress(0);
-    mutation.reset();
+    setCurrentJobId(null);
+    setJobStatus(null);
+    startImportMutation.reset();
   };
+
+  // Calculate overall progress
+  const calculateProgress = (): number => {
+    if (!jobStatus || !jobStatus.progress) return 0;
+    
+    const dataTypes = Object.keys(jobStatus.progress);
+    if (dataTypes.length === 0) return 0;
+
+    let totalProgress = 0;
+    let completedTypes = 0;
+
+    dataTypes.forEach((type) => {
+      const typeProgress = jobStatus.progress[type as keyof JobProgress];
+      if (typeProgress) {
+        if (typeProgress.completed) {
+          completedTypes++;
+        } else if (typeProgress.total > 0) {
+          totalProgress += (typeProgress.current / typeProgress.total) * 100;
+        }
+      }
+    });
+
+    const avgProgress = dataTypes.length > 0 
+      ? (completedTypes * 100 + totalProgress) / dataTypes.length 
+      : 0;
+
+    return Math.min(Math.round(avgProgress), 100);
+  };
+
+  const isJobActive = jobStatus?.status === 'running' || jobStatus?.status === 'pending';
+  const isJobResumable = jobStatus?.status === 'failed' || jobStatus?.status === 'paused';
+  const isJobCompleted = jobStatus?.status === 'completed';
 
   return (
     <Card>
@@ -111,16 +196,16 @@ export function DataImportCard() {
             <CardTitle>Mindbody Data Import</CardTitle>
             <CardDescription>Import your Mindbody account data</CardDescription>
           </div>
-          {importStats && (
+          {isJobCompleted && (
             <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
           )}
-          {mutation.isError && (
+          {jobStatus?.status === 'failed' && (
             <AlertCircle className="h-5 w-5 text-destructive" />
           )}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!mutation.isPending && !importStats && (
+        {!currentJobId && (
           <div className="space-y-6">
             <p className="text-sm text-muted-foreground">
               Import your students, classes, schedules, attendance records, and revenue data from Mindbody.
@@ -224,57 +309,80 @@ export function DataImportCard() {
               </div>
             </div>
 
-            <div className="flex gap-2">
-              <Button 
-                onClick={() => handleImport(true)} 
-                className="flex-1 gap-2"
-                variant="outline"
-                data-testid="button-import-sample"
-              >
-                <Upload className="h-4 w-4" />
-                Use Sample Data
-              </Button>
-              <Button 
-                onClick={() => handleImport(false)} 
-                className="flex-1 gap-2"
-                data-testid="button-import-mindbody"
-              >
+            <Button 
+              onClick={handleStartImport} 
+              className="w-full gap-2"
+              disabled={startImportMutation.isPending}
+              data-testid="button-start-import"
+            >
+              {startImportMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
                 <Database className="h-4 w-4" />
-                Import from Mindbody
-              </Button>
-            </div>
+              )}
+              Start Import
+            </Button>
             <p className="text-xs text-muted-foreground">
-              Configure date range and data types, then import from Mindbody (Site ID: 133) or use sample data.
+              Import runs in the background. You can close this page and check back later.
             </p>
           </div>
         )}
 
-        {mutation.isPending && (
+        {isJobActive && jobStatus && (
           <div className="space-y-4">
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Importing data...</span>
-                <span className="font-medium">{progress}%</span>
+                <span className="text-muted-foreground">
+                  Importing {jobStatus.currentDataType || 'data'}...
+                </span>
+                <span className="font-medium">{calculateProgress()}%</span>
               </div>
-              <Progress value={progress} />
+              <Progress value={calculateProgress()} />
             </div>
+
+            {/* Show detailed progress for each data type */}
+            <div className="space-y-2 text-xs">
+              {Object.entries(jobStatus.progress).map(([type, data]) => (
+                <div key={type} className="flex justify-between text-muted-foreground">
+                  <span className="capitalize">{type}:</span>
+                  <span>
+                    {data.completed ? (
+                      <CheckCircle className="inline h-3 w-3 text-green-600" />
+                    ) : (
+                      `${data.current} / ${data.total || '?'}`
+                    )}
+                  </span>
+                </div>
+              ))}
+            </div>
+
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Loader2 className="h-3 w-3 animate-spin" />
-              <span>Please don't close this window. This may take a few minutes.</span>
+              <span>Running in background. Safe to close this page.</span>
             </div>
           </div>
         )}
 
-        {importStats && (
+        {isJobCompleted && jobStatus && (
           <div className="space-y-4">
             <div className="rounded-lg bg-green-50 dark:bg-green-950/20 p-4">
               <p className="text-sm font-medium text-green-900 dark:text-green-100">
                 Import completed successfully!
               </p>
-              <p className="text-xs text-green-700 dark:text-green-300 mt-1">
-                Imported {importStats.students} students, {importStats.classes} classes, 
-                {importStats.attendance} attendance records, and {importStats.revenue} revenue transactions.
-              </p>
+              <div className="text-xs text-green-700 dark:text-green-300 mt-2 space-y-1">
+                {jobStatus.progress.clients && (
+                  <p>Clients: {jobStatus.progress.clients.imported} new, {jobStatus.progress.clients.updated} updated</p>
+                )}
+                {jobStatus.progress.classes && (
+                  <p>Classes: {jobStatus.progress.classes.imported} imported</p>
+                )}
+                {jobStatus.progress.visits && (
+                  <p>Visits: {jobStatus.progress.visits.imported} imported</p>
+                )}
+                {jobStatus.progress.sales && (
+                  <p>Sales: {jobStatus.progress.sales.imported} imported</p>
+                )}
+              </div>
             </div>
             <Button 
               variant="outline" 
@@ -284,6 +392,44 @@ export function DataImportCard() {
             >
               Import Again
             </Button>
+          </div>
+        )}
+
+        {isJobResumable && jobStatus && (
+          <div className="space-y-4">
+            <div className="rounded-lg bg-destructive/10 p-4">
+              <p className="text-sm font-medium text-destructive">
+                Import {jobStatus.status === 'failed' ? 'failed' : 'paused'}
+              </p>
+              {jobStatus.error && (
+                <p className="text-xs text-destructive/80 mt-1">
+                  {jobStatus.error}
+                </p>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleResumeImport}
+                className="flex-1 gap-2"
+                disabled={resumeImportMutation.isPending}
+                data-testid="button-resume-import"
+              >
+                {resumeImportMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Play className="h-4 w-4" />
+                )}
+                Resume Import
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleReset}
+                className="flex-1"
+                data-testid="button-cancel-import"
+              >
+                Cancel
+              </Button>
+            </div>
           </div>
         )}
       </CardContent>
