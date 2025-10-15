@@ -109,6 +109,8 @@ export function DataImportCard() {
             title: "Import failed",
             description: status.error || "Unknown error occurred",
           });
+        } else if (status.status === 'paused') {
+          clearInterval(pollInterval);
         }
       } catch (error) {
         console.error("Failed to fetch job status:", error);
@@ -161,6 +163,27 @@ export function DataImportCard() {
     },
   });
 
+  const cancelImportMutation = useMutation({
+    mutationFn: async (jobId: string) => {
+      const response = await apiRequest("POST", `/api/mindbody/import/${jobId}/cancel`);
+      const result = await response.json() as { success: boolean; message: string };
+      return result;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Import cancelled",
+        description: "Your import has been stopped",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Failed to cancel import",
+        description: error.message,
+      });
+    },
+  });
+
   const handleStartImport = () => {
     startImportMutation.mutate(importConfig);
   };
@@ -168,6 +191,12 @@ export function DataImportCard() {
   const handleResumeImport = () => {
     if (currentJobId) {
       resumeImportMutation.mutate(currentJobId);
+    }
+  };
+
+  const handleCancelImport = () => {
+    if (currentJobId) {
+      cancelImportMutation.mutate(currentJobId);
     }
   };
 
@@ -381,6 +410,20 @@ export function DataImportCard() {
               <Loader2 className="h-3 w-3 animate-spin" />
               <span>Running in background. Safe to close this page.</span>
             </div>
+
+            <Button 
+              variant="outline" 
+              onClick={handleCancelImport}
+              className="w-full"
+              disabled={cancelImportMutation.isPending}
+              data-testid="button-cancel-import"
+            >
+              {cancelImportMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Cancel Import"
+              )}
+            </Button>
           </div>
         )}
 
