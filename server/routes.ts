@@ -684,6 +684,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/mindbody/import/:id/cancel", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.user as User)?.organizationId;
+      const jobId = req.params.id;
+      
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const job = await storage.getImportJob(jobId);
+      
+      if (!job) {
+        return res.status(404).json({ error: "Import job not found" });
+      }
+
+      // Check authorization
+      if (job.organizationId !== organizationId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
+      // Can only cancel pending or running jobs
+      if (job.status !== 'pending' && job.status !== 'running') {
+        return res.status(400).json({ error: "Job is not in a cancellable state" });
+      }
+
+      // Update status to paused (can be resumed later if needed)
+      await storage.updateImportJob(jobId, {
+        status: 'paused',
+        error: 'Cancelled by user',
+      });
+
+      res.json({
+        success: true,
+        message: "Import job cancelled"
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to cancel import";
+      res.status(500).json({ error: errorMessage });
+    }
+  });
+
   // Legacy import endpoint (kept for backward compatibility)
   app.post("/api/mindbody/import", requireAuth, async (req, res) => {
     try {
