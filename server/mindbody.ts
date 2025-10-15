@@ -326,28 +326,52 @@ export class MindbodyService {
       200
     );
 
+    // Load existing students for duplicate detection
+    console.log('Loading existing students for duplicate detection...');
+    const existingStudents = await storage.getStudents(organizationId, 100000);
+    const studentMap = new Map(existingStudents.map(s => [s.mindbodyClientId, s]));
+
     let imported = 0;
+    let updated = 0;
 
     for (const client of clients) {
       try {
-        await storage.createStudent({
-          organizationId,
-          mindbodyClientId: client.Id,
-          firstName: client.FirstName,
-          lastName: client.LastName,
-          email: client.Email || null,
-          phone: client.MobilePhone || null,
-          status: client.Status === "Active" ? "active" : "inactive",
-          joinDate: client.CreationDate ? new Date(client.CreationDate) : null,
-          membershipType: null,
-        });
-        imported++;
+        const existingStudent = studentMap.get(client.Id);
+        
+        if (existingStudent) {
+          // Update existing student
+          await storage.updateStudent(existingStudent.id, {
+            firstName: client.FirstName,
+            lastName: client.LastName,
+            email: client.Email || null,
+            phone: client.MobilePhone || null,
+            status: client.Status === "Active" ? "active" : "inactive",
+            joinDate: client.CreationDate ? new Date(client.CreationDate) : null,
+          });
+          updated++;
+        } else {
+          // Create new student
+          const newStudent = await storage.createStudent({
+            organizationId,
+            mindbodyClientId: client.Id,
+            firstName: client.FirstName,
+            lastName: client.LastName,
+            email: client.Email || null,
+            phone: client.MobilePhone || null,
+            status: client.Status === "Active" ? "active" : "inactive",
+            joinDate: client.CreationDate ? new Date(client.CreationDate) : null,
+            membershipType: null,
+          });
+          studentMap.set(client.Id, newStudent); // Add to map for future lookups
+          imported++;
+        }
       } catch (error) {
         console.error(`Failed to import client ${client.Id}:`, error);
       }
     }
 
-    return imported;
+    console.log(`Client import complete: ${imported} new, ${updated} updated`);
+    return imported + updated;
   }
 
   async importClasses(organizationId: string, startDate?: Date, endDate?: Date): Promise<number> {
