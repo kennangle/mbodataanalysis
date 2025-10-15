@@ -172,3 +172,29 @@ export const sessions = pgTable("sessions", {
 }, (table) => ({
   expireIdx: index("sessions_expire_idx").on(table.expire),
 }));
+
+export const importJobs = pgTable("import_jobs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  organizationId: uuid("organization_id").notNull(),
+  status: text("status").notNull().default("pending"), // pending, running, completed, failed, paused
+  dataTypes: text("data_types").array().notNull(), // ["clients", "classes", "visits", "sales"]
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  progress: text("progress").notNull().default("{}"), // JSON: {clients: {current: 0, total: 0}, ...}
+  currentDataType: text("current_data_type"), // Which data type is currently processing
+  currentOffset: integer("current_offset").default(0), // Current pagination offset
+  error: text("error"), // Error message if failed
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  orgIdx: index("import_jobs_org_idx").on(table.organizationId),
+  statusIdx: index("import_jobs_status_idx").on(table.status),
+}));
+
+export const insertImportJobSchema = createInsertSchema(importJobs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertImportJob = z.infer<typeof insertImportJobSchema>;
+export type ImportJob = typeof importJobs.$inferSelect;
