@@ -40,8 +40,29 @@ interface JobStatus {
 export function DataImportCard() {
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
+  const [isLoadingActiveJob, setIsLoadingActiveJob] = useState(true);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  // Fetch active job on mount to restore progress after page reload
+  useEffect(() => {
+    const fetchActiveJob = async () => {
+      try {
+        const response = await apiRequest("GET", "/api/mindbody/import/active");
+        if (response.ok) {
+          const job = await response.json() as JobStatus;
+          setCurrentJobId(job.id);
+          setJobStatus(job);
+        }
+      } catch (error) {
+        // No active job found - this is expected
+      } finally {
+        setIsLoadingActiveJob(false);
+      }
+    };
+
+    fetchActiveJob();
+  }, []);
 
   const getDefaultStartDate = () => {
     const date = new Date();

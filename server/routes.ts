@@ -502,6 +502,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // New resumable import endpoints
+  app.get("/api/mindbody/import/active", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.user as User)?.organizationId;
+      
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const activeJob = await storage.getActiveImportJob(organizationId);
+      
+      if (!activeJob) {
+        return res.status(404).json({ error: "No active import job" });
+      }
+
+      res.json({
+        id: activeJob.id,
+        status: activeJob.status,
+        dataTypes: activeJob.dataTypes,
+        startDate: activeJob.startDate,
+        endDate: activeJob.endDate,
+        progress: JSON.parse(activeJob.progress),
+        currentDataType: activeJob.currentDataType,
+        currentOffset: activeJob.currentOffset,
+        error: activeJob.error,
+        createdAt: activeJob.createdAt,
+        updatedAt: activeJob.updatedAt,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to fetch active job";
+      res.status(500).json({ error: errorMessage });
+    }
+  });
+
   app.post("/api/mindbody/import/start", requireAuth, async (req, res) => {
     try {
       const organizationId = (req.user as User)?.organizationId;

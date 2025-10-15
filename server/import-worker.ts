@@ -3,15 +3,31 @@ import { mindbodyService } from "./mindbody";
 import type { ImportJob } from "@shared/schema";
 
 export class ImportWorker {
+  private jobQueue: string[] = [];
   private isProcessing = false;
   private currentJobId: string | null = null;
 
   async processJob(jobId: string): Promise<void> {
-    if (this.isProcessing) {
-      console.log('Worker already processing a job, skipping...');
-      return;
+    // Add job to queue
+    if (!this.jobQueue.includes(jobId)) {
+      this.jobQueue.push(jobId);
+      console.log(`Job ${jobId} added to queue (position ${this.jobQueue.length})`);
     }
 
+    // Start processing if not already processing
+    if (!this.isProcessing) {
+      this.processQueue();
+    }
+  }
+
+  private async processQueue(): Promise<void> {
+    while (this.jobQueue.length > 0) {
+      const jobId = this.jobQueue.shift()!;
+      await this.processJobInternal(jobId);
+    }
+  }
+
+  private async processJobInternal(jobId: string): Promise<void> {
     this.isProcessing = true;
     this.currentJobId = jobId;
 
