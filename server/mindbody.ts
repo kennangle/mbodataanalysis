@@ -1,4 +1,5 @@
 import { storage } from "./storage";
+import pLimit from "p-limit";
 
 interface MindbodyTokenResponse {
   access_token: string;
@@ -71,6 +72,9 @@ function getRedirectUri(): string {
 }
 
 export class MindbodyService {
+  private cachedUserToken: string | null = null;
+  private tokenExpiryTime: number = 0;
+
   async exchangeCodeForTokens(code: string, organizationId: string): Promise<void> {
     const redirectUri = getRedirectUri();
 
@@ -140,6 +144,12 @@ export class MindbodyService {
   }
 
   private async getUserToken(): Promise<string> {
+    // Return cached token if still valid (expires in 60 minutes, we cache for 55)
+    const now = Date.now();
+    if (this.cachedUserToken && now < this.tokenExpiryTime) {
+      return this.cachedUserToken;
+    }
+
     const apiKey = process.env.MINDBODY_API_KEY;
     const clientSecret = process.env.MINDBODY_CLIENT_SECRET;
     const siteId = "133";
@@ -169,6 +179,11 @@ export class MindbodyService {
     }
 
     const data = await response.json();
+    
+    // Cache token for 55 minutes (expires in 60)
+    this.cachedUserToken = data.AccessToken;
+    this.tokenExpiryTime = now + (55 * 60 * 1000);
+    
     return data.AccessToken;
   }
 
@@ -202,6 +217,35 @@ export class MindbodyService {
       const errorText = await response.text();
       console.error(`Mindbody API error: ${response.status} - ${errorText}`);
       console.error(`Request URL: ${MINDBODY_API_BASE}${endpoint}`);
+      
+      // Clear cached token on authentication errors and retry once
+      if (response.status === 401) {
+        console.log('Authentication error detected, clearing token cache and retrying...');
+        this.cachedUserToken = null;
+        this.tokenExpiryTime = 0;
+        
+        // Retry once with fresh token
+        const newToken = await this.getUserToken();
+        const retryResponse = await fetch(`${MINDBODY_API_BASE}${endpoint}`, {
+          ...options,
+          headers: {
+            ...options.headers,
+            "Content-Type": "application/json",
+            "Api-Key": apiKey,
+            "SiteId": siteId,
+            "Authorization": `Bearer ${newToken}`,
+          },
+        });
+        
+        if (!retryResponse.ok) {
+          const retryErrorText = await retryResponse.text();
+          console.error(`Mindbody API retry failed: ${retryResponse.status} - ${retryErrorText}`);
+          throw new Error(`Mindbody API error: ${retryResponse.statusText}`);
+        }
+        
+        return await retryResponse.json();
+      }
+      
       throw new Error(`Mindbody API error: ${response.statusText}`);
     }
 
@@ -392,58 +436,59 @@ export class MindbodyService {
     const scheduleMap = new Map(schedules.map(s => [s.mindbodyScheduleId, s]));
 
     let totalImported = 0;
-    const BATCH_SIZE = 50; // Process 50 clients in parallel
+    const CONCURRENCY_LIMIT = 15; // Limit to 15 concurrent requests (safe for Mindbody's 30 req/sec)
+    const limit = pLimit(CONCURRENCY_LIMIT);
     
-    console.log(`Processing ${students.length} clients in batches of ${BATCH_SIZE}...`);
+    console.log(`Processing ${students.length} clients with ${CONCURRENCY_LIMIT} concurrent requests...`);
 
-    // Process students in parallel batches
-    for (let i = 0; i < students.length; i += BATCH_SIZE) {
-      const batch = students.slice(i, i + BATCH_SIZE);
-      
-      const batchResults = await Promise.all(
-        batch.map(async (student) => {
-          try {
-            const visits = await this.fetchAllPages<MindbodyVisit>(
-              organizationId,
-              `/client/clientvisits?ClientId=${student.mindbodyClientId}&StartDate=${visitStartDate.toISOString()}`,
-              `Visits for client ${student.mindbodyClientId}`,
-              200
-            );
+    // Process students with rate limiting
+    const importPromises = students.map((student, index) =>
+      limit(async () => {
+        try {
+          const visits = await this.fetchAllPages<MindbodyVisit>(
+            organizationId,
+            `/client/clientvisits?ClientId=${student.mindbodyClientId}&StartDate=${visitStartDate.toISOString()}`,
+            'Visits',
+            200
+          );
 
-            let imported = 0;
-            for (const visit of visits) {
-              try {
-                if (!visit.ClassId || !visit.VisitDateTime) continue;
+          let imported = 0;
+          for (const visit of visits) {
+            try {
+              if (!visit.ClassId || !visit.VisitDateTime) continue;
 
-                const schedule = scheduleMap.get(visit.ClassId.toString());
-                if (!schedule) continue;
+              const schedule = scheduleMap.get(visit.ClassId.toString());
+              if (!schedule) continue;
 
-                await storage.createAttendance({
-                  organizationId,
-                  studentId: student.id,
-                  scheduleId: schedule.id,
-                  attendedAt: new Date(visit.VisitDateTime),
-                  status: visit.SignedIn ? "attended" : "noshow",
-                });
+              await storage.createAttendance({
+                organizationId,
+                studentId: student.id,
+                scheduleId: schedule.id,
+                attendedAt: new Date(visit.VisitDateTime),
+                status: visit.SignedIn ? "attended" : "noshow",
+              });
 
-                imported++;
-              } catch (error) {
-                console.error(`Failed to import visit:`, error);
-              }
+              imported++;
+            } catch (error) {
+              console.error(`Failed to import visit:`, error);
             }
-            return imported;
-          } catch (error) {
-            console.error(`Failed to fetch visits for client ${student.mindbodyClientId}:`, error);
-            return 0;
           }
-        })
-      );
+          
+          // Log progress every 50 clients
+          if ((index + 1) % 50 === 0) {
+            console.log(`Processed ${index + 1}/${students.length} clients...`);
+          }
+          
+          return imported;
+        } catch (error) {
+          console.error(`Failed to fetch visits for client ${student.mindbodyClientId}:`, error);
+          return 0;
+        }
+      })
+    );
 
-      const batchImported = batchResults.reduce((sum, count) => sum + count, 0);
-      totalImported += batchImported;
-      
-      console.log(`Batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(students.length / BATCH_SIZE)}: ${batchImported} visits imported (Total: ${totalImported})`);
-    }
+    const results = await Promise.all(importPromises);
+    totalImported = results.reduce((sum, count) => sum + count, 0);
 
     console.log(`Visit import complete: ${totalImported} visits imported from ${students.length} clients`);
     return totalImported;
@@ -461,57 +506,58 @@ export class MindbodyService {
     const students = await storage.getStudents(organizationId, 100000);
 
     let totalImported = 0;
-    const BATCH_SIZE = 50; // Process 50 clients in parallel
+    const CONCURRENCY_LIMIT = 15; // Limit to 15 concurrent requests (safe for Mindbody's 30 req/sec)
+    const limit = pLimit(CONCURRENCY_LIMIT);
     
-    console.log(`Processing ${students.length} clients in batches of ${BATCH_SIZE}...`);
+    console.log(`Processing ${students.length} clients with ${CONCURRENCY_LIMIT} concurrent requests...`);
 
-    // Process students in parallel batches
-    for (let i = 0; i < students.length; i += BATCH_SIZE) {
-      const batch = students.slice(i, i + BATCH_SIZE);
-      
-      const batchResults = await Promise.all(
-        batch.map(async (student) => {
-          try {
-            const sales = await this.fetchAllPages<MindbodySale>(
-              organizationId,
-              `/sale/sales?ClientId=${student.mindbodyClientId}&StartSaleDateTime=${saleStartDate.toISOString()}`,
-              `Sales for client ${student.mindbodyClientId}`,
-              200
-            );
+    // Process students with rate limiting
+    const importPromises = students.map((student, index) =>
+      limit(async () => {
+        try {
+          const sales = await this.fetchAllPages<MindbodySale>(
+            organizationId,
+            `/sale/sales?ClientId=${student.mindbodyClientId}&StartSaleDateTime=${saleStartDate.toISOString()}`,
+            'Sales',
+            200
+          );
 
-            let imported = 0;
-            for (const sale of sales) {
-              for (const item of sale.PurchasedItems) {
-                try {
-                  if (!item.AmountPaid && item.AmountPaid !== 0) continue;
-                  
-                  await storage.createRevenue({
-                    organizationId,
-                    studentId: student.id,
-                    amount: item.AmountPaid.toString(),
-                    type: item.Type || 'Unknown',
-                    description: item.Description || 'No description',
-                    transactionDate: new Date(sale.SaleDateTime),
-                  });
-                  imported++;
-                } catch (error) {
-                  console.error(`Failed to import sale item:`, error);
-                }
+          let imported = 0;
+          for (const sale of sales) {
+            for (const item of sale.PurchasedItems) {
+              try {
+                if (!item.AmountPaid && item.AmountPaid !== 0) continue;
+                
+                await storage.createRevenue({
+                  organizationId,
+                  studentId: student.id,
+                  amount: item.AmountPaid.toString(),
+                  type: item.Type || 'Unknown',
+                  description: item.Description || 'No description',
+                  transactionDate: new Date(sale.SaleDateTime),
+                });
+                imported++;
+              } catch (error) {
+                console.error(`Failed to import sale item:`, error);
               }
             }
-            return imported;
-          } catch (error) {
-            console.error(`Failed to fetch sales for client ${student.mindbodyClientId}:`, error);
-            return 0;
           }
-        })
-      );
+          
+          // Log progress every 50 clients
+          if ((index + 1) % 50 === 0) {
+            console.log(`Processed ${index + 1}/${students.length} clients...`);
+          }
+          
+          return imported;
+        } catch (error) {
+          console.error(`Failed to fetch sales for client ${student.mindbodyClientId}:`, error);
+          return 0;
+        }
+      })
+    );
 
-      const batchImported = batchResults.reduce((sum, count) => sum + count, 0);
-      totalImported += batchImported;
-      
-      console.log(`Batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(students.length / BATCH_SIZE)}: ${batchImported} revenue items imported (Total: ${totalImported})`);
-    }
+    const results = await Promise.all(importPromises);
+    totalImported = results.reduce((sum, count) => sum + count, 0);
 
     console.log(`Sales import complete: ${totalImported} revenue items imported from ${students.length} clients`);
     return totalImported;

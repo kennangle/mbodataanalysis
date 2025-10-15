@@ -503,6 +503,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/mindbody/import", requireAuth, async (req, res) => {
     try {
+      // Extend timeout for long-running imports (30 minutes)
+      req.setTimeout(30 * 60 * 1000); // 30 minutes in milliseconds
+      res.setTimeout(30 * 60 * 1000);
+      
       const organizationId = (req.user as User)?.organizationId;
       
       if (!organizationId) {

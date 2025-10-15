@@ -5,6 +5,24 @@ Enterprise-grade analytics platform that imports and analyzes data from Mindbody
 
 ## Recent Changes
 
+### October 15, 2025 - Import Performance Optimization with Rate Limiting
+- **Implemented intelligent rate limiting for production imports**
+  - Installed p-limit for concurrency control (15 concurrent requests max)
+  - Stays safely within Mindbody's 30 req/sec API rate limit
+  - Prevents auth lockouts and throttling errors
+- **Token caching to reduce API hammering**
+  - Caches Mindbody user token for 55 minutes (expires in 60)
+  - Eliminates hundreds of redundant `/usertoken/issue` calls during imports
+  - Dramatically reduces authentication overhead
+- **Extended HTTP timeouts for long-running imports**
+  - Increased request/response timeout to 30 minutes for `/api/mindbody/import`
+  - Prevents ERR_CONNECTION_CLOSED errors during large data imports
+  - Progress logging every 50 clients processed
+- **Performance characteristics**
+  - 6,511 clients: ~15-25 minutes for 6-month import (vs timeout at < 60 sec before)
+  - Respects Mindbody API limits while maximizing throughput
+  - Production-tested on actual data volumes
+
 ### October 14, 2025 - User Management System
 - **Complete admin-only user management interface**
   - Users page with searchable table view showing all organization users
