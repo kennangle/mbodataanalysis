@@ -101,6 +101,13 @@ export class ImportWorker {
 
     let batchResult;
     do {
+      // Check if job has been cancelled before processing next batch
+      const currentJob = await storage.getImportJob(job.id);
+      if (currentJob?.status === 'paused') {
+        console.log(`Job ${job.id} has been cancelled, stopping clients import`);
+        return;
+      }
+
       batchResult = await mindbodyService.importClientsResumable(
         job.organizationId,
         startDate,
@@ -146,6 +153,13 @@ export class ImportWorker {
 
     let batchResult;
     do {
+      // Check if job has been cancelled before processing next batch
+      const currentJob = await storage.getImportJob(job.id);
+      if (currentJob?.status === 'paused') {
+        console.log(`Job ${job.id} has been cancelled, stopping classes import`);
+        return;
+      }
+
       batchResult = await mindbodyService.importClassesResumable(
         job.organizationId,
         startDate,
@@ -190,6 +204,13 @@ export class ImportWorker {
 
     let batchResult;
     do {
+      // Check if job has been cancelled before processing next batch
+      const currentJob = await storage.getImportJob(job.id);
+      if (currentJob?.status === 'paused') {
+        console.log(`Job ${job.id} has been cancelled, stopping visits import`);
+        return;
+      }
+
       batchResult = await mindbodyService.importVisitsResumable(
         job.organizationId,
         startDate,
@@ -234,6 +255,13 @@ export class ImportWorker {
 
     let batchResult;
     do {
+      // Check if job has been cancelled before processing next batch
+      const currentJob = await storage.getImportJob(job.id);
+      if (currentJob?.status === 'paused') {
+        console.log(`Job ${job.id} has been cancelled, stopping sales import`);
+        return;
+      }
+
       batchResult = await mindbodyService.importSalesResumable(
         job.organizationId,
         startDate,
