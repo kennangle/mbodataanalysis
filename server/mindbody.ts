@@ -436,7 +436,7 @@ export class MindbodyService {
     const scheduleMap = new Map(schedules.map(s => [s.mindbodyScheduleId, s]));
 
     let totalImported = 0;
-    const CONCURRENCY_LIMIT = 15; // Limit to 15 concurrent requests (safe for Mindbody's 30 req/sec)
+    const CONCURRENCY_LIMIT = 25; // Increased to 25 concurrent requests (under Mindbody's 30 req/sec limit)
     const limit = pLimit(CONCURRENCY_LIMIT);
     
     console.log(`Processing ${students.length} clients with ${CONCURRENCY_LIMIT} concurrent requests...`);
@@ -506,7 +506,7 @@ export class MindbodyService {
     const students = await storage.getStudents(organizationId, 100000);
 
     let totalImported = 0;
-    const CONCURRENCY_LIMIT = 15; // Limit to 15 concurrent requests (safe for Mindbody's 30 req/sec)
+    const CONCURRENCY_LIMIT = 25; // Increased to 25 concurrent requests (under Mindbody's 30 req/sec limit)
     const limit = pLimit(CONCURRENCY_LIMIT);
     
     console.log(`Processing ${students.length} clients with ${CONCURRENCY_LIMIT} concurrent requests...`);
