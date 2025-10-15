@@ -667,6 +667,316 @@ export class MindbodyService {
 
     return { clients, classes, visits, sales };
   }
+
+  // Resumable import methods with progress tracking
+  async importClientsResumable(
+    organizationId: string,
+    startDate: Date,
+    endDate: Date,
+    onProgress: (current: number, total: number) => Promise<void>,
+    startOffset: number = 0
+  ): Promise<{ imported: number; updated: number; nextOffset: number; completed: boolean }> {
+    const BATCH_SIZE = 200;
+    const BATCH_DELAY = 200; // 200ms delay between batches
+    
+    // Fetch first page to get total count
+    const endpoint = `/client/clients?LastModifiedDate=${startDate.toISOString()}&Limit=${BATCH_SIZE}&Offset=${startOffset}`;
+    const data = await this.makeAuthenticatedRequest(organizationId, endpoint);
+    
+    const pagination: MindbodyPaginationResponse | undefined = data.PaginationResponse;
+    const totalResults = pagination?.TotalResults || 0;
+    const clients: MindbodyClient[] = data.Clients || [];
+    
+    if (clients.length === 0) {
+      return { imported: 0, updated: 0, nextOffset: startOffset, completed: true };
+    }
+    
+    // Load existing students for duplicate detection
+    console.log('Loading existing students for duplicate detection...');
+    const existingStudents = await storage.getStudents(organizationId, 100000);
+    const studentMap = new Map(existingStudents.map(s => [s.mindbodyClientId, s]));
+    
+    let imported = 0;
+    let updated = 0;
+    
+    // Process this batch
+    for (const client of clients) {
+      try {
+        const existingStudent = studentMap.get(client.Id);
+        
+        if (existingStudent) {
+          await storage.updateStudent(existingStudent.id, {
+            firstName: client.FirstName,
+            lastName: client.LastName,
+            email: client.Email || null,
+            phone: client.MobilePhone || null,
+            status: client.Status === "Active" ? "active" : "inactive",
+            joinDate: client.CreationDate ? new Date(client.CreationDate) : null,
+          });
+          updated++;
+        } else {
+          const newStudent = await storage.createStudent({
+            organizationId,
+            mindbodyClientId: client.Id,
+            firstName: client.FirstName,
+            lastName: client.LastName,
+            email: client.Email || null,
+            phone: client.MobilePhone || null,
+            status: client.Status === "Active" ? "active" : "inactive",
+            joinDate: client.CreationDate ? new Date(client.CreationDate) : null,
+            membershipType: null,
+          });
+          studentMap.set(client.Id, newStudent);
+          imported++;
+        }
+      } catch (error) {
+        console.error(`Failed to import client ${client.Id}:`, error);
+      }
+    }
+    
+    const nextOffset = startOffset + clients.length;
+    const completed = nextOffset >= totalResults;
+    
+    // Report progress
+    await onProgress(nextOffset, totalResults);
+    
+    // Delay before next batch (unless completed)
+    if (!completed) {
+      await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+    }
+    
+    return { imported, updated, nextOffset, completed };
+  }
+
+  async importClassesResumable(
+    organizationId: string,
+    startDate: Date,
+    endDate: Date,
+    onProgress: (current: number, total: number) => Promise<void>,
+    startOffset: number = 0
+  ): Promise<{ imported: number; nextOffset: number; completed: boolean }> {
+    const BATCH_SIZE = 200;
+    const BATCH_DELAY = 200; // 200ms delay between batches
+    
+    // Fetch first page to get total count
+    const endpoint = `/class/classes?StartDateTime=${startDate.toISOString()}&EndDateTime=${endDate.toISOString()}&Limit=${BATCH_SIZE}&Offset=${startOffset}`;
+    const data = await this.makeAuthenticatedRequest(organizationId, endpoint);
+    
+    const pagination: MindbodyPaginationResponse | undefined = data.PaginationResponse;
+    const totalResults = pagination?.TotalResults || 0;
+    const classes: MindbodyClass[] = data.Classes || [];
+    
+    if (classes.length === 0) {
+      return { imported: 0, nextOffset: startOffset, completed: true };
+    }
+    
+    // Load existing classes once for efficient lookup
+    console.log('Loading existing classes for import...');
+    const existingClasses = await storage.getClasses(organizationId);
+    const classMap = new Map(existingClasses.map(c => [c.mindbodyClassId, c]));
+    
+    let imported = 0;
+    
+    // Process this batch
+    for (const mbClass of classes) {
+      try {
+        if (!mbClass.ClassDescription?.Id || !mbClass.ClassScheduleId || !mbClass.StartDateTime || !mbClass.EndDateTime) {
+          continue;
+        }
+        
+        let classRecord = classMap.get(mbClass.ClassDescription.Id.toString());
+        
+        if (!classRecord) {
+          classRecord = await storage.createClass({
+            organizationId,
+            mindbodyClassId: mbClass.ClassDescription.Id.toString(),
+            name: mbClass.ClassDescription.Name || 'Unknown Class',
+            description: mbClass.ClassDescription.Description || null,
+            instructorName: mbClass.Staff?.Name || null,
+            capacity: mbClass.MaxCapacity || null,
+            duration: null,
+          });
+          classMap.set(classRecord.mindbodyClassId!, classRecord);
+        }
+        
+        await storage.createClassSchedule({
+          organizationId,
+          classId: classRecord.id,
+          mindbodyScheduleId: mbClass.ClassScheduleId.toString(),
+          startTime: new Date(mbClass.StartDateTime),
+          endTime: new Date(mbClass.EndDateTime),
+          location: mbClass.Location?.Name || null,
+        });
+        
+        imported++;
+      } catch (error) {
+        console.error(`Failed to import class ${mbClass.ClassScheduleId}:`, error);
+      }
+    }
+    
+    const nextOffset = startOffset + classes.length;
+    const completed = nextOffset >= totalResults;
+    
+    // Report progress
+    await onProgress(nextOffset, totalResults);
+    
+    // Delay before next batch (unless completed)
+    if (!completed) {
+      await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+    }
+    
+    return { imported, nextOffset, completed };
+  }
+
+  async importVisitsResumable(
+    organizationId: string,
+    startDate: Date,
+    endDate: Date,
+    onProgress: (current: number, total: number) => Promise<void>,
+    startStudentIndex: number = 0
+  ): Promise<{ imported: number; nextStudentIndex: number; completed: boolean }> {
+    const BATCH_SIZE = 100; // Process 100 students per batch
+    const BATCH_DELAY = 250; // 250ms delay between batches
+    
+    // Load all students once
+    const allStudents = await storage.getStudents(organizationId, 100000);
+    const totalStudents = allStudents.length;
+    
+    if (startStudentIndex >= totalStudents) {
+      return { imported: 0, nextStudentIndex: startStudentIndex, completed: true };
+    }
+    
+    // Get batch of students to process
+    const endIndex = Math.min(startStudentIndex + BATCH_SIZE, totalStudents);
+    const studentBatch = allStudents.slice(startStudentIndex, endIndex);
+    
+    // Load schedules once for efficient lookup
+    console.log('Loading class schedules for visit import...');
+    const schedules = await storage.getClassSchedules(organizationId);
+    const scheduleMap = new Map(schedules.map(s => [s.mindbodyScheduleId, s]));
+    
+    let imported = 0;
+    
+    // Process students sequentially in this batch
+    for (const student of studentBatch) {
+      try {
+        const visits = await this.fetchAllPages<MindbodyVisit>(
+          organizationId,
+          `/client/clientvisits?ClientId=${student.mindbodyClientId}&StartDate=${startDate.toISOString()}`,
+          'Visits',
+          200
+        );
+        
+        for (const visit of visits) {
+          try {
+            if (!visit.ClassId || !visit.VisitDateTime) continue;
+            
+            const schedule = scheduleMap.get(visit.ClassId.toString());
+            if (!schedule) continue;
+            
+            await storage.createAttendance({
+              organizationId,
+              studentId: student.id,
+              scheduleId: schedule.id,
+              attendedAt: new Date(visit.VisitDateTime),
+              status: visit.SignedIn ? "attended" : "noshow",
+            });
+            
+            imported++;
+          } catch (error) {
+            console.error(`Failed to import visit:`, error);
+          }
+        }
+      } catch (error) {
+        console.error(`Failed to fetch visits for client ${student.mindbodyClientId}:`, error);
+      }
+    }
+    
+    const nextStudentIndex = endIndex;
+    const completed = nextStudentIndex >= totalStudents;
+    
+    // Report progress
+    await onProgress(nextStudentIndex, totalStudents);
+    
+    // Delay before next batch (unless completed)
+    if (!completed) {
+      await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+    }
+    
+    return { imported, nextStudentIndex, completed };
+  }
+
+  async importSalesResumable(
+    organizationId: string,
+    startDate: Date,
+    endDate: Date,
+    onProgress: (current: number, total: number) => Promise<void>,
+    startStudentIndex: number = 0
+  ): Promise<{ imported: number; nextStudentIndex: number; completed: boolean }> {
+    const BATCH_SIZE = 100; // Process 100 students per batch
+    const BATCH_DELAY = 250; // 250ms delay between batches
+    
+    // Load all students once
+    const allStudents = await storage.getStudents(organizationId, 100000);
+    const totalStudents = allStudents.length;
+    
+    if (startStudentIndex >= totalStudents) {
+      return { imported: 0, nextStudentIndex: startStudentIndex, completed: true };
+    }
+    
+    // Get batch of students to process
+    const endIndex = Math.min(startStudentIndex + BATCH_SIZE, totalStudents);
+    const studentBatch = allStudents.slice(startStudentIndex, endIndex);
+    
+    let imported = 0;
+    
+    // Process students sequentially in this batch
+    for (const student of studentBatch) {
+      try {
+        const sales = await this.fetchAllPages<MindbodySale>(
+          organizationId,
+          `/sale/sales?ClientId=${student.mindbodyClientId}&StartSaleDateTime=${startDate.toISOString()}`,
+          'Sales',
+          200
+        );
+        
+        for (const sale of sales) {
+          for (const item of sale.PurchasedItems) {
+            try {
+              if (!item.AmountPaid && item.AmountPaid !== 0) continue;
+              
+              await storage.createRevenue({
+                organizationId,
+                studentId: student.id,
+                amount: item.AmountPaid.toString(),
+                type: item.Type || 'Unknown',
+                description: item.Description || 'No description',
+                transactionDate: new Date(sale.SaleDateTime),
+              });
+              imported++;
+            } catch (error) {
+              console.error(`Failed to import sale item:`, error);
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`Failed to fetch sales for client ${student.mindbodyClientId}:`, error);
+      }
+    }
+    
+    const nextStudentIndex = endIndex;
+    const completed = nextStudentIndex >= totalStudents;
+    
+    // Report progress
+    await onProgress(nextStudentIndex, totalStudents);
+    
+    // Delay before next batch (unless completed)
+    if (!completed) {
+      await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+    }
+    
+    return { imported, nextStudentIndex, completed };
+  }
 }
 
 export const mindbodyService = new MindbodyService();
