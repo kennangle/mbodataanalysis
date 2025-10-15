@@ -1,0 +1,52 @@
+Based on the code I found in your project, here are the key techniques that were used to handle large data imports without timing out:
+
+Strategies Used for Large Data Imports:
+1. Batch Processing
+const BATCH_SIZE = 100; // Process in smaller batches
+Data was split into manageable chunks (typically 100-500 records per batch)
+Each batch processed sequentially to avoid overwhelming the server
+Progress tracked between batches
+2. Rate Limiting & Delays
+const RATE_LIMIT_DELAY = 150; // Delay between requests
+await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
+Small delays between each record/request (150-500ms)
+Prevents API throttling and timeout errors
+Gives server breathing room to process
+3. Progress Persistence
+function saveProgress(sheetName, currentIndex, totalCount) {
+  const state = { sheetName, currentIndex, totalCount, timestamp: new Date().toISOString() };
+  fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
+}
+State saved to disk every 10 records
+If process crashes/times out, can resume from last checkpoint
+No need to restart from beginning
+4. Retry Logic
+async function sendEmailWithRetry(recipient, subject, htmlBody, textBody, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    // Exponential backoff on retries
+    await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+  }
+}
+Automatic retry on failures (up to 3 attempts)
+Exponential backoff between retries
+Handles network errors gracefully
+5. Using Production Server
+From Ken's time entries:
+
+"Mindbody Imports continue to create challenges, such as huge imports kept crashing the dev server. So...now I use the production server which has eliminated the server crashes."
+
+Production deployment has more resources and longer timeout limits
+Development environment has stricter resource constraints
+Large imports run against production database with better performance
+6. Stream Processing (for extremely large datasets)
+Files like test-alternative-stream.js and broadcast-stream-test.js suggest streaming was explored
+Allows processing data as it arrives rather than loading everything into memory
+Key Takeaways:
+✅ Batch processing prevents overwhelming the system
+✅ Rate limiting avoids API throttling and timeouts
+✅ Progress persistence enables resumable imports
+✅ Retry logic handles transient failures
+✅ Production deployment provides more resources and longer timeouts
+✅ Error handling logs failures without stopping entire import
+
+This approach allowed importing thousands of records (students, classes, attendance) without timing out, with the ability to resume if interrupted.
