@@ -211,17 +211,35 @@ Required secrets (all configured):
 - Email: ken@yogahealthcenter.com
 - Password: Admin123!
 
+## Known Limitations & Workarounds
+
+### HTTP Connection Timeout Issue (ERR_HTTP2_PROTOCOL_ERROR)
+**Problem:** Replit's infrastructure closes long-running HTTP/2 connections at the proxy level, independent of application-level timeouts. This causes `CONNECTION_CLOSED` errors for very large imports (20,000+ records), even with 90-minute timeout settings.
+
+**Root Cause:** Replit's front-door proxy has hard limits on HTTP connection duration that cannot be overridden by application code.
+
+**Workarounds:**
+1. **Import in smaller chunks** - Import 1-2 months at a time instead of 6-12 months
+2. **Import data types separately** - First Clients+Classes, then Visits, then Sales
+3. **Future solution** - Implement background job processing with polling for very large datasets
+
+### Duplicate Prevention
+- ✅ **Clients/Students**: Implemented upsert logic - updates existing records instead of creating duplicates
+- ⚠️ **Visits/Attendance**: Still creates duplicates on re-import (needs upsert logic)
+- ⚠️ **Sales/Revenue**: Still creates duplicates on re-import (needs upsert logic)
+
+**Recommendation:** Clear attendance and revenue data before re-importing to avoid duplicates, or import only new date ranges.
+
 ## Next Steps
 1. ✅ ~~Test Mindbody API data import with real credentials~~ - COMPLETED
-2. Add configurable import settings (data types, date ranges, limits)
-3. Implement per-client import for Visits/Sales data (if needed in future)
-4. Add data visualization components (revenue charts, attendance graphs)
-5. Implement role-based access control and API rate limiting
-6. Add scheduled reports and email notifications
-7. Implement backup/recovery system
-8. Create admin dashboard for user management
-9. Cache user tokens to reduce redundant /usertoken/issue calls
-10. Support multi-site deployments with per-organization SiteId
+2. ✅ ~~Add configurable import settings (data types, date ranges, limits)~~ - COMPLETED
+3. ✅ ~~Implement duplicate prevention for clients~~ - COMPLETED
+4. Implement duplicate prevention for visits and sales (upsert logic)
+5. Implement chunked/background import for 20,000+ record datasets
+6. Add data visualization components (revenue charts, attendance graphs)
+7. Implement role-based access control and API rate limiting
+8. Add scheduled reports and email notifications
+9. Implement backup/recovery system
 
 ## Development Commands
 - `npm run dev` - Start development server (port 5000)
