@@ -51,21 +51,49 @@ export class ImportWorker {
       // Process clients
       if (dataTypes.includes('clients') && !progress.clients?.completed) {
         await this.processClients(job, startDate, endDate, progress);
+        
+        // Check if job was cancelled during processing
+        const updatedJob = await storage.getImportJob(jobId);
+        if (updatedJob?.status === 'paused') {
+          console.log(`Job ${jobId} was cancelled during clients import, stopping`);
+          return;
+        }
       }
 
       // Process classes
       if (dataTypes.includes('classes') && !progress.classes?.completed) {
         await this.processClasses(job, startDate, endDate, progress);
+        
+        // Check if job was cancelled during processing
+        const updatedJob = await storage.getImportJob(jobId);
+        if (updatedJob?.status === 'paused') {
+          console.log(`Job ${jobId} was cancelled during classes import, stopping`);
+          return;
+        }
       }
 
       // Process visits
       if (dataTypes.includes('visits') && !progress.visits?.completed) {
         await this.processVisits(job, startDate, endDate, progress);
+        
+        // Check if job was cancelled during processing
+        const updatedJob = await storage.getImportJob(jobId);
+        if (updatedJob?.status === 'paused') {
+          console.log(`Job ${jobId} was cancelled during visits import, stopping`);
+          return;
+        }
       }
 
       // Process sales
       if (dataTypes.includes('sales') && !progress.sales?.completed) {
         await this.processSales(job, startDate, endDate, progress);
+        
+        // Check if job was cancelled during processing
+        const updatedJob = await storage.getImportJob(jobId);
+        if (updatedJob?.status === 'paused') {
+          console.log(`Job ${jobId} was cancelled during sales import, stopping`);
+          return;
+        }
       }
 
       // Mark job as completed
