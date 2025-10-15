@@ -501,6 +501,157 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // New resumable import endpoints
+  app.post("/api/mindbody/import/start", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.user as User)?.organizationId;
+      
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { config } = req.body;
+      
+      // Check if there's already an active job
+      const activeJob = await storage.getActiveImportJob(organizationId);
+      if (activeJob) {
+        return res.status(400).json({ 
+          error: "An import is already in progress", 
+          jobId: activeJob.id 
+        });
+      }
+
+      // Parse config
+      const startDate = config?.startDate ? new Date(config.startDate) : new Date(new Date().setMonth(new Date().getMonth() - 12));
+      const endDate = config?.endDate ? new Date(config.endDate) : new Date();
+      const dataTypes = [];
+      
+      if (config?.dataTypes?.clients) dataTypes.push('clients');
+      if (config?.dataTypes?.classes) dataTypes.push('classes');
+      if (config?.dataTypes?.visits) dataTypes.push('visits');
+      if (config?.dataTypes?.sales) dataTypes.push('sales');
+
+      if (dataTypes.length === 0) {
+        return res.status(400).json({ error: "At least one data type must be selected" });
+      }
+
+      // Create import job
+      const job = await storage.createImportJob({
+        organizationId,
+        status: 'pending',
+        dataTypes,
+        startDate,
+        endDate,
+        progress: JSON.stringify({}),
+        currentDataType: null,
+        currentOffset: 0,
+        error: null,
+      });
+
+      // Start processing in background (don't await)
+      const { importWorker } = await import("./import-worker");
+      importWorker.processJob(job.id).catch(error => {
+        console.error(`Background job ${job.id} failed:`, error);
+      });
+
+      res.json({
+        success: true,
+        message: "Import job started",
+        jobId: job.id
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to start import";
+      res.status(500).json({ error: errorMessage });
+    }
+  });
+
+  app.get("/api/mindbody/import/:id/status", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.user as User)?.organizationId;
+      const jobId = req.params.id;
+      
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const job = await storage.getImportJob(jobId);
+      
+      if (!job) {
+        return res.status(404).json({ error: "Import job not found" });
+      }
+
+      // Check authorization
+      if (job.organizationId !== organizationId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
+      res.json({
+        id: job.id,
+        status: job.status,
+        dataTypes: job.dataTypes,
+        startDate: job.startDate,
+        endDate: job.endDate,
+        progress: JSON.parse(job.progress),
+        currentDataType: job.currentDataType,
+        currentOffset: job.currentOffset,
+        error: job.error,
+        createdAt: job.createdAt,
+        updatedAt: job.updatedAt,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to get job status";
+      res.status(500).json({ error: errorMessage });
+    }
+  });
+
+  app.post("/api/mindbody/import/:id/resume", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.user as User)?.organizationId;
+      const jobId = req.params.id;
+      
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const job = await storage.getImportJob(jobId);
+      
+      if (!job) {
+        return res.status(404).json({ error: "Import job not found" });
+      }
+
+      // Check authorization
+      if (job.organizationId !== organizationId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
+      // Can only resume paused or failed jobs
+      if (job.status !== 'paused' && job.status !== 'failed') {
+        return res.status(400).json({ error: "Job is not in a resumable state" });
+      }
+
+      // Update status to pending
+      await storage.updateImportJob(jobId, {
+        status: 'pending',
+        error: null,
+      });
+
+      // Start processing in background (don't await)
+      const { importWorker } = await import("./import-worker");
+      importWorker.processJob(jobId).catch(error => {
+        console.error(`Background job ${jobId} failed:`, error);
+      });
+
+      res.json({
+        success: true,
+        message: "Import job resumed"
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to resume import";
+      res.status(500).json({ error: errorMessage });
+    }
+  });
+
+  // Legacy import endpoint (kept for backward compatibility)
   app.post("/api/mindbody/import", requireAuth, async (req, res) => {
     try {
       // Extend timeout for long-running imports (90 minutes for 20,000+ records)
