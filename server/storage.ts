@@ -8,6 +8,7 @@ import {
   attendance, 
   revenue,
   aiQueries,
+  importJobs,
   type User, 
   type InsertUser,
   type Organization,
@@ -24,6 +25,8 @@ import {
   type InsertRevenue,
   type AIQuery,
   type InsertAIQuery,
+  type ImportJob,
+  type InsertImportJob,
 } from "@shared/schema";
 import { eq, and, desc, gte, lte, sql } from "drizzle-orm";
 
@@ -67,6 +70,13 @@ export interface IStorage {
   
   createAIQuery(query: InsertAIQuery): Promise<AIQuery>;
   getAIQueries(organizationId: string, limit?: number): Promise<AIQuery[]>;
+  
+  // Import Jobs
+  createImportJob(job: InsertImportJob): Promise<ImportJob>;
+  getImportJob(id: string): Promise<ImportJob | undefined>;
+  getImportJobs(organizationId: string, limit?: number): Promise<ImportJob[]>;
+  updateImportJob(id: string, job: Partial<InsertImportJob>): Promise<void>;
+  getActiveImportJob(organizationId: string): Promise<ImportJob | undefined>;
 }
 
 export class DbStorage implements IStorage {
@@ -390,6 +400,44 @@ export class DbStorage implements IStorage {
       .where(eq(aiQueries.organizationId, organizationId))
       .orderBy(desc(aiQueries.createdAt))
       .limit(limit);
+  }
+
+  async createImportJob(job: InsertImportJob): Promise<ImportJob> {
+    const result = await db.insert(importJobs).values(job).returning();
+    return result[0];
+  }
+
+  async getImportJob(id: string): Promise<ImportJob | undefined> {
+    const result = await db.select().from(importJobs).where(eq(importJobs.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getImportJobs(organizationId: string, limit: number = 10): Promise<ImportJob[]> {
+    return await db.select()
+      .from(importJobs)
+      .where(eq(importJobs.organizationId, organizationId))
+      .orderBy(desc(importJobs.createdAt))
+      .limit(limit);
+  }
+
+  async updateImportJob(id: string, job: Partial<InsertImportJob>): Promise<void> {
+    await db.update(importJobs)
+      .set({ ...job, updatedAt: new Date() })
+      .where(eq(importJobs.id, id));
+  }
+
+  async getActiveImportJob(organizationId: string): Promise<ImportJob | undefined> {
+    const result = await db.select()
+      .from(importJobs)
+      .where(
+        and(
+          eq(importJobs.organizationId, organizationId),
+          sql`${importJobs.status} IN ('pending', 'running', 'paused')`
+        )
+      )
+      .orderBy(desc(importJobs.createdAt))
+      .limit(1);
+    return result[0];
   }
 }
 
