@@ -42,12 +42,12 @@ export interface IStorage {
   createOrganization(org: InsertOrganization): Promise<Organization>;
   updateOrganizationTokens(id: string, accessToken: string, refreshToken: string): Promise<void>;
   
-  getStudents(organizationId: string, limit?: number, offset?: number): Promise<Student[]>;
+  getStudents(organizationId: string, limit?: number, offset?: number, status?: string, startDate?: Date, endDate?: Date): Promise<Student[]>;
   getStudentById(id: string): Promise<Student | undefined>;
   createStudent(student: InsertStudent): Promise<Student>;
   updateStudent(id: string, student: Partial<InsertStudent>): Promise<void>;
   deleteStudent(id: string): Promise<void>;
-  getStudentCount(organizationId: string): Promise<number>;
+  getStudentCount(organizationId: string, status?: string, startDate?: Date, endDate?: Date): Promise<number>;
   getActiveStudentCount(organizationId: string): Promise<number>;
   
   getClasses(organizationId: string): Promise<Class[]>;
@@ -126,10 +126,24 @@ export class DbStorage implements IStorage {
       .where(eq(organizations.id, id));
   }
 
-  async getStudents(organizationId: string, limit: number = 100, offset: number = 0): Promise<Student[]> {
+  async getStudents(organizationId: string, limit: number = 100, offset: number = 0, status?: string, startDate?: Date, endDate?: Date): Promise<Student[]> {
+    const conditions = [eq(students.organizationId, organizationId)];
+    
+    if (status) {
+      conditions.push(eq(students.status, status));
+    }
+    
+    if (startDate) {
+      conditions.push(gte(students.joinDate, startDate));
+    }
+    
+    if (endDate) {
+      conditions.push(lte(students.joinDate, endDate));
+    }
+    
     return await db.select()
       .from(students)
-      .where(eq(students.organizationId, organizationId))
+      .where(and(...conditions))
       .limit(limit)
       .offset(offset);
   }
@@ -152,10 +166,24 @@ export class DbStorage implements IStorage {
     await db.delete(students).where(eq(students.id, id));
   }
 
-  async getStudentCount(organizationId: string): Promise<number> {
+  async getStudentCount(organizationId: string, status?: string, startDate?: Date, endDate?: Date): Promise<number> {
+    const conditions = [eq(students.organizationId, organizationId)];
+    
+    if (status) {
+      conditions.push(eq(students.status, status));
+    }
+    
+    if (startDate) {
+      conditions.push(gte(students.joinDate, startDate));
+    }
+    
+    if (endDate) {
+      conditions.push(lte(students.joinDate, endDate));
+    }
+    
     const result = await db.select({ count: sql<number>`count(*)` })
       .from(students)
-      .where(eq(students.organizationId, organizationId));
+      .where(and(...conditions));
     return Number(result[0].count);
   }
 
