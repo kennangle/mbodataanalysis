@@ -216,6 +216,7 @@ export class MindbodyService {
 
     // Track API call
     this.apiCallCounter++;
+    console.log(`[API Counter] makeAuthenticatedRequest called, counter now: ${this.apiCallCounter}`);
 
     if (!response.ok) {
       const errorText = await response.text();

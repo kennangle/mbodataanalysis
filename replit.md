@@ -35,6 +35,7 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
   - Proper cancellation with terminal 'cancelled' status
   - Auto-cleanup of stale jobs when starting new imports
   - Race condition protection between worker and cancel operations
+  - **API Call Tracking & Limit Management**: Tracks Mindbody API calls (1,000/day free tier limit) with real-time rate calculation and estimated time to reach daily limit, enabling users to schedule chunked imports strategically. Implementation updates `progress.apiCallCount` during batch processing (in progress callback and after each batch) to ensure real-time accuracy in both the database and UI
 - **Automatic Pagination**: Implements a generic helper (`fetchAllPages<T>()`) to retrieve all records from the Mindbody API, optimized for large datasets.
 - **User Management**: An admin-only interface for managing users within an organization, including CRUD operations, role-based access (admin/user), and multi-tenancy support.
 - **Dashboard & Analytics**: Displays real-time data using live database queries for charts such as Revenue & Growth Trend and Class Attendance by Time, with optimized SQL for performance.

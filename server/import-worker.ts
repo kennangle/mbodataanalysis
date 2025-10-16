@@ -60,7 +60,10 @@ export class ImportWorker {
         progress.importStartTime = new Date().toISOString();
       }
       
-      // Reset the API counter at start of job (it accumulates during the job)
+      // Store baseline API count from previous session (if resuming)
+      const baselineApiCallCount = progress.apiCallCount || 0;
+      
+      // Reset the API counter to track only this session's calls
       mindbodyService.resetApiCallCount();
       
       await storage.updateImportJob(jobId, { 
@@ -72,13 +75,9 @@ export class ImportWorker {
 
       // Process clients
       if (dataTypes.includes('clients') && !progress.clients?.completed) {
-        await this.processClients(job, startDate, endDate, progress);
+        await this.processClients(job, startDate, endDate, progress, baselineApiCallCount);
         
-        // Update API call count after clients
-        progress.apiCallCount = mindbodyService.getApiCallCount();
-        await storage.updateImportJob(jobId, {
-          progress: JSON.stringify(progress),
-        });
+        // API call count is already updated within processClients
         
         // Check if job was cancelled during processing
         const updatedJob = await storage.getImportJob(jobId);
@@ -90,13 +89,9 @@ export class ImportWorker {
 
       // Process classes
       if (dataTypes.includes('classes') && !progress.classes?.completed) {
-        await this.processClasses(job, startDate, endDate, progress);
+        await this.processClasses(job, startDate, endDate, progress, baselineApiCallCount);
         
-        // Update API call count after classes
-        progress.apiCallCount = mindbodyService.getApiCallCount();
-        await storage.updateImportJob(jobId, {
-          progress: JSON.stringify(progress),
-        });
+        // API call count is already updated within processClasses
         
         // Check if job was cancelled during processing
         const updatedJob = await storage.getImportJob(jobId);
@@ -108,13 +103,9 @@ export class ImportWorker {
 
       // Process visits
       if (dataTypes.includes('visits') && !progress.visits?.completed) {
-        await this.processVisits(job, startDate, endDate, progress);
+        await this.processVisits(job, startDate, endDate, progress, baselineApiCallCount);
         
-        // Update API call count after visits
-        progress.apiCallCount = mindbodyService.getApiCallCount();
-        await storage.updateImportJob(jobId, {
-          progress: JSON.stringify(progress),
-        });
+        // API call count is already updated within processVisits
         
         // Check if job was cancelled during processing
         const updatedJob = await storage.getImportJob(jobId);
@@ -126,13 +117,9 @@ export class ImportWorker {
 
       // Process sales
       if (dataTypes.includes('sales') && !progress.sales?.completed) {
-        await this.processSales(job, startDate, endDate, progress);
+        await this.processSales(job, startDate, endDate, progress, baselineApiCallCount);
         
-        // Update API call count after sales
-        progress.apiCallCount = mindbodyService.getApiCallCount();
-        await storage.updateImportJob(jobId, {
-          progress: JSON.stringify(progress),
-        });
+        // API call count is already updated within processSales
         
         // Check if job was cancelled during processing
         const updatedJob = await storage.getImportJob(jobId);
@@ -165,7 +152,8 @@ export class ImportWorker {
     job: ImportJob,
     startDate: Date,
     endDate: Date,
-    progress: any
+    progress: any,
+    baselineApiCallCount: number = 0
   ): Promise<void> {
     console.log('Processing clients...');
     
@@ -189,6 +177,8 @@ export class ImportWorker {
         async (current, total) => {
           progress.clients.current = current;
           progress.clients.total = total;
+          // Update API call count in progress callback
+          progress.apiCallCount = baselineApiCallCount + mindbodyService.getApiCallCount();
           await storage.updateImportJob(job.id, {
             progress: JSON.stringify(progress),
             currentDataType: 'clients',
@@ -203,21 +193,25 @@ export class ImportWorker {
       progress.clients.current = batchResult.nextOffset;
       progress.clients.completed = batchResult.completed;
 
+      // Update API call count after batch
+      progress.apiCallCount = baselineApiCallCount + mindbodyService.getApiCallCount();
+
       await storage.updateImportJob(job.id, {
         progress: JSON.stringify(progress),
       });
 
-      console.log(`Clients batch: imported=${batchResult.imported}, updated=${batchResult.updated}, next=${batchResult.nextOffset}, completed=${batchResult.completed}`);
+      console.log(`Clients batch: imported=${batchResult.imported}, updated=${batchResult.updated}, next=${batchResult.nextOffset}, completed=${batchResult.completed}, apiCalls=${progress.apiCallCount}`);
     } while (!batchResult.completed);
 
-    console.log(`Clients complete: ${progress.clients.imported} new, ${progress.clients.updated} updated`);
+    console.log(`Clients complete: ${progress.clients.imported} new, ${progress.clients.updated} updated, API calls: ${progress.apiCallCount}`);
   }
 
   private async processClasses(
     job: ImportJob,
     startDate: Date,
     endDate: Date,
-    progress: any
+    progress: any,
+    baselineApiCallCount: number = 0
   ): Promise<void> {
     console.log('Processing classes...');
     
@@ -241,6 +235,8 @@ export class ImportWorker {
         async (current, total) => {
           progress.classes.current = current;
           progress.classes.total = total;
+          // Update API call count in progress callback
+          progress.apiCallCount = baselineApiCallCount + mindbodyService.getApiCallCount();
           await storage.updateImportJob(job.id, {
             progress: JSON.stringify(progress),
             currentDataType: 'classes',
@@ -254,21 +250,25 @@ export class ImportWorker {
       progress.classes.current = batchResult.nextOffset;
       progress.classes.completed = batchResult.completed;
 
+      // Update API call count after batch
+      progress.apiCallCount = baselineApiCallCount + mindbodyService.getApiCallCount();
+
       await storage.updateImportJob(job.id, {
         progress: JSON.stringify(progress),
       });
 
-      console.log(`Classes batch: imported=${batchResult.imported}, next=${batchResult.nextOffset}, completed=${batchResult.completed}`);
+      console.log(`Classes batch: imported=${batchResult.imported}, next=${batchResult.nextOffset}, completed=${batchResult.completed}, apiCalls=${progress.apiCallCount}`);
     } while (!batchResult.completed);
 
-    console.log(`Classes complete: ${progress.classes.imported} imported`);
+    console.log(`Classes complete: ${progress.classes.imported} imported, API calls: ${progress.apiCallCount}`);
   }
 
   private async processVisits(
     job: ImportJob,
     startDate: Date,
     endDate: Date,
-    progress: any
+    progress: any,
+    baselineApiCallCount: number = 0
   ): Promise<void> {
     console.log('Processing visits...');
     
@@ -292,6 +292,8 @@ export class ImportWorker {
         async (current, total) => {
           progress.visits.current = current;
           progress.visits.total = total;
+          // Update API call count in progress callback
+          progress.apiCallCount = baselineApiCallCount + mindbodyService.getApiCallCount();
           await storage.updateImportJob(job.id, {
             progress: JSON.stringify(progress),
             currentDataType: 'visits',
@@ -305,21 +307,25 @@ export class ImportWorker {
       progress.visits.current = batchResult.nextStudentIndex;
       progress.visits.completed = batchResult.completed;
 
+      // Update API call count after batch
+      progress.apiCallCount = baselineApiCallCount + mindbodyService.getApiCallCount();
+
       await storage.updateImportJob(job.id, {
         progress: JSON.stringify(progress),
       });
 
-      console.log(`Visits batch: imported=${batchResult.imported}, next=${batchResult.nextStudentIndex}, completed=${batchResult.completed}`);
+      console.log(`Visits batch: imported=${batchResult.imported}, next=${batchResult.nextStudentIndex}, completed=${batchResult.completed}, apiCalls=${progress.apiCallCount}`);
     } while (!batchResult.completed);
 
-    console.log(`Visits complete: ${progress.visits.imported} imported`);
+    console.log(`Visits complete: ${progress.visits.imported} imported, API calls: ${progress.apiCallCount}`);
   }
 
   private async processSales(
     job: ImportJob,
     startDate: Date,
     endDate: Date,
-    progress: any
+    progress: any,
+    baselineApiCallCount: number = 0
   ): Promise<void> {
     console.log('Processing sales...');
     
@@ -343,6 +349,8 @@ export class ImportWorker {
         async (current, total) => {
           progress.sales.current = current;
           progress.sales.total = total;
+          // Update API call count in progress callback
+          progress.apiCallCount = baselineApiCallCount + mindbodyService.getApiCallCount();
           await storage.updateImportJob(job.id, {
             progress: JSON.stringify(progress),
             currentDataType: 'sales',
@@ -356,14 +364,17 @@ export class ImportWorker {
       progress.sales.current = batchResult.nextStudentIndex;
       progress.sales.completed = batchResult.completed;
 
+      // Update API call count after batch
+      progress.apiCallCount = baselineApiCallCount + mindbodyService.getApiCallCount();
+
       await storage.updateImportJob(job.id, {
         progress: JSON.stringify(progress),
       });
 
-      console.log(`Sales batch: imported=${batchResult.imported}, next=${batchResult.nextStudentIndex}, completed=${batchResult.completed}`);
+      console.log(`Sales batch: imported=${batchResult.imported}, next=${batchResult.nextStudentIndex}, completed=${batchResult.completed}, apiCalls=${progress.apiCallCount}`);
     } while (!batchResult.completed);
 
-    console.log(`Sales complete: ${progress.sales.imported} imported`);
+    console.log(`Sales complete: ${progress.sales.imported} imported, API calls: ${progress.apiCallCount}`);
   }
 
   isJobProcessing(): boolean {
