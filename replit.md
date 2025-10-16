@@ -40,6 +40,7 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
 - **User Management**: An admin-only interface for managing users within an organization, including CRUD operations, role-based access (admin/user), and multi-tenancy support.
 - **Dashboard & Analytics**: Displays real-time data using live database queries for charts such as Revenue & Growth Trend and Class Attendance by Time, with optimized SQL for performance.
 - **Configurable Imports**: Allows users to specify date ranges and data types (Clients, Classes, Visits, Sales) for selective data fetching.
+- **Students Data Management**: Comprehensive student roster management with advanced filtering (status, date range) and Excel export functionality using xlsx library. Filters respect search queries and export includes all filtered results with columns: First Name, Last Name, Email, Status, Membership.
 - **Authentication**: Session-based authentication using Passport.js with scrypt for password hashing. Mindbody API authentication uses cached User Tokens for efficiency.
 - **Database Schema**: A comprehensive PostgreSQL schema with 10 tables, designed for multi-tenancy via `organizationId` and optimized with indexing.
 
