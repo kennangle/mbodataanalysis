@@ -10,6 +10,8 @@ import {
   aiQueries,
   importJobs,
   passwordResetTokens,
+  webhookSubscriptions,
+  webhookEvents,
   type User, 
   type InsertUser,
   type Organization,
@@ -29,6 +31,10 @@ import {
   type ImportJob,
   type InsertImportJob,
   type PasswordResetToken,
+  type WebhookSubscription,
+  type InsertWebhookSubscription,
+  type WebhookEvent,
+  type InsertWebhookEvent,
 } from "@shared/schema";
 import { eq, and, desc, gte, lte, sql } from "drizzle-orm";
 
@@ -86,6 +92,18 @@ export interface IStorage {
   getImportJobs(organizationId: string, limit?: number): Promise<ImportJob[]>;
   updateImportJob(id: string, job: Partial<InsertImportJob>): Promise<void>;
   getActiveImportJob(organizationId: string): Promise<ImportJob | undefined>;
+  
+  // Webhooks
+  createWebhookSubscription(subscription: InsertWebhookSubscription): Promise<WebhookSubscription>;
+  getWebhookSubscriptions(organizationId: string): Promise<WebhookSubscription[]>;
+  getWebhookSubscription(id: string): Promise<WebhookSubscription | undefined>;
+  updateWebhookSubscription(id: string, subscription: Partial<InsertWebhookSubscription>): Promise<void>;
+  deleteWebhookSubscription(id: string): Promise<void>;
+  
+  createWebhookEvent(event: InsertWebhookEvent): Promise<WebhookEvent>;
+  getWebhookEvent(messageId: string): Promise<WebhookEvent | undefined>;
+  getWebhookEvents(organizationId: string, limit?: number): Promise<WebhookEvent[]>;
+  updateWebhookEvent(id: string, event: Partial<InsertWebhookEvent>): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -522,6 +540,53 @@ export class DbStorage implements IStorage {
       .orderBy(desc(importJobs.createdAt))
       .limit(1);
     return result[0];
+  }
+
+  async createWebhookSubscription(subscription: InsertWebhookSubscription): Promise<WebhookSubscription> {
+    const result = await db.insert(webhookSubscriptions).values(subscription).returning();
+    return result[0];
+  }
+
+  async getWebhookSubscriptions(organizationId: string): Promise<WebhookSubscription[]> {
+    return await db.select()
+      .from(webhookSubscriptions)
+      .where(eq(webhookSubscriptions.organizationId, organizationId))
+      .orderBy(desc(webhookSubscriptions.createdAt));
+  }
+
+  async getWebhookSubscription(id: string): Promise<WebhookSubscription | undefined> {
+    const result = await db.select().from(webhookSubscriptions).where(eq(webhookSubscriptions.id, id)).limit(1);
+    return result[0];
+  }
+
+  async updateWebhookSubscription(id: string, subscription: Partial<InsertWebhookSubscription>): Promise<void> {
+    await db.update(webhookSubscriptions).set(subscription).where(eq(webhookSubscriptions.id, id));
+  }
+
+  async deleteWebhookSubscription(id: string): Promise<void> {
+    await db.delete(webhookSubscriptions).where(eq(webhookSubscriptions.id, id));
+  }
+
+  async createWebhookEvent(event: InsertWebhookEvent): Promise<WebhookEvent> {
+    const result = await db.insert(webhookEvents).values(event).returning();
+    return result[0];
+  }
+
+  async getWebhookEvent(messageId: string): Promise<WebhookEvent | undefined> {
+    const result = await db.select().from(webhookEvents).where(eq(webhookEvents.messageId, messageId)).limit(1);
+    return result[0];
+  }
+
+  async getWebhookEvents(organizationId: string, limit: number = 50): Promise<WebhookEvent[]> {
+    return await db.select()
+      .from(webhookEvents)
+      .where(eq(webhookEvents.organizationId, organizationId))
+      .orderBy(desc(webhookEvents.createdAt))
+      .limit(limit);
+  }
+
+  async updateWebhookEvent(id: string, event: Partial<InsertWebhookEvent>): Promise<void> {
+    await db.update(webhookEvents).set(event).where(eq(webhookEvents.id, id));
   }
 }
 

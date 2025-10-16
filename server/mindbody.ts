@@ -628,6 +628,92 @@ export class MindbodyService {
     
     return { imported, nextStudentIndex, completed };
   }
+
+  async createWebhookSubscription(
+    organizationId: string,
+    eventType: string,
+    webhookUrl: string,
+    referenceId?: string
+  ): Promise<{ subscriptionId: string; messageSignatureKey: string }> {
+    const userToken = await this.getUserToken();
+    const WEBHOOKS_API_BASE = "https://api.mindbodyonline.com/webhooks/v6";
+    
+    const org = await storage.getOrganization(organizationId);
+    if (!org?.mindbodySiteId) {
+      throw new Error("Mindbody site ID not configured");
+    }
+
+    const response = await fetch(`${WEBHOOKS_API_BASE}/subscriptions`, {
+      method: 'POST',
+      headers: {
+        'Api-Key': process.env.MINDBODY_API_KEY || '',
+        'Authorization': `Bearer ${userToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        eventType,
+        webhookUrl,
+        eventSchemaVersion: 1,
+        referenceId: referenceId || organizationId,
+        siteIds: [parseInt(org.mindbodySiteId)],
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Failed to create webhook subscription: ${error}`);
+    }
+
+    const data = await response.json();
+    return {
+      subscriptionId: data.id,
+      messageSignatureKey: data.messageSignatureKey,
+    };
+  }
+
+  async deleteWebhookSubscription(
+    organizationId: string,
+    mindbodySubscriptionId: string
+  ): Promise<void> {
+    const userToken = await this.getUserToken();
+    const WEBHOOKS_API_BASE = "https://api.mindbodyonline.com/webhooks/v6";
+
+    const response = await fetch(`${WEBHOOKS_API_BASE}/subscriptions/${mindbodySubscriptionId}`, {
+      method: 'DELETE',
+      headers: {
+        'Api-Key': process.env.MINDBODY_API_KEY || '',
+        'Authorization': `Bearer ${userToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Failed to delete webhook subscription: ${error}`);
+    }
+  }
+
+  verifyWebhookSignature(
+    payload: string,
+    signatureHeader: string,
+    signatureKey: string
+  ): boolean {
+    const crypto = require('crypto');
+    
+    // Compute HMAC-SHA256
+    const hmac = crypto.createHmac('sha256', signatureKey);
+    const hash = hmac.update(payload).digest('base64');
+    const computedSignature = `sha256=${hash}`;
+    
+    // Timing-safe comparison
+    const expected = Buffer.from(computedSignature, 'utf8');
+    const received = Buffer.from(signatureHeader || '', 'utf8');
+    
+    if (expected.length !== received.length) {
+      return false;
+    }
+    
+    return crypto.timingSafeEqual(expected, received);
+  }
 }
 
 export const mindbodyService = new MindbodyService();
