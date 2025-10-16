@@ -838,6 +838,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
       const [
+        totalStudentCount,
         activeStudentCount,
         revenueStats,
         lastMonthRevenueStats,
@@ -845,6 +846,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastMonthAttendanceRecords,
         classes
       ] = await Promise.all([
+        storage.getStudentCount(organizationId),
         storage.getActiveStudentCount(organizationId),
         storage.getRevenueStats(organizationId, thisMonth, now),
         storage.getRevenueStats(organizationId, lastMonth, thisMonth),
@@ -873,6 +875,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalRevenue: revenueStats.total,
         revenueChange: revenueChange.toFixed(1),
         activeStudents: activeStudentCount,
+        totalStudents: totalStudentCount,
         studentChange: "+12.5",
         attendanceRate: attendanceRate.toFixed(1),
         attendanceChange: attendanceChange.toFixed(1),

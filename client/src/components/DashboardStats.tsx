@@ -6,6 +6,7 @@ interface DashboardStatsData {
   totalRevenue: number;
   revenueChange: string;
   activeStudents: number;
+  totalStudents: number;
   studentChange: string;
   attendanceRate: string;
   attendanceChange: string;
@@ -20,8 +21,8 @@ export function DashboardStats() {
 
   if (isLoading) {
     return (
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {[...Array(4)].map((_, index) => (
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        {[...Array(5)].map((_, index) => (
           <Card key={index}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div className="h-4 w-24 bg-muted animate-pulse rounded" />
@@ -53,6 +54,13 @@ export function DashboardStats() {
       icon: Users,
     },
     {
+      title: "All Students",
+      value: data?.totalStudents.toLocaleString() || "0",
+      change: `${data?.activeStudents || 0} active`,
+      trend: "neutral",
+      icon: Users,
+    },
+    {
       title: "Class Attendance",
       value: `${data?.attendanceRate || "0"}%`,
       change: `${data?.attendanceChange || "0"}%`,
@@ -69,11 +77,16 @@ export function DashboardStats() {
   ];
 
   return (
-    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       {stats.map((stat, index) => {
         const Icon = stat.icon;
         const TrendIcon = stat.trend === "up" ? TrendingUp : TrendingDown;
-        const trendColor = stat.trend === "up" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
+        const trendColor = stat.trend === "up" 
+          ? "text-green-600 dark:text-green-400" 
+          : stat.trend === "down" 
+            ? "text-red-600 dark:text-red-400"
+            : "text-muted-foreground";
+        const showTrendIcon = stat.trend !== "neutral";
 
         return (
           <Card key={index} data-testid={`card-stat-${index}`}>
@@ -88,8 +101,8 @@ export function DashboardStats() {
                 {stat.value}
               </div>
               <div className={`flex items-center gap-1 text-xs ${trendColor} mt-1`}>
-                <TrendIcon className="h-3 w-3" />
-                <span>{stat.change} from last month</span>
+                {showTrendIcon && <TrendIcon className="h-3 w-3" />}
+                <span>{stat.change}{stat.trend !== "neutral" ? " from last month" : ""}</span>
               </div>
             </CardContent>
           </Card>
