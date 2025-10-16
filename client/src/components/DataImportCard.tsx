@@ -209,7 +209,7 @@ export function DataImportCard() {
     },
   });
 
-  const cancelImportMutation = useMutation({
+  const pauseImportMutation = useMutation({
     mutationFn: async (jobId: string) => {
       const response = await apiRequest("POST", `/api/mindbody/import/${jobId}/cancel`);
       const result = await response.json() as { success: boolean; message: string };
@@ -217,14 +217,14 @@ export function DataImportCard() {
     },
     onSuccess: () => {
       toast({
-        title: "Import cancelled",
-        description: "Your import has been stopped",
+        title: "Import paused",
+        description: "Your import has been paused and can be resumed later",
       });
     },
     onError: (error: Error) => {
       toast({
         variant: "destructive",
-        title: "Failed to cancel import",
+        title: "Failed to pause import",
         description: error.message,
       });
     },
@@ -240,9 +240,9 @@ export function DataImportCard() {
     }
   };
 
-  const handleCancelImport = () => {
+  const handlePauseImport = () => {
     if (currentJobId) {
-      cancelImportMutation.mutate(currentJobId);
+      pauseImportMutation.mutate(currentJobId);
     }
   };
 
@@ -460,12 +460,12 @@ export function DataImportCard() {
 
             <Button 
               variant="outline" 
-              onClick={handleCancelImport}
+              onClick={handlePauseImport}
               className="w-full"
-              disabled={cancelImportMutation.isPending}
+              disabled={pauseImportMutation.isPending}
               data-testid="button-pause-import"
             >
-              {cancelImportMutation.isPending ? (
+              {pauseImportMutation.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 "Pause Import"

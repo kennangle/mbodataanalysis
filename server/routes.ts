@@ -681,10 +681,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Only enforce 24-hour limit if:
       // 1. The job made progress (fetched data from Mindbody API), AND
-      // 2. It wasn't manually cancelled by user (those should be resumable immediately)
-      const wasManuallyCancelled = job.error === 'Cancelled by user';
+      // 2. It wasn't manually paused/cancelled by user (those should be resumable immediately)
+      const wasManuallyPaused = job.error === 'Paused by user' || job.error === 'Cancelled by user';
       
-      if (hasProgress && !wasManuallyCancelled) {
+      if (hasProgress && !wasManuallyPaused) {
         const now = new Date();
         const lastUpdate = new Date(job.updatedAt);
         const hoursSinceLastUpdate = (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60);
