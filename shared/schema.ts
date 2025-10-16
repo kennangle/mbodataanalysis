@@ -5,10 +5,12 @@ import { z } from "zod";
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   email: text("email").notNull().unique(),
-  passwordHash: text("password_hash").notNull(),
+  passwordHash: text("password_hash"), // Nullable for OAuth users
   name: text("name").notNull(),
   role: text("role").notNull().default("user"),
   organizationId: uuid("organization_id"),
+  provider: text("provider").notNull().default("local"), // "local", "google"
+  providerId: text("provider_id"), // OAuth provider user ID
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -199,3 +201,22 @@ export const insertImportJobSchema = createInsertSchema(importJobs).omit({
 });
 export type InsertImportJob = z.infer<typeof insertImportJobSchema>;
 export type ImportJob = typeof importJobs.$inferSelect;
+
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull(),
+  token: text("token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  userIdx: index("password_reset_tokens_user_idx").on(table.userId),
+  tokenIdx: index("password_reset_tokens_token_idx").on(table.token),
+  expiresIdx: index("password_reset_tokens_expires_idx").on(table.expiresAt),
+}));
+
+export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTokens).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertPasswordResetToken = z.infer<typeof insertPasswordResetTokenSchema>;
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
