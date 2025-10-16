@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,10 +45,10 @@ export default function Register() {
     <div className="min-h-screen flex flex-col">
       <header className="border-b">
         <div className="container flex h-16 items-center justify-between px-6">
-          <div className="flex items-center gap-2">
+          <a href="/" className="flex items-center gap-2 hover-elevate active-elevate-2 rounded-md px-2 py-1 -ml-2 cursor-pointer" data-testid="link-home-logo">
             <BarChart3 className="h-6 w-6 text-primary" />
             <span className="text-lg font-bold">Mindbody Analytics</span>
-          </div>
+          </a>
           <ThemeToggle />
         </div>
       </header>
