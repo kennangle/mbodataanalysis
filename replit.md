@@ -5,6 +5,45 @@ An enterprise-grade analytics platform designed to import and analyze data from 
 
 ## Recent Changes
 
+### October 16, 2025 - Student Count Accuracy Fix 🔢
+**Problem Solved:** Dashboard showed total student count (6,523) as "Active Students" and AI queries only analyzed first 100 students, reporting "7 active" when actually 537 are active. Solution: Accurate count aggregates from database.
+
+#### Root Causes Identified
+1. **Dashboard Bug**: Called `getStudentCount()` (total) instead of filtering by status='active'
+   - Displayed 6,523 total students labeled as "Active Students"
+   - No status filtering applied
+   
+2. **AI Query Bug**: Fetched only first 100 students, then filtered for active
+   - Only 7 of first 100 students were active
+   - AI reported "7 active students" instead of actual 537
+   - Caused misleading business insights
+
+#### Implementation
+- **Added `getActiveStudentCount()` method** to storage layer
+  - Filters by organizationId AND status='active'
+  - Returns accurate count via SQL aggregate (no row fetching)
+  
+- **Fixed dashboard endpoint** (`GET /api/dashboard/stats`)
+  - Now uses `getActiveStudentCount()` instead of `getStudentCount()`
+  - Correctly displays 537 active students
+  
+- **Fixed AI query service** (`server/openai.ts`)
+  - Replaced 100-student fetch with count aggregates
+  - Uses `getStudentCount()` + `getActiveStudentCount()` directly
+  - AI now receives accurate context: "6,523 total, 537 active, 5,986 inactive"
+
+#### Testing Results
+✅ Dashboard shows 537 active students (was 6,523)  
+✅ AI query reports 537 active students (was 7)  
+✅ Both use same accurate data source  
+✅ No performance regressions (aggregates faster than row fetches)
+
+#### Architect Reviewed & Approved ✅
+- Storage method correctly filters by organizationId and status
+- Dashboard no longer mislabels total count as active
+- AI insights now reflect full population (not just first 100 rows)
+- No architectural or performance concerns
+
 ### October 16, 2025 - Cancel Import Feature 🛑
 **Problem Solved:** Users needed ability to stop long-running imports (especially when hitting API rate limits or importing wrong date ranges). Solution: Cancel button with comprehensive race condition protection.
 
