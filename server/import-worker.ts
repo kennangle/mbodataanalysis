@@ -40,11 +40,12 @@ export class ImportWorker {
 
       // Check if job was cancelled before it started processing
       if (job.status === 'paused' || job.status === 'cancelled') {
-        console.log(`Job ${jobId} was cancelled before processing started, skipping`);
+        console.log(`Job ${jobId} was cancelled before processing started (status: ${job.status}), skipping`);
         return;
       }
 
       // Set job to running
+      console.log(`[Worker] Setting job ${jobId} status from '${job.status}' to 'running'`);
       await storage.updateImportJob(jobId, { status: 'running' });
 
       const startDate = new Date(job.startDate);

@@ -53,7 +53,7 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
 - `/api/mindbody/import/active`: Fetches active import job status.
 - `/api/mindbody/import/:id/status`: Retrieves real-time status of an import job.
 - `/api/mindbody/import/:id/resume`: Resumes a paused/failed import job.
-- `/api/mindbody/import/:id/cancel`: Cancels an import job.
+- `/api/mindbody/import/:id/cancel`: Pauses an import job (can be resumed later).
 - `/api/dashboard/revenue-trend`: Provides revenue and student count trends.
 - `/api/dashboard/attendance-by-time`: Provides attendance by day/time.
 

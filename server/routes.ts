@@ -704,9 +704,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Update status to pending
+      // Update status to pending and clear pausedAt
       await storage.updateImportJob(jobId, {
         status: 'pending',
+        pausedAt: null,
         error: null,
       });
 
@@ -748,15 +749,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Can only pause pending or running jobs
       if (job.status !== 'pending' && job.status !== 'running') {
+        console.log(`Cannot pause job ${jobId}: status is ${job.status}, not pending or running`);
         return res.status(400).json({ error: "Job is not in a pausable state" });
       }
 
+      console.log(`Pausing job ${jobId} (current status: ${job.status})`);
+      
       // Update status to paused with timestamp (can be resumed later)
       await storage.updateImportJob(jobId, {
         status: 'paused',
         pausedAt: new Date(),
         error: 'Paused by user',
       });
+      
+      console.log(`Job ${jobId} paused successfully`);
 
       res.json({
         success: true,
