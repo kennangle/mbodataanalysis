@@ -180,9 +180,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
       const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+      const status = req.query.status as string | undefined;
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
       
-      const students = await storage.getStudents(organizationId, limit, offset);
-      const count = await storage.getStudentCount(organizationId);
+      const students = await storage.getStudents(organizationId, limit, offset, status, startDate, endDate);
+      const count = await storage.getStudentCount(organizationId, status, startDate, endDate);
       
       res.json({ students, count });
     } catch (error) {
