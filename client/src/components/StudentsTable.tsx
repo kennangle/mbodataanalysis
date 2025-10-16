@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import * as XLSX from "xlsx";
 import {
   Table,
   TableBody,
@@ -12,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, MoreVertical, Calendar as CalendarIcon, X } from "lucide-react";
+import { Search, MoreVertical, Calendar as CalendarIcon, X, Download } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -76,6 +77,23 @@ export function StudentsTable() {
     setDateRange({ from: undefined, to: undefined });
   };
 
+  const exportToExcel = () => {
+    const exportData = filteredStudents.map((student) => ({
+      "First Name": student.firstName,
+      "Last Name": student.lastName,
+      "Email": student.email || "",
+      "Status": student.status,
+      "Membership": student.membershipType || "",
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Students");
+
+    const fileName = `students_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -85,15 +103,27 @@ export function StudentsTable() {
               <CardTitle>Students</CardTitle>
               <CardDescription>Manage and view your student roster</CardDescription>
             </div>
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search students..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-8"
-                data-testid="input-search-students"
-              />
+            <div className="flex items-center gap-2">
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search students..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-8"
+                  data-testid="input-search-students"
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="default"
+                onClick={exportToExcel}
+                disabled={filteredStudents.length === 0}
+                data-testid="button-export-excel"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
             </div>
           </div>
           
