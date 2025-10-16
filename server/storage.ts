@@ -9,6 +9,7 @@ import {
   revenue,
   aiQueries,
   importJobs,
+  passwordResetTokens,
   type User, 
   type InsertUser,
   type Organization,
@@ -27,16 +28,23 @@ import {
   type InsertAIQuery,
   type ImportJob,
   type InsertImportJob,
+  type PasswordResetToken,
 } from "@shared/schema";
 import { eq, and, desc, gte, lte, sql } from "drizzle-orm";
 
 export interface IStorage {
   getUserById(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByProvider(provider: string, providerId: string): Promise<User | undefined>;
   getUsers(organizationId: string): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, user: Partial<InsertUser>): Promise<void>;
   deleteUser(id: string): Promise<void>;
+  
+  createPasswordResetToken(userId: string, token: string, expiresAt: Date): Promise<PasswordResetToken>;
+  getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined>;
+  deletePasswordResetToken(token: string): Promise<void>;
+  deleteExpiredPasswordResetTokens(): Promise<void>;
   
   getOrganization(id: string): Promise<Organization | undefined>;
   createOrganization(org: InsertOrganization): Promise<Organization>;
@@ -91,6 +99,13 @@ export class DbStorage implements IStorage {
     return result[0];
   }
 
+  async getUserByProvider(provider: string, providerId: string): Promise<User | undefined> {
+    const result = await db.select().from(users)
+      .where(and(eq(users.provider, provider), eq(users.providerId, providerId)))
+      .limit(1);
+    return result[0];
+  }
+
   async getUsers(organizationId: string): Promise<User[]> {
     return await db.select()
       .from(users)
@@ -108,6 +123,30 @@ export class DbStorage implements IStorage {
 
   async deleteUser(id: string): Promise<void> {
     await db.delete(users).where(eq(users.id, id));
+  }
+
+  async createPasswordResetToken(userId: string, token: string, expiresAt: Date): Promise<PasswordResetToken> {
+    const result = await db.insert(passwordResetTokens).values({
+      userId,
+      token,
+      expiresAt,
+    }).returning();
+    return result[0];
+  }
+
+  async getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined> {
+    const result = await db.select().from(passwordResetTokens)
+      .where(eq(passwordResetTokens.token, token))
+      .limit(1);
+    return result[0];
+  }
+
+  async deletePasswordResetToken(token: string): Promise<void> {
+    await db.delete(passwordResetTokens).where(eq(passwordResetTokens.token, token));
+  }
+
+  async deleteExpiredPasswordResetTokens(): Promise<void> {
+    await db.delete(passwordResetTokens).where(lte(passwordResetTokens.expiresAt, new Date()));
   }
 
   async getOrganization(id: string): Promise<Organization | undefined> {
