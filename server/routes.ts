@@ -638,6 +638,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         currentDataType: job.currentDataType,
         currentOffset: job.currentOffset,
         error: job.error,
+        pausedAt: job.pausedAt,
         createdAt: job.createdAt,
         updatedAt: job.updatedAt,
       });
@@ -745,20 +746,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Forbidden" });
       }
 
-      // Can only cancel pending or running jobs
-      if (job.status !== 'pending' && job.status !== 'running' && job.status !== 'paused') {
-        return res.status(400).json({ error: "Job is not in a cancellable state" });
+      // Can only pause pending or running jobs
+      if (job.status !== 'pending' && job.status !== 'running') {
+        return res.status(400).json({ error: "Job is not in a pausable state" });
       }
 
-      // Update status to cancelled (terminal state, cannot be resumed)
+      // Update status to paused with timestamp (can be resumed later)
       await storage.updateImportJob(jobId, {
-        status: 'cancelled',
-        error: 'Cancelled by user',
+        status: 'paused',
+        pausedAt: new Date(),
+        error: 'Paused by user',
       });
 
       res.json({
         success: true,
-        message: "Import job cancelled"
+        message: "Import job paused"
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to cancel import";
