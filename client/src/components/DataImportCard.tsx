@@ -30,7 +30,7 @@ interface JobProgress {
 
 interface JobStatus {
   id: string;
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'paused';
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'paused' | 'cancelled';
   dataTypes: string[];
   progress: JobProgress;
   currentDataType: string | null;
@@ -281,6 +281,7 @@ export function DataImportCard() {
   const isJobActive = jobStatus?.status === 'running' || jobStatus?.status === 'pending';
   const isJobResumable = jobStatus?.status === 'failed' || jobStatus?.status === 'paused';
   const isJobCompleted = jobStatus?.status === 'completed';
+  const isJobCancelled = jobStatus?.status === 'cancelled';
 
   return (
     <Card>
@@ -499,6 +500,29 @@ export function DataImportCard() {
               data-testid="button-import-again"
             >
               Import Again
+            </Button>
+          </div>
+        )}
+
+        {isJobCancelled && jobStatus && (
+          <div className="space-y-4">
+            <div className="rounded-lg bg-muted p-4">
+              <p className="text-sm font-medium">
+                Import cancelled
+              </p>
+              {jobStatus.error && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {jobStatus.error}
+                </p>
+              )}
+            </div>
+            <Button 
+              variant="outline" 
+              onClick={handleReset}
+              className="w-full"
+              data-testid="button-start-new-import"
+            >
+              Start New Import
             </Button>
           </div>
         )}

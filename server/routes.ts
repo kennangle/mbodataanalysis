@@ -545,13 +545,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { config } = req.body;
       
-      // Check if there's already an active job
+      // Check if there's already an active job (running or pending)
       const activeJob = await storage.getActiveImportJob(organizationId);
       if (activeJob) {
-        return res.status(400).json({ 
-          error: "An import is already in progress", 
-          jobId: activeJob.id 
-        });
+        // Allow starting new import if the active job is paused or cancelled
+        if (activeJob.status === 'paused' || activeJob.status === 'cancelled') {
+          // Clean up the old paused/cancelled job by marking it as cancelled
+          await storage.updateImportJob(activeJob.id, {
+            status: 'cancelled',
+            error: activeJob.error || 'Replaced by new import',
+          });
+        } else {
+          // Reject if there's a truly active (running/pending) job
+          return res.status(400).json({ 
+            error: "An import is already in progress", 
+            jobId: activeJob.id 
+          });
+        }
       }
 
       // Parse config
@@ -736,13 +746,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Can only cancel pending or running jobs
-      if (job.status !== 'pending' && job.status !== 'running') {
+      if (job.status !== 'pending' && job.status !== 'running' && job.status !== 'paused') {
         return res.status(400).json({ error: "Job is not in a cancellable state" });
       }
 
-      // Update status to paused (can be resumed later if needed)
+      // Update status to cancelled (terminal state, cannot be resumed)
       await storage.updateImportJob(jobId, {
-        status: 'paused',
+        status: 'cancelled',
         error: 'Cancelled by user',
       });
 

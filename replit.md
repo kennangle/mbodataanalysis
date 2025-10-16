@@ -1,7 +1,7 @@
 # Mindbody Data Analysis SaaS Platform
 
 ## Overview
-This platform is an enterprise-grade analytics solution for Mindbody data, covering students, classes, schedules, attendance, memberships, purchases, and income. Its core purpose is to provide robust data synchronization, AI-powered natural language querying, real-time analytics dashboards, custom report generation, and role-based access control. The platform aims to solve the challenge of unreliable long-running data imports by implementing a resumable background import system, ensuring accurate and comprehensive business intelligence for large datasets.
+This platform is an enterprise-grade analytics solution for Mindbody data, covering students, classes, schedules, attendance, memberships, purchases, and income. Its core purpose is to provide robust data synchronization, AI-powered natural language querying, real-time analytics dashboards, custom report generation, and role-based access control. The platform solves the challenge of unreliable long-running data imports by implementing a resumable background import system with proper cancellation handling, ensuring accurate and comprehensive business intelligence for large datasets.
 
 ## User Preferences
 - Professional business intelligence interface
@@ -27,7 +27,14 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
 - Responsive mobile-first design
 
 ### Core Features & Implementations
-- **Resumable Background Import System**: Utilizes a database-backed job queue for asynchronous, checkpointed data imports to overcome HTTP connection timeouts. It features sequential batching for Mindbody API rate limiting, real-time progress tracking, session resilience, resume capabilities for failed jobs, and a cancel function with race condition protection.
+- **Resumable Background Import System**: Utilizes a database-backed job queue for asynchronous, checkpointed data imports to overcome HTTP connection timeouts. Features include:
+  - Sequential batching for Mindbody API rate limiting
+  - Real-time progress tracking with live polling
+  - Session resilience (survives page reloads)
+  - Resume capabilities for failed jobs
+  - Proper cancellation with terminal 'cancelled' status
+  - Auto-cleanup of stale jobs when starting new imports
+  - Race condition protection between worker and cancel operations
 - **Automatic Pagination**: Implements a generic helper (`fetchAllPages<T>()`) to retrieve all records from the Mindbody API, optimized for large datasets.
 - **User Management**: An admin-only interface for managing users within an organization, including CRUD operations, role-based access (admin/user), and multi-tenancy support.
 - **Dashboard & Analytics**: Displays real-time data using live database queries for charts such as Revenue & Growth Trend and Class Attendance by Time, with optimized SQL for performance.

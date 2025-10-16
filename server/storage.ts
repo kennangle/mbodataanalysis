@@ -445,7 +445,7 @@ export class DbStorage implements IStorage {
       .where(
         and(
           eq(importJobs.organizationId, organizationId),
-          sql`${importJobs.status} IN ('pending', 'running', 'paused')`
+          sql`${importJobs.status} IN ('pending', 'running', 'paused', 'cancelled')`
         )
       )
       .orderBy(desc(importJobs.createdAt))

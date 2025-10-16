@@ -39,7 +39,7 @@ export class ImportWorker {
       }
 
       // Check if job was cancelled before it started processing
-      if (job.status === 'paused') {
+      if (job.status === 'paused' || job.status === 'cancelled') {
         console.log(`Job ${jobId} was cancelled before processing started, skipping`);
         return;
       }
@@ -60,7 +60,7 @@ export class ImportWorker {
         
         // Check if job was cancelled during processing
         const updatedJob = await storage.getImportJob(jobId);
-        if (updatedJob?.status === 'paused') {
+        if (updatedJob?.status === 'paused' || updatedJob?.status === 'cancelled') {
           console.log(`Job ${jobId} was cancelled during clients import, stopping`);
           return;
         }
@@ -72,7 +72,7 @@ export class ImportWorker {
         
         // Check if job was cancelled during processing
         const updatedJob = await storage.getImportJob(jobId);
-        if (updatedJob?.status === 'paused') {
+        if (updatedJob?.status === 'paused' || updatedJob?.status === 'cancelled') {
           console.log(`Job ${jobId} was cancelled during classes import, stopping`);
           return;
         }
@@ -84,7 +84,7 @@ export class ImportWorker {
         
         // Check if job was cancelled during processing
         const updatedJob = await storage.getImportJob(jobId);
-        if (updatedJob?.status === 'paused') {
+        if (updatedJob?.status === 'paused' || updatedJob?.status === 'cancelled') {
           console.log(`Job ${jobId} was cancelled during visits import, stopping`);
           return;
         }
@@ -96,7 +96,7 @@ export class ImportWorker {
         
         // Check if job was cancelled during processing
         const updatedJob = await storage.getImportJob(jobId);
-        if (updatedJob?.status === 'paused') {
+        if (updatedJob?.status === 'paused' || updatedJob?.status === 'cancelled') {
           console.log(`Job ${jobId} was cancelled during sales import, stopping`);
           return;
         }
@@ -137,7 +137,7 @@ export class ImportWorker {
     do {
       // Check if job has been cancelled before processing next batch
       const currentJob = await storage.getImportJob(job.id);
-      if (currentJob?.status === 'paused') {
+      if (currentJob?.status === 'paused' || currentJob?.status === 'cancelled') {
         console.log(`Job ${job.id} has been cancelled, stopping clients import`);
         return;
       }
@@ -189,7 +189,7 @@ export class ImportWorker {
     do {
       // Check if job has been cancelled before processing next batch
       const currentJob = await storage.getImportJob(job.id);
-      if (currentJob?.status === 'paused') {
+      if (currentJob?.status === 'paused' || currentJob?.status === 'cancelled') {
         console.log(`Job ${job.id} has been cancelled, stopping classes import`);
         return;
       }
@@ -240,7 +240,7 @@ export class ImportWorker {
     do {
       // Check if job has been cancelled before processing next batch
       const currentJob = await storage.getImportJob(job.id);
-      if (currentJob?.status === 'paused') {
+      if (currentJob?.status === 'paused' || currentJob?.status === 'cancelled') {
         console.log(`Job ${job.id} has been cancelled, stopping visits import`);
         return;
       }
@@ -291,7 +291,7 @@ export class ImportWorker {
     do {
       // Check if job has been cancelled before processing next batch
       const currentJob = await storage.getImportJob(job.id);
-      if (currentJob?.status === 'paused') {
+      if (currentJob?.status === 'paused' || currentJob?.status === 'cancelled') {
         console.log(`Job ${job.id} has been cancelled, stopping sales import`);
         return;
       }

@@ -176,7 +176,7 @@ export const sessions = pgTable("sessions", {
 export const importJobs = pgTable("import_jobs", {
   id: uuid("id").defaultRandom().primaryKey(),
   organizationId: uuid("organization_id").notNull(),
-  status: text("status").notNull().default("pending"), // pending, running, completed, failed, paused
+  status: text("status").notNull().default("pending"), // pending, running, completed, failed, paused, cancelled
   dataTypes: text("data_types").array().notNull(), // ["clients", "classes", "visits", "sales"]
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),
