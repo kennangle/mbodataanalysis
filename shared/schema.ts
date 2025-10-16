@@ -184,6 +184,7 @@ export const importJobs = pgTable("import_jobs", {
   currentDataType: text("current_data_type"), // Which data type is currently processing
   currentOffset: integer("current_offset").default(0), // Current pagination offset
   error: text("error"), // Error message if failed
+  pausedAt: timestamp("paused_at"), // When the import was paused
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => ({
