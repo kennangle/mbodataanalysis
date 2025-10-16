@@ -876,7 +876,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/webhooks/mindbody", async (req, res) => {
     try {
       const signature = req.headers['x-mindbody-signature'] as string;
-      const rawBody = JSON.stringify(req.body);
+      const rawBody = (req as any).rawBody?.toString() || '';
       const { messageId, eventType, siteId, classVisit } = req.body;
 
       if (!messageId) {

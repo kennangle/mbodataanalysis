@@ -4,7 +4,29 @@ import { setupAuth } from "./auth";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
-app.use(express.json());
+
+// Webhook endpoint needs raw body for signature verification
+// Apply conditional JSON parsing: use raw body for webhooks, JSON for everything else
+app.use((req, res, next) => {
+  if (req.path === '/api/webhooks/mindbody' && req.method === 'POST') {
+    // For webhooks, capture raw body and parse JSON manually
+    express.raw({ type: 'application/json' })(req, res, () => {
+      try {
+        // Store raw body for signature verification
+        (req as any).rawBody = (req as any).body;
+        // Parse JSON for convenience
+        req.body = JSON.parse((req as any).body.toString());
+        next();
+      } catch (err) {
+        next(err);
+      }
+    });
+  } else {
+    // For all other routes, use standard JSON parsing
+    express.json()(req, res, next);
+  }
+});
+
 app.use(express.urlencoded({ extended: false }));
 
 setupAuth(app);

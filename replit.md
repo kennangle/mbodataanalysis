@@ -37,6 +37,15 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
   - Race condition protection between worker and cancel operations
   - Clean logging that retains failure/completion signals while eliminating per-batch noise
   - **API Call Tracking & Limit Management**: Tracks Mindbody API calls (1,000/day free tier limit) with real-time rate calculation and estimated time to reach daily limit, enabling users to schedule chunked imports strategically. Implementation updates `progress.apiCallCount` during batch processing (in progress callback and after each batch) to ensure real-time accuracy in both the database and UI
+- **Real-Time Webhook Integration**: Mindbody webhook support for instant data synchronization without consuming API calls. After initial bulk import, webhooks provide continuous real-time updates for new bookings and visit changes. Features include:
+  - HMAC-SHA256 signature verification for security
+  - Raw request body preservation for authentic signature validation
+  - Deduplication by messageId to prevent duplicate processing
+  - Asynchronous event processing with error tracking
+  - Support for `classVisit.created` and `classVisit.updated` events
+  - Automatic attendance record creation from webhook payloads
+  - Subscription management (create, list, delete) through API
+  - Event history tracking in webhookEvents table
 - **Automatic Pagination**: Implements a generic helper (`fetchAllPages<T>()`) to retrieve all records from the Mindbody API, optimized for large datasets.
 - **User Management**: An admin-only interface for managing users within an organization, including CRUD operations, role-based access (admin/user), and multi-tenancy support.
 - **Dashboard & Analytics**: Displays real-time data using live database queries for charts such as Revenue & Growth Trend and Class Attendance by Time, with optimized SQL for performance.
