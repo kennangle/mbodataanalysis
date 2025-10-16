@@ -10,9 +10,11 @@ import { AttendanceChart } from "@/components/AttendanceChart";
 import { DataImportCard } from "@/components/DataImportCard";
 import { AIQueryInterface } from "@/components/AIQueryInterface";
 import { StudentsTable } from "@/components/StudentsTable";
+import { Button } from "@/components/ui/button";
+import { LogOut } from "lucide-react";
 
 export default function Dashboard() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, logout } = useAuth();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
@@ -48,7 +50,20 @@ export default function Dashboard() {
               <SidebarTrigger data-testid="button-sidebar-toggle" />
               <h1 className="text-lg font-semibold">Dashboard</h1>
             </div>
-            <ThemeToggle />
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={async () => {
+                  await logout();
+                  setLocation("/login");
+                }}
+                data-testid="button-logout"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+              <ThemeToggle />
+            </div>
           </header>
           <main className="flex-1 overflow-y-auto p-6">
             <div className="max-w-screen-2xl mx-auto space-y-6">

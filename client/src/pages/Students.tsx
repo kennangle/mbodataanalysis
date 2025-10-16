@@ -5,9 +5,11 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { StudentsTable } from "@/components/StudentsTable";
+import { Button } from "@/components/ui/button";
+import { LogOut } from "lucide-react";
 
 export default function Students() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, logout } = useAuth();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
@@ -43,7 +45,20 @@ export default function Students() {
               <SidebarTrigger data-testid="button-sidebar-toggle" />
               <h1 className="text-lg font-semibold">Students</h1>
             </div>
-            <ThemeToggle />
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={async () => {
+                  await logout();
+                  setLocation("/login");
+                }}
+                data-testid="button-logout"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+              <ThemeToggle />
+            </div>
           </header>
           <main className="flex-1 overflow-y-auto p-6">
             <div className="max-w-screen-2xl mx-auto">
