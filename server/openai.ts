@@ -30,8 +30,9 @@ export class OpenAIService {
       );
     }
 
-    const [students, classes, attendance, revenue] = await Promise.all([
-      storage.getStudents(organizationId, 100),
+    const [totalStudentCount, activeStudentCount, classes, attendance, revenue] = await Promise.all([
+      storage.getStudentCount(organizationId),
+      storage.getActiveStudentCount(organizationId),
       storage.getClasses(organizationId),
       storage.getAttendance(organizationId),
       storage.getRevenue(organizationId),
@@ -45,12 +46,14 @@ export class OpenAIService {
       now
     );
 
+    const inactiveStudentCount = totalStudentCount - activeStudentCount;
+
     const dataContext = `
 You are an AI assistant helping analyze fitness and wellness business data. Here's the current data summary:
 
-Students: ${students.length} total
-- Active: ${students.filter((s) => s.status === "active").length}
-- Inactive: ${students.filter((s) => s.status === "inactive").length}
+Students: ${totalStudentCount} total
+- Active: ${activeStudentCount}
+- Inactive: ${inactiveStudentCount}
 
 Classes: ${classes.length} different class types
 

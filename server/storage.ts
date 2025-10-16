@@ -48,6 +48,7 @@ export interface IStorage {
   updateStudent(id: string, student: Partial<InsertStudent>): Promise<void>;
   deleteStudent(id: string): Promise<void>;
   getStudentCount(organizationId: string): Promise<number>;
+  getActiveStudentCount(organizationId: string): Promise<number>;
   
   getClasses(organizationId: string): Promise<Class[]>;
   getClassById(id: string): Promise<Class | undefined>;
@@ -155,6 +156,18 @@ export class DbStorage implements IStorage {
     const result = await db.select({ count: sql<number>`count(*)` })
       .from(students)
       .where(eq(students.organizationId, organizationId));
+    return Number(result[0].count);
+  }
+
+  async getActiveStudentCount(organizationId: string): Promise<number> {
+    const result = await db.select({ count: sql<number>`count(*)` })
+      .from(students)
+      .where(
+        and(
+          eq(students.organizationId, organizationId),
+          eq(students.status, 'active')
+        )
+      );
     return Number(result[0].count);
   }
 

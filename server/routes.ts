@@ -838,14 +838,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
       const [
-        studentCount,
+        activeStudentCount,
         revenueStats,
         lastMonthRevenueStats,
         attendanceRecords,
         lastMonthAttendanceRecords,
         classes
       ] = await Promise.all([
-        storage.getStudentCount(organizationId),
+        storage.getActiveStudentCount(organizationId),
         storage.getRevenueStats(organizationId, thisMonth, now),
         storage.getRevenueStats(organizationId, lastMonth, thisMonth),
         storage.getAttendance(organizationId, thisMonth, now),
@@ -872,7 +872,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         totalRevenue: revenueStats.total,
         revenueChange: revenueChange.toFixed(1),
-        activeStudents: studentCount,
+        activeStudents: activeStudentCount,
         studentChange: "+12.5",
         attendanceRate: attendanceRate.toFixed(1),
         attendanceChange: attendanceChange.toFixed(1),
