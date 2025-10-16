@@ -216,7 +216,6 @@ export class MindbodyService {
 
     // Track API call
     this.apiCallCounter++;
-    console.log(`[API Counter] makeAuthenticatedRequest called, counter now: ${this.apiCallCounter}`);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -280,13 +279,9 @@ export class MindbodyService {
     let hasMorePages = true;
     let apiCallCount = 0;
 
-    console.log(`Starting paginated fetch from ${baseEndpoint} with page size ${pageSize}`);
-
     while (hasMorePages) {
       const separator = baseEndpoint.includes('?') ? '&' : '?';
       const endpoint = `${baseEndpoint}${separator}Limit=${pageSize}&Offset=${offset}`;
-      
-      console.log(`Fetching page at offset ${offset}...`);
       const data = await this.makeAuthenticatedRequest(organizationId, endpoint);
       apiCallCount++; // Track API call
 
@@ -296,8 +291,6 @@ export class MindbodyService {
       const pagination: MindbodyPaginationResponse | undefined = data.PaginationResponse;
       
       if (pagination) {
-        console.log(`Page received: ${results.length} items (Total: ${pagination.TotalResults}, Retrieved so far: ${allResults.length})`);
-        
         // Guard against offset exceeding total results
         if (offset >= pagination.TotalResults) {
           console.warn(`Offset ${offset} exceeds TotalResults ${pagination.TotalResults}, stopping pagination`);
@@ -316,16 +309,13 @@ export class MindbodyService {
           }
           
           offset += actualPageSize;
-          console.log(`Next offset will be ${offset} (incremented by ${actualPageSize} actual items returned)`);
         }
       } else {
         // No pagination info, assume single page
-        console.log(`No pagination info, treating as single page: ${results.length} items`);
         hasMorePages = false;
       }
     }
 
-    console.log(`Pagination complete: ${allResults.length} total items fetched with ${apiCallCount} API calls`);
     return { results: allResults, apiCalls: apiCallCount };
   }
 
@@ -352,7 +342,6 @@ export class MindbodyService {
     }
     
     // Load existing students for duplicate detection
-    console.log('Loading existing students for duplicate detection...');
     const existingStudents = await storage.getStudents(organizationId, 100000);
     const studentMap = new Map(existingStudents.map(s => [s.mindbodyClientId, s]));
     
@@ -431,7 +420,6 @@ export class MindbodyService {
     }
     
     // Load existing classes once for efficient lookup
-    console.log('Loading existing classes for import...');
     const existingClasses = await storage.getClasses(organizationId);
     const classMap = new Map(existingClasses.map(c => [c.mindbodyClassId, c]));
     
@@ -511,7 +499,6 @@ export class MindbodyService {
     const studentBatch = allStudents.slice(startStudentIndex, endIndex);
     
     // Load schedules once for efficient lookup
-    console.log('Loading class schedules for visit import...');
     const schedules = await storage.getClassSchedules(organizationId);
     const scheduleMap = new Map(schedules.map(s => [s.mindbodyScheduleId, s]));
     

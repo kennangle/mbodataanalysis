@@ -11,7 +11,6 @@ export class ImportWorker {
     // Add job to queue
     if (!this.jobQueue.includes(jobId)) {
       this.jobQueue.push(jobId);
-      console.log(`Job ${jobId} added to queue (position ${this.jobQueue.length})`);
     }
 
     // Start processing if not already processing
@@ -40,12 +39,10 @@ export class ImportWorker {
 
       // Check if job was cancelled before it started processing
       if (job.status === 'paused' || job.status === 'cancelled') {
-        console.log(`Job ${jobId} was cancelled before processing started (status: ${job.status}), skipping`);
         return;
       }
 
       // Set job to running and initialize/resume progress tracking
-      console.log(`[Worker] Setting job ${jobId} status from '${job.status}' to 'running'`);
       
       const startDate = new Date(job.startDate);
       const endDate = new Date(job.endDate);
@@ -71,8 +68,6 @@ export class ImportWorker {
         progress: JSON.stringify(progress),
       });
 
-      console.log(`Processing import job ${jobId} for organization ${job.organizationId}`);
-
       // Process clients
       if (dataTypes.includes('clients') && !progress.clients?.completed) {
         await this.processClients(job, startDate, endDate, progress, baselineApiCallCount);
@@ -82,7 +77,6 @@ export class ImportWorker {
         // Check if job was cancelled during processing
         const updatedJob = await storage.getImportJob(jobId);
         if (updatedJob?.status === 'paused' || updatedJob?.status === 'cancelled') {
-          console.log(`Job ${jobId} was cancelled during clients import, stopping`);
           return;
         }
       }
@@ -96,7 +90,6 @@ export class ImportWorker {
         // Check if job was cancelled during processing
         const updatedJob = await storage.getImportJob(jobId);
         if (updatedJob?.status === 'paused' || updatedJob?.status === 'cancelled') {
-          console.log(`Job ${jobId} was cancelled during classes import, stopping`);
           return;
         }
       }
@@ -110,7 +103,6 @@ export class ImportWorker {
         // Check if job was cancelled during processing
         const updatedJob = await storage.getImportJob(jobId);
         if (updatedJob?.status === 'paused' || updatedJob?.status === 'cancelled') {
-          console.log(`Job ${jobId} was cancelled during visits import, stopping`);
           return;
         }
       }
@@ -124,7 +116,6 @@ export class ImportWorker {
         // Check if job was cancelled during processing
         const updatedJob = await storage.getImportJob(jobId);
         if (updatedJob?.status === 'paused' || updatedJob?.status === 'cancelled') {
-          console.log(`Job ${jobId} was cancelled during sales import, stopping`);
           return;
         }
       }
@@ -155,8 +146,6 @@ export class ImportWorker {
     progress: any,
     baselineApiCallCount: number = 0
   ): Promise<void> {
-    console.log('Processing clients...');
-    
     if (!progress.clients) {
       progress.clients = { current: 0, total: 0, imported: 0, updated: 0, completed: false };
     }
@@ -166,7 +155,6 @@ export class ImportWorker {
       // Check if job has been cancelled before processing next batch
       const currentJob = await storage.getImportJob(job.id);
       if (currentJob?.status === 'paused' || currentJob?.status === 'cancelled') {
-        console.log(`Job ${job.id} has been cancelled, stopping clients import`);
         return;
       }
 
@@ -199,11 +187,7 @@ export class ImportWorker {
       await storage.updateImportJob(job.id, {
         progress: JSON.stringify(progress),
       });
-
-      console.log(`Clients batch: imported=${batchResult.imported}, updated=${batchResult.updated}, next=${batchResult.nextOffset}, completed=${batchResult.completed}, apiCalls=${progress.apiCallCount}`);
     } while (!batchResult.completed);
-
-    console.log(`Clients complete: ${progress.clients.imported} new, ${progress.clients.updated} updated, API calls: ${progress.apiCallCount}`);
   }
 
   private async processClasses(
@@ -213,8 +197,6 @@ export class ImportWorker {
     progress: any,
     baselineApiCallCount: number = 0
   ): Promise<void> {
-    console.log('Processing classes...');
-    
     if (!progress.classes) {
       progress.classes = { current: 0, total: 0, imported: 0, completed: false };
     }
@@ -224,7 +206,6 @@ export class ImportWorker {
       // Check if job has been cancelled before processing next batch
       const currentJob = await storage.getImportJob(job.id);
       if (currentJob?.status === 'paused' || currentJob?.status === 'cancelled') {
-        console.log(`Job ${job.id} has been cancelled, stopping classes import`);
         return;
       }
 
@@ -256,11 +237,7 @@ export class ImportWorker {
       await storage.updateImportJob(job.id, {
         progress: JSON.stringify(progress),
       });
-
-      console.log(`Classes batch: imported=${batchResult.imported}, next=${batchResult.nextOffset}, completed=${batchResult.completed}, apiCalls=${progress.apiCallCount}`);
     } while (!batchResult.completed);
-
-    console.log(`Classes complete: ${progress.classes.imported} imported, API calls: ${progress.apiCallCount}`);
   }
 
   private async processVisits(
@@ -270,8 +247,6 @@ export class ImportWorker {
     progress: any,
     baselineApiCallCount: number = 0
   ): Promise<void> {
-    console.log('Processing visits...');
-    
     if (!progress.visits) {
       progress.visits = { current: 0, total: 0, imported: 0, completed: false };
     }
@@ -313,11 +288,7 @@ export class ImportWorker {
       await storage.updateImportJob(job.id, {
         progress: JSON.stringify(progress),
       });
-
-      console.log(`Visits batch: imported=${batchResult.imported}, next=${batchResult.nextStudentIndex}, completed=${batchResult.completed}, apiCalls=${progress.apiCallCount}`);
     } while (!batchResult.completed);
-
-    console.log(`Visits complete: ${progress.visits.imported} imported, API calls: ${progress.apiCallCount}`);
   }
 
   private async processSales(
@@ -327,8 +298,6 @@ export class ImportWorker {
     progress: any,
     baselineApiCallCount: number = 0
   ): Promise<void> {
-    console.log('Processing sales...');
-    
     if (!progress.sales) {
       progress.sales = { current: 0, total: 0, imported: 0, completed: false };
     }
@@ -370,11 +339,7 @@ export class ImportWorker {
       await storage.updateImportJob(job.id, {
         progress: JSON.stringify(progress),
       });
-
-      console.log(`Sales batch: imported=${batchResult.imported}, next=${batchResult.nextStudentIndex}, completed=${batchResult.completed}, apiCalls=${progress.apiCallCount}`);
     } while (!batchResult.completed);
-
-    console.log(`Sales complete: ${progress.sales.imported} imported, API calls: ${progress.apiCallCount}`);
   }
 
   isJobProcessing(): boolean {
