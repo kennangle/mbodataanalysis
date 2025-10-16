@@ -220,3 +220,50 @@ export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTo
 });
 export type InsertPasswordResetToken = z.infer<typeof insertPasswordResetTokenSchema>;
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+
+export const webhookSubscriptions = pgTable("webhook_subscriptions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  organizationId: uuid("organization_id").notNull(),
+  eventType: text("event_type").notNull(), // e.g., "classVisit.created"
+  webhookUrl: text("webhook_url").notNull(),
+  status: text("status").notNull().default("active"), // active, inactive
+  mindbodySubscriptionId: text("mindbody_subscription_id"), // ID from Mindbody
+  messageSignatureKey: text("message_signature_key"), // For HMAC verification
+  referenceId: text("reference_id"),
+  eventSchemaVersion: integer("event_schema_version").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  orgIdx: index("webhook_subscriptions_org_idx").on(table.organizationId),
+  statusIdx: index("webhook_subscriptions_status_idx").on(table.status),
+}));
+
+export const insertWebhookSubscriptionSchema = createInsertSchema(webhookSubscriptions).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertWebhookSubscription = z.infer<typeof insertWebhookSubscriptionSchema>;
+export type WebhookSubscription = typeof webhookSubscriptions.$inferSelect;
+
+export const webhookEvents = pgTable("webhook_events", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  organizationId: uuid("organization_id").notNull(),
+  subscriptionId: uuid("subscription_id"), // Link to subscription
+  messageId: text("message_id").notNull().unique(), // For deduplication
+  eventType: text("event_type").notNull(),
+  eventData: text("event_data").notNull(), // JSON payload
+  processed: boolean("processed").notNull().default(false),
+  processedAt: timestamp("processed_at"),
+  error: text("error"), // Error message if processing failed
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  orgIdx: index("webhook_events_org_idx").on(table.organizationId),
+  messageIdx: index("webhook_events_message_idx").on(table.messageId),
+  processedIdx: index("webhook_events_processed_idx").on(table.processed),
+}));
+
+export const insertWebhookEventSchema = createInsertSchema(webhookEvents).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertWebhookEvent = z.infer<typeof insertWebhookEventSchema>;
+export type WebhookEvent = typeof webhookEvents.$inferSelect;
