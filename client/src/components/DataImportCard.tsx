@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { format } from "date-fns";
 
 interface ImportConfig {
   startDate: string;
@@ -35,6 +36,7 @@ interface JobStatus {
   progress: JobProgress;
   currentDataType: string | null;
   error: string | null;
+  pausedAt?: string | null;
 }
 
 export function DataImportCard() {
@@ -461,12 +463,12 @@ export function DataImportCard() {
               onClick={handleCancelImport}
               className="w-full"
               disabled={cancelImportMutation.isPending}
-              data-testid="button-cancel-import"
+              data-testid="button-pause-import"
             >
               {cancelImportMutation.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                "Cancel Import"
+                "Pause Import"
               )}
             </Button>
           </div>
@@ -529,15 +531,37 @@ export function DataImportCard() {
 
         {isJobResumable && jobStatus && (
           <div className="space-y-4">
-            <div className="rounded-lg bg-destructive/10 p-4">
-              <p className="text-sm font-medium text-destructive">
+            <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 p-4">
+              <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
                 Import {jobStatus.status === 'failed' ? 'failed' : 'paused'}
               </p>
+              {jobStatus.pausedAt && (
+                <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                  Paused: {format(new Date(jobStatus.pausedAt), 'MMM d, yyyy h:mm a')}
+                </p>
+              )}
               {jobStatus.error && (
-                <p className="text-xs text-destructive/80 mt-1">
+                <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
                   {jobStatus.error}
                 </p>
               )}
+              
+              {/* Show progress at time of pausing */}
+              <div className="text-xs text-amber-700 dark:text-amber-300 mt-3 space-y-1">
+                <p className="font-medium">Progress at pause:</p>
+                {jobStatus.progress.clients && (
+                  <p>Clients: {jobStatus.progress.clients.imported} new, {jobStatus.progress.clients.updated} updated</p>
+                )}
+                {jobStatus.progress.classes && (
+                  <p>Classes: {jobStatus.progress.classes.imported} imported</p>
+                )}
+                {jobStatus.progress.visits && (
+                  <p>Visits: {jobStatus.progress.visits.imported} imported</p>
+                )}
+                {jobStatus.progress.sales && (
+                  <p>Sales: {jobStatus.progress.sales.imported} imported</p>
+                )}
+              </div>
             </div>
             <div className="flex gap-2">
               <Button 
