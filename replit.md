@@ -41,11 +41,22 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
 - **Dashboard & Analytics**: Displays real-time data using live database queries for charts such as Revenue & Growth Trend and Class Attendance by Time, with optimized SQL for performance.
 - **Configurable Imports**: Allows users to specify date ranges and data types (Clients, Classes, Visits, Sales) for selective data fetching.
 - **Students Data Management**: Comprehensive student roster management with advanced filtering (status, date range) and Excel export functionality using xlsx library. Filters respect search queries and export includes all filtered results with columns: First Name, Last Name, Email, Status, Membership.
-- **Authentication**: Session-based authentication using Passport.js with scrypt for password hashing. Mindbody API authentication uses cached User Tokens for efficiency.
-- **Database Schema**: A comprehensive PostgreSQL schema with 10 tables, designed for multi-tenancy via `organizationId` and optimized with indexing.
+- **Authentication**: Multi-provider authentication system supporting:
+  - **Email/Password**: Session-based authentication using Passport.js with scrypt for password hashing
+  - **Google OAuth 2.0**: Single sign-on via Google with automatic account creation and organization setup
+  - **Password Reset**: Secure token-based password reset flow using Brevo email service (1-hour token expiry)
+  - Mindbody API authentication uses cached User Tokens for efficiency
+- **Database Schema**: A comprehensive PostgreSQL schema with 11 tables (users, organizations, students, classes, visits, sales, importJobs, sessions, mindbodyTokenCache, passwordResetTokens), designed for multi-tenancy via `organizationId` and optimized with indexing. Users table supports both local and OAuth providers via `provider` and `providerId` fields, with nullable `passwordHash` for OAuth users.
 
 ### API Endpoints
-- `/api/auth/*`: Authentication endpoints.
+- `/api/auth/login`: Email/password login
+- `/api/auth/register`: User registration
+- `/api/auth/logout`: User logout
+- `/api/auth/me`: Get current user
+- `/api/auth/google`: Google OAuth login
+- `/api/auth/google/callback`: Google OAuth callback
+- `/api/auth/forgot-password`: Request password reset email
+- `/api/auth/reset-password`: Reset password with token
 - `/api/students`: Student management and search.
 - `/api/classes`: Class management.
 - `/api/attendance`: Attendance tracking.
@@ -63,3 +74,24 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
 - **Mindbody Public API**: Used for importing client, class, visit, and sales data, authenticated via API Key and User Tokens.
 - **OpenAI API**: Integrated for AI-powered natural language querying.
 - **Neon (PostgreSQL)**: Cloud-hosted PostgreSQL database service.
+- **Google OAuth 2.0**: Provides single sign-on authentication for users.
+- **Brevo (SendinBlue)**: Transactional email service used for password reset emails.
+
+## Environment Variables
+
+### Required for Core Functionality
+- `DATABASE_URL`: PostgreSQL connection string (provided by Neon integration)
+- `SESSION_SECRET`: Secret key for session encryption
+- `MINDBODY_API_KEY`: Mindbody Public API key
+- `MINDBODY_CLIENT_ID`: Mindbody OAuth client ID
+- `MINDBODY_CLIENT_SECRET`: Mindbody OAuth client secret
+- `OPENAI_API_KEY`: OpenAI API key for AI features
+
+### Required for Google OAuth (Optional Feature)
+- `GOOGLE_CLIENT_ID`: Google OAuth 2.0 client ID
+- `GOOGLE_CLIENT_SECRET`: Google OAuth 2.0 client secret
+
+### Required for Password Reset (Optional Feature)
+- `BREVO_API_KEY`: Brevo (SendinBlue) API key for transactional emails
+
+Note: If Google OAuth credentials are not provided, the Google sign-in buttons will not be functional but the app will work with email/password authentication. Similarly, password reset requires Brevo API key to be configured.
