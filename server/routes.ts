@@ -662,6 +662,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Job is not in a resumable state" });
       }
 
+      // Check if any progress was made (data was actually fetched from Mindbody)
+      const progress = JSON.parse(job.progress || '{}');
+      const hasProgress = Object.values(progress).some((p: any) => 
+        p && (p.imported > 0 || p.updated > 0 || p.current > 0)
+      );
+
+      // Only enforce 24-hour limit if:
+      // 1. The job made progress (fetched data from Mindbody API), AND
+      // 2. It wasn't manually cancelled by user (those should be resumable immediately)
+      const wasManuallyCancelled = job.error === 'Cancelled by user';
+      
+      if (hasProgress && !wasManuallyCancelled) {
+        const now = new Date();
+        const lastUpdate = new Date(job.updatedAt);
+        const hoursSinceLastUpdate = (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60);
+        const REQUIRED_HOURS = 24;
+
+        if (hoursSinceLastUpdate < REQUIRED_HOURS) {
+          const hoursRemaining = Math.ceil(REQUIRED_HOURS - hoursSinceLastUpdate);
+          const nextAvailableTime = new Date(lastUpdate.getTime() + (REQUIRED_HOURS * 60 * 60 * 1000));
+          
+          return res.status(429).json({ 
+            error: "Too soon to resume import",
+            message: `Mindbody API has a 24-hour limit between imports. Please wait ${hoursRemaining} more hour${hoursRemaining !== 1 ? 's' : ''} before resuming.`,
+            lastDownloadTime: lastUpdate.toISOString(),
+            nextAvailableTime: nextAvailableTime.toISOString(),
+            hoursRemaining
+          });
+        }
+      }
+
       // Update status to pending
       await storage.updateImportJob(jobId, {
         status: 'pending',

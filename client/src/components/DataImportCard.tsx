@@ -144,9 +144,29 @@ export function DataImportCard() {
 
   const resumeImportMutation = useMutation({
     mutationFn: async (jobId: string) => {
-      const response = await apiRequest("POST", `/api/mindbody/import/${jobId}/resume`);
-      const result = await response.json() as { success: boolean; message: string };
-      return result;
+      const response = await fetch(`/api/mindbody/import/${jobId}/resume`, {
+        method: "POST",
+        credentials: "include",
+      });
+      
+      const data = await response.json();
+      
+      // Handle 429 rate limit error with detailed message
+      if (response.status === 429) {
+        const lastDownload = new Date(data.lastDownloadTime);
+        const nextAvailable = new Date(data.nextAvailableTime);
+        const hoursRemaining = data.hoursRemaining || 0;
+        
+        throw new Error(
+          `Rate limit: Please wait ${hoursRemaining} more hour${hoursRemaining !== 1 ? 's' : ''} before resuming. Last download was at ${lastDownload.toLocaleString()}. Next available at ${nextAvailable.toLocaleString()}.`
+        );
+      }
+      
+      if (!response.ok) {
+        throw new Error(data.error || data.message || "Failed to resume import");
+      }
+      
+      return data as { success: boolean; message: string };
     },
     onSuccess: () => {
       toast({
