@@ -74,6 +74,7 @@ function getRedirectUri(): string {
 export class MindbodyService {
   private cachedUserToken: string | null = null;
   private tokenExpiryTime: number = 0;
+  private apiCallCounter: number = 0;
 
   async exchangeCodeForTokens(code: string, organizationId: string): Promise<void> {
     const redirectUri = getRedirectUri();
@@ -213,6 +214,9 @@ export class MindbodyService {
       },
     });
 
+    // Track API call
+    this.apiCallCounter++;
+
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`Mindbody API error: ${response.status} - ${errorText}`);
@@ -243,6 +247,9 @@ export class MindbodyService {
           throw new Error(`Mindbody API error: ${retryResponse.statusText}`);
         }
         
+        // Track retry API call
+        this.apiCallCounter++;
+        
         return await retryResponse.json();
       }
       
@@ -250,6 +257,15 @@ export class MindbodyService {
     }
 
     return await response.json();
+  }
+
+  // API call tracking methods
+  getApiCallCount(): number {
+    return this.apiCallCounter;
+  }
+
+  resetApiCallCount(): void {
+    this.apiCallCounter = 0;
   }
 
   private async fetchAllPages<T>(

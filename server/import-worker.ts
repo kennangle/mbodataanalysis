@@ -44,20 +44,41 @@ export class ImportWorker {
         return;
       }
 
-      // Set job to running
+      // Set job to running and initialize/resume progress tracking
       console.log(`[Worker] Setting job ${jobId} status from '${job.status}' to 'running'`);
-      await storage.updateImportJob(jobId, { status: 'running' });
-
+      
       const startDate = new Date(job.startDate);
       const endDate = new Date(job.endDate);
       const dataTypes = job.dataTypes;
       const progress = JSON.parse(job.progress);
+      
+      // Initialize API tracking if not present
+      if (!progress.apiCallCount) {
+        progress.apiCallCount = 0;
+      }
+      if (!progress.importStartTime) {
+        progress.importStartTime = new Date().toISOString();
+      }
+      
+      // Reset the API counter at start of job (it accumulates during the job)
+      mindbodyService.resetApiCallCount();
+      
+      await storage.updateImportJob(jobId, { 
+        status: 'running',
+        progress: JSON.stringify(progress),
+      });
 
       console.log(`Processing import job ${jobId} for organization ${job.organizationId}`);
 
       // Process clients
       if (dataTypes.includes('clients') && !progress.clients?.completed) {
         await this.processClients(job, startDate, endDate, progress);
+        
+        // Update API call count after clients
+        progress.apiCallCount = mindbodyService.getApiCallCount();
+        await storage.updateImportJob(jobId, {
+          progress: JSON.stringify(progress),
+        });
         
         // Check if job was cancelled during processing
         const updatedJob = await storage.getImportJob(jobId);
@@ -71,6 +92,12 @@ export class ImportWorker {
       if (dataTypes.includes('classes') && !progress.classes?.completed) {
         await this.processClasses(job, startDate, endDate, progress);
         
+        // Update API call count after classes
+        progress.apiCallCount = mindbodyService.getApiCallCount();
+        await storage.updateImportJob(jobId, {
+          progress: JSON.stringify(progress),
+        });
+        
         // Check if job was cancelled during processing
         const updatedJob = await storage.getImportJob(jobId);
         if (updatedJob?.status === 'paused' || updatedJob?.status === 'cancelled') {
@@ -83,6 +110,12 @@ export class ImportWorker {
       if (dataTypes.includes('visits') && !progress.visits?.completed) {
         await this.processVisits(job, startDate, endDate, progress);
         
+        // Update API call count after visits
+        progress.apiCallCount = mindbodyService.getApiCallCount();
+        await storage.updateImportJob(jobId, {
+          progress: JSON.stringify(progress),
+        });
+        
         // Check if job was cancelled during processing
         const updatedJob = await storage.getImportJob(jobId);
         if (updatedJob?.status === 'paused' || updatedJob?.status === 'cancelled') {
@@ -94,6 +127,12 @@ export class ImportWorker {
       // Process sales
       if (dataTypes.includes('sales') && !progress.sales?.completed) {
         await this.processSales(job, startDate, endDate, progress);
+        
+        // Update API call count after sales
+        progress.apiCallCount = mindbodyService.getApiCallCount();
+        await storage.updateImportJob(jobId, {
+          progress: JSON.stringify(progress),
+        });
         
         // Check if job was cancelled during processing
         const updatedJob = await storage.getImportJob(jobId);
