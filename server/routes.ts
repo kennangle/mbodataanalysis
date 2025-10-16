@@ -777,61 +777,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Legacy import endpoint (kept for backward compatibility)
-  app.post("/api/mindbody/import", requireAuth, async (req, res) => {
-    try {
-      // Extend timeout for long-running imports (90 minutes for 20,000+ records)
-      req.setTimeout(90 * 60 * 1000); // 90 minutes in milliseconds
-      res.setTimeout(90 * 60 * 1000);
-      
-      const organizationId = (req.user as User)?.organizationId;
-      
-      if (!organizationId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
-
-      const { useSampleData, config } = req.body;
-      console.log("Import request - useSampleData:", useSampleData, "config:", config);
-
-      if (useSampleData) {
-        console.log("Creating sample data for org:", organizationId);
-        const stats = await createSampleData(organizationId);
-        console.log("Sample data created:", stats);
-        return res.json({
-          success: true,
-          message: "Sample data imported successfully",
-          stats
-        });
-      }
-
-      const mindbodyService = new MindbodyService();
-      const stats = await mindbodyService.importAllData(organizationId, config);
-
-      const importedTypes = [];
-      if (stats.clients > 0) importedTypes.push(`${stats.clients} clients`);
-      if (stats.classes > 0) importedTypes.push(`${stats.classes} classes`);
-      if (stats.visits > 0) importedTypes.push(`${stats.visits} visits`);
-      if (stats.sales > 0) importedTypes.push(`${stats.sales} sales`);
-
-      const message = importedTypes.length > 0 
-        ? `Successfully imported ${importedTypes.join(', ')} from Mindbody`
-        : 'No data imported - please select at least one data type';
-
-      res.json({
-        success: true,
-        message,
-        stats: {
-          students: stats.clients,
-          classes: stats.classes,
-          attendance: stats.visits,
-          revenue: stats.sales
-        }
-      });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to import Mindbody data";
-      res.status(500).json({ error: errorMessage });
-    }
-  });
 
   app.post("/api/ai/query", requireAuth, async (req, res) => {
     try {

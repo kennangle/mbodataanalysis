@@ -329,6 +329,369 @@ export class MindbodyService {
     return { results: allResults, apiCalls: apiCallCount };
   }
 
+  async importClients(organizationId: string, startDate?: Date, endDate?: Date): Promise<number> {
+    // Use provided startDate or default to last 12 months
+    const lastModifiedDate = startDate || (() => {
+      const date = new Date();
+      date.setMonth(date.getMonth() - 12);
+      return date;
+    })();
+    
+    // Fetch all pages of clients using pagination
+    const { results: clients, apiCalls } = await this.fetchAllPages<MindbodyClient>(
+      organizationId,
+      `/client/clients?LastModifiedDate=${lastModifiedDate.toISOString()}`,
+      'Clients',
+      200
+    );
+
+    console.log(`Clients fetch used ${apiCalls} API calls`);
+
+    // Load existing students for duplicate detection
+    console.log('Loading existing students for duplicate detection...');
+    const existingStudents = await storage.getStudents(organizationId, 100000);
+    const studentMap = new Map(existingStudents.map(s => [s.mindbodyClientId, s]));
+
+    let imported = 0;
+    let updated = 0;
+
+    for (const client of clients) {
+      try {
+        const existingStudent = studentMap.get(client.Id);
+        
+        if (existingStudent) {
+          // Update existing student
+          await storage.updateStudent(existingStudent.id, {
+            firstName: client.FirstName,
+            lastName: client.LastName,
+            email: client.Email || null,
+            phone: client.MobilePhone || null,
+            status: client.Status === "Active" ? "active" : "inactive",
+            joinDate: client.CreationDate ? new Date(client.CreationDate) : null,
+          });
+          updated++;
+        } else {
+          // Create new student
+          const newStudent = await storage.createStudent({
+            organizationId,
+            mindbodyClientId: client.Id,
+            firstName: client.FirstName,
+            lastName: client.LastName,
+            email: client.Email || null,
+            phone: client.MobilePhone || null,
+            status: client.Status === "Active" ? "active" : "inactive",
+            joinDate: client.CreationDate ? new Date(client.CreationDate) : null,
+            membershipType: null,
+          });
+          studentMap.set(client.Id, newStudent); // Add to map for future lookups
+          imported++;
+        }
+      } catch (error) {
+        console.error(`Failed to import client ${client.Id}:`, error);
+      }
+    }
+
+    console.log(`Client import complete: ${imported} new, ${updated} updated`);
+    return imported + updated;
+  }
+
+  async importClasses(organizationId: string, startDate?: Date, endDate?: Date): Promise<number> {
+    // Use provided dates or default to 12 months past, 1 month future
+    const classStartDate = startDate || (() => {
+      const date = new Date();
+      date.setMonth(date.getMonth() - 12);
+      return date;
+    })();
+    
+    const classEndDate = endDate || (() => {
+      const date = new Date();
+      date.setMonth(date.getMonth() + 1);
+      return date;
+    })();
+
+    // Fetch all pages of classes using pagination
+    const { results: classes, apiCalls } = await this.fetchAllPages<MindbodyClass>(
+      organizationId,
+      `/class/classes?StartDateTime=${classStartDate.toISOString()}&EndDateTime=${classEndDate.toISOString()}`,
+      'Classes',
+      200
+    );
+
+    console.log(`Classes fetch used ${apiCalls} API calls`);
+
+    // Load existing classes once for efficient lookup
+    console.log('Loading existing classes for import...');
+    const existingClasses = await storage.getClasses(organizationId);
+    const classMap = new Map(existingClasses.map(c => [c.mindbodyClassId, c]));
+
+    let imported = 0;
+
+    for (const mbClass of classes) {
+      try {
+        // Skip if missing required fields
+        if (!mbClass.ClassDescription?.Id || !mbClass.ClassScheduleId || !mbClass.StartDateTime || !mbClass.EndDateTime) {
+          continue;
+        }
+
+        let classRecord = classMap.get(mbClass.ClassDescription.Id.toString());
+
+        if (!classRecord) {
+          classRecord = await storage.createClass({
+            organizationId,
+            mindbodyClassId: mbClass.ClassDescription.Id.toString(),
+            name: mbClass.ClassDescription.Name || 'Unknown Class',
+            description: mbClass.ClassDescription.Description || null,
+            instructorName: mbClass.Staff?.Name || null,
+            capacity: mbClass.MaxCapacity || null,
+            duration: null,
+          });
+          // Add to map for future lookups in this import session
+          classMap.set(classRecord.mindbodyClassId!, classRecord);
+        }
+
+        await storage.createClassSchedule({
+          organizationId,
+          classId: classRecord.id,
+          mindbodyScheduleId: mbClass.ClassScheduleId.toString(),
+          startTime: new Date(mbClass.StartDateTime),
+          endTime: new Date(mbClass.EndDateTime),
+          location: mbClass.Location?.Name || null,
+        });
+
+        imported++;
+      } catch (error) {
+        console.error(`Failed to import class ${mbClass.ClassScheduleId}:`, error);
+      }
+    }
+
+    return imported;
+  }
+
+  async importVisits(organizationId: string, startDate?: Date, endDate?: Date): Promise<number> {
+    const visitStartDate = startDate || (() => {
+      const date = new Date();
+      date.setMonth(date.getMonth() - 12);
+      return date;
+    })();
+
+    // Load students and schedules once for efficient lookup
+    console.log('Loading students for visit import...');
+    const students = await storage.getStudents(organizationId, 100000);
+    
+    console.log('Loading class schedules for visit import...');
+    const schedules = await storage.getClassSchedules(organizationId);
+    const scheduleMap = new Map(schedules.map(s => [s.mindbodyScheduleId, s]));
+
+    let totalImported = 0;
+    const CONCURRENCY_LIMIT = 25; // Increased to 25 concurrent requests (under Mindbody's 30 req/sec limit)
+    const limit = pLimit(CONCURRENCY_LIMIT);
+    
+    console.log(`Processing ${students.length} clients with ${CONCURRENCY_LIMIT} concurrent requests...`);
+
+    // Process students with rate limiting
+    const importPromises = students.map((student, index) =>
+      limit(async () => {
+        try {
+          const { results: visits } = await this.fetchAllPages<MindbodyVisit>(
+            organizationId,
+            `/client/clientvisits?ClientId=${student.mindbodyClientId}&StartDate=${visitStartDate.toISOString()}`,
+            'Visits',
+            200
+          );
+
+          let imported = 0;
+          for (const visit of visits) {
+            try {
+              if (!visit.ClassId || !visit.VisitDateTime) continue;
+
+              const schedule = scheduleMap.get(visit.ClassId.toString());
+              if (!schedule) continue;
+
+              await storage.createAttendance({
+                organizationId,
+                studentId: student.id,
+                scheduleId: schedule.id,
+                attendedAt: new Date(visit.VisitDateTime),
+                status: visit.SignedIn ? "attended" : "noshow",
+              });
+
+              imported++;
+            } catch (error) {
+              console.error(`Failed to import visit:`, error);
+            }
+          }
+          
+          // Log progress every 50 clients
+          if ((index + 1) % 50 === 0) {
+            console.log(`Processed ${index + 1}/${students.length} clients...`);
+          }
+          
+          return imported;
+        } catch (error) {
+          console.error(`Failed to fetch visits for client ${student.mindbodyClientId}:`, error);
+          return 0;
+        }
+      })
+    );
+
+    const results = await Promise.all(importPromises);
+    totalImported = results.reduce((sum, count) => sum + count, 0);
+
+    console.log(`Visit import complete: ${totalImported} visits imported from ${students.length} clients`);
+    return totalImported;
+  }
+
+  async importSales(organizationId: string, startDate?: Date, endDate?: Date): Promise<number> {
+    const saleStartDate = startDate || (() => {
+      const date = new Date();
+      date.setMonth(date.getMonth() - 12);
+      return date;
+    })();
+
+    // Load students once for efficient lookup
+    console.log('Loading students for sales import...');
+    const students = await storage.getStudents(organizationId, 100000);
+
+    let totalImported = 0;
+    const CONCURRENCY_LIMIT = 25; // Increased to 25 concurrent requests (under Mindbody's 30 req/sec limit)
+    const limit = pLimit(CONCURRENCY_LIMIT);
+    
+    console.log(`Processing ${students.length} clients with ${CONCURRENCY_LIMIT} concurrent requests...`);
+
+    // Process students with rate limiting
+    const importPromises = students.map((student, index) =>
+      limit(async () => {
+        try {
+          const { results: sales } = await this.fetchAllPages<MindbodySale>(
+            organizationId,
+            `/sale/sales?ClientId=${student.mindbodyClientId}&StartSaleDateTime=${saleStartDate.toISOString()}`,
+            'Sales',
+            200
+          );
+
+          let imported = 0;
+          for (const sale of sales) {
+            for (const item of sale.PurchasedItems) {
+              try {
+                if (!item.AmountPaid && item.AmountPaid !== 0) continue;
+                
+                await storage.createRevenue({
+                  organizationId,
+                  studentId: student.id,
+                  amount: item.AmountPaid.toString(),
+                  type: item.Type || 'Unknown',
+                  description: item.Description || 'No description',
+                  transactionDate: new Date(sale.SaleDateTime),
+                });
+                imported++;
+              } catch (error) {
+                console.error(`Failed to import sale item:`, error);
+              }
+            }
+          }
+          
+          // Log progress every 50 clients
+          if ((index + 1) % 50 === 0) {
+            console.log(`Processed ${index + 1}/${students.length} clients...`);
+          }
+          
+          return imported;
+        } catch (error) {
+          console.error(`Failed to fetch sales for client ${student.mindbodyClientId}:`, error);
+          return 0;
+        }
+      })
+    );
+
+    const results = await Promise.all(importPromises);
+    totalImported = results.reduce((sum, count) => sum + count, 0);
+
+    console.log(`Sales import complete: ${totalImported} revenue items imported from ${students.length} clients`);
+    return totalImported;
+  }
+
+  async importAllData(
+    organizationId: string, 
+    config?: {
+      startDate?: string;
+      endDate?: string;
+      dataTypes?: {
+        clients?: boolean;
+        classes?: boolean;
+        visits?: boolean;
+        sales?: boolean;
+      };
+    }
+  ): Promise<{
+    clients: number;
+    classes: number;
+    visits: number;
+    sales: number;
+  }> {
+    console.log('Import config received:', JSON.stringify(config, null, 2));
+    
+    // Parse dates and ensure they're valid 4-digit years
+    let startDate: Date | undefined;
+    let endDate: Date | undefined;
+    
+    if (config?.startDate) {
+      // Add 'T00:00:00.000Z' to ensure correct parsing as UTC
+      const dateStr = config.startDate.includes('T') ? config.startDate : `${config.startDate}T00:00:00.000Z`;
+      startDate = new Date(dateStr);
+      console.log(`Parsed startDate: ${config.startDate} -> ${startDate.toISOString()}`);
+      
+      // Validate year is 4 digits
+      if (startDate.getFullYear() < 1000 || startDate.getFullYear() > 9999) {
+        console.error(`Invalid year in startDate: ${startDate.getFullYear()}`);
+        throw new Error(`Invalid start date year: ${startDate.getFullYear()}`);
+      }
+    }
+    
+    if (config?.endDate) {
+      // Add 'T00:00:00.000Z' to ensure correct parsing as UTC
+      const dateStr = config.endDate.includes('T') ? config.endDate : `${config.endDate}T00:00:00.000Z`;
+      endDate = new Date(dateStr);
+      console.log(`Parsed endDate: ${config.endDate} -> ${endDate.toISOString()}`);
+      
+      // Validate year is 4 digits
+      if (endDate.getFullYear() < 1000 || endDate.getFullYear() > 9999) {
+        console.error(`Invalid year in endDate: ${endDate.getFullYear()}`);
+        throw new Error(`Invalid end date year: ${endDate.getFullYear()}`);
+      }
+    }
+
+    const dataTypes = config?.dataTypes || {
+      clients: true,
+      classes: true,
+      visits: false,
+      sales: false,
+    };
+
+    let clients = 0;
+    let classes = 0;
+    let visits = 0;
+    let sales = 0;
+
+    if (dataTypes.clients) {
+      clients = await this.importClients(organizationId, startDate, endDate);
+    }
+
+    if (dataTypes.classes) {
+      classes = await this.importClasses(organizationId, startDate, endDate);
+    }
+
+    if (dataTypes.visits) {
+      visits = await this.importVisits(organizationId, startDate, endDate);
+    }
+
+    if (dataTypes.sales) {
+      sales = await this.importSales(organizationId, startDate, endDate);
+    }
+
+    return { clients, classes, visits, sales };
+  }
+
+  // Resumable import methods with progress tracking
   async importClientsResumable(
     organizationId: string,
     startDate: Date,
