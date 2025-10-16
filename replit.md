@@ -5,6 +5,37 @@ An enterprise-grade analytics platform designed to import and analyze data from 
 
 ## Recent Changes
 
+### October 16, 2025 - Cancel Import Feature 🛑
+**Problem Solved:** Users needed ability to stop long-running imports (especially when hitting API rate limits or importing wrong date ranges). Solution: Cancel button with comprehensive race condition protection.
+
+#### Implementation
+- **Cancel API endpoint** - `POST /api/mindbody/import/:id/cancel`
+  - Sets job status to 'paused' with error 'Cancelled by user'
+  - Preserves progress and offset for resumability
+  - Authorization checks: auth + organization ownership
+  
+- **Triple race condition protection** in worker
+  - **Pre-processing check**: Skips queued jobs that were cancelled before worker starts
+  - **Batch-level checks**: Verifies job status before each batch, stops immediately if paused
+  - **Data-type-level checks**: Checks status after each data type, prevents marking cancelled jobs as completed
+  
+- **UI/UX enhancements**
+  - Cancel button appears during active imports
+  - Resume button appears for cancelled/paused jobs
+  - Toast notifications for cancel/resume actions
+  - Polling stops when job is cancelled
+
+#### Testing Results
+✅ Cancel during active processing → Job stays 'paused', Resume button appears  
+✅ Cancel doesn't mark job as 'completed' → Protection verified  
+✅ Cancel queued job → Only minimal imports (1 record), job stays 'paused'
+
+#### Architect Reviewed & Approved ✅
+- All race conditions addressed
+- Queued and in-flight jobs halt properly
+- No jobs marked completed after cancellation
+- Production-ready with low cancellation latency
+
 ### October 15, 2025 - Resumable Background Import System 🚀
 **Problem Solved:** Replit's HTTP/2 proxy closes long-running connections, causing imports to fail with `ERR_CONNECTION_CLOSED`. Solution: Background job processing with checkpoint/resume.
 
@@ -91,7 +122,7 @@ An enterprise-grade analytics platform designed to import and analyze data from 
 - Responsive mobile-first design
 
 ### Core Features & Implementations
-- **Resumable Background Import System**: Addresses HTTP connection timeouts by using a database-backed job queue for asynchronous, checkpointed data imports. Features sequential batching for API rate limiting, real-time progress tracking, session resilience, and resume capabilities for failed jobs.
+- **Resumable Background Import System**: Addresses HTTP connection timeouts by using a database-backed job queue for asynchronous, checkpointed data imports. Features sequential batching for API rate limiting, real-time progress tracking, session resilience, resume capabilities for failed jobs, and cancel functionality with triple race condition protection to stop imports immediately without wasting API quota.
 - **Automatic Pagination**: Implements a generic `fetchAllPages<T>()` helper to ensure all records are fetched from Mindbody API, regardless of volume. Includes performance optimizations for large datasets using in-memory lookups.
 - **User Management**: Comprehensive admin-only interface for managing users within an organization, featuring add/edit/delete functionality, role-based access control (admin/user), and tenant isolation.
 - **Dashboard & Analytics**: Replaces mock data with live database queries for charts like Revenue & Growth Trend and Class Attendance by Time. Optimized SQL queries for performance and handles empty states gracefully.
@@ -111,6 +142,7 @@ An enterprise-grade analytics platform designed to import and analyze data from 
 - `/api/mindbody/import/active`: Fetches active import job status for current organization
 - `/api/mindbody/import/:id/status`: Retrieves real-time status of a specific import job
 - `/api/mindbody/import/:id/resume`: Resumes a paused/failed import job
+- `/api/mindbody/import/:id/cancel`: Cancels a running/pending import job
 - `/api/dashboard/revenue-trend`: Returns 12 months of revenue and student counts
 - `/api/dashboard/attendance-by-time`: Returns attendance by day/time slot
 
