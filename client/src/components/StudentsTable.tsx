@@ -62,8 +62,9 @@ export function StudentsTable() {
   }
   
   const queryString = queryParams.toString();
+  const url = queryString ? `/api/students?${queryString}` : "/api/students";
   const { data, isLoading } = useQuery<{ students: Student[]; count: number }>({
-    queryKey: ["/api/students", queryString],
+    queryKey: [url],
   });
 
   const filteredStudents = (data?.students || []).filter((student) =>

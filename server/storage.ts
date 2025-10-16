@@ -127,7 +127,7 @@ export class DbStorage implements IStorage {
   }
 
   async getStudents(organizationId: string, limit: number = 100, offset: number = 0, status?: string, startDate?: Date, endDate?: Date): Promise<Student[]> {
-    const conditions = [eq(students.organizationId, organizationId)];
+    const conditions: any[] = [eq(students.organizationId, organizationId)];
     
     if (status) {
       conditions.push(eq(students.status, status));
@@ -141,9 +141,11 @@ export class DbStorage implements IStorage {
       conditions.push(lte(students.joinDate, endDate));
     }
     
+    const whereClause = conditions.length === 1 ? conditions[0] : and(...conditions);
+    
     return await db.select()
       .from(students)
-      .where(and(...conditions))
+      .where(whereClause)
       .limit(limit)
       .offset(offset);
   }
@@ -167,7 +169,7 @@ export class DbStorage implements IStorage {
   }
 
   async getStudentCount(organizationId: string, status?: string, startDate?: Date, endDate?: Date): Promise<number> {
-    const conditions = [eq(students.organizationId, organizationId)];
+    const conditions: any[] = [eq(students.organizationId, organizationId)];
     
     if (status) {
       conditions.push(eq(students.status, status));
@@ -181,9 +183,11 @@ export class DbStorage implements IStorage {
       conditions.push(lte(students.joinDate, endDate));
     }
     
+    const whereClause = conditions.length === 1 ? conditions[0] : and(...conditions);
+    
     const result = await db.select({ count: sql<number>`count(*)` })
       .from(students)
-      .where(and(...conditions));
+      .where(whereClause);
     return Number(result[0].count);
   }
 
