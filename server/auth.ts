@@ -1,5 +1,6 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { storage } from "./storage";
 import { scryptSync, randomBytes, timingSafeEqual } from "crypto";
 import type { Express, Request } from "express";
@@ -7,6 +8,7 @@ import session from "express-session";
 import type { User } from "@shared/schema";
 import ConnectPgSimple from "connect-pg-simple";
 import { pool } from "./db";
+import { sendPasswordResetEmail } from "./brevo";
 
 const PgSession = ConnectPgSimple(session);
 
@@ -54,6 +56,10 @@ export const setupAuth = (app: Express) => {
             return done(null, false, { message: "Incorrect email or password" });
           }
 
+          if (!user.passwordHash) {
+            return done(null, false, { message: "Please sign in with Google" });
+          }
+
           const [salt, hash] = user.passwordHash.split(":");
           const inputHash = hashPassword(password, salt);
           const hashBuffer = Buffer.from(hash, "hex");
@@ -70,6 +76,57 @@ export const setupAuth = (app: Express) => {
       }
     )
   );
+
+  // Google OAuth Strategy
+  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    passport.use(
+      new GoogleStrategy(
+        {
+          clientID: process.env.GOOGLE_CLIENT_ID,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          callbackURL: "/api/auth/google/callback",
+        },
+        async (accessToken, refreshToken, profile, done) => {
+          try {
+            const email = profile.emails?.[0]?.value;
+            if (!email) {
+              return done(new Error("No email from Google"));
+            }
+
+            let user = await storage.getUserByProvider("google", profile.id);
+
+            if (!user) {
+              user = await storage.getUserByEmail(email);
+              
+              if (user && user.provider === "local") {
+                return done(null, false, { message: "Email already registered with password. Please sign in with email and password." });
+              }
+            }
+
+            if (!user) {
+              const organization = await storage.createOrganization({
+                name: `${profile.displayName || email}'s Organization`,
+              });
+
+              user = await storage.createUser({
+                email,
+                name: profile.displayName || email,
+                role: "admin",
+                organizationId: organization.id,
+                provider: "google",
+                providerId: profile.id,
+                passwordHash: null,
+              });
+            }
+
+            return done(null, user);
+          } catch (err) {
+            return done(err);
+          }
+        }
+      )
+    );
+  }
 
   passport.serializeUser((user: Express.User, done) => {
     done(null, (user as User).id);
@@ -176,6 +233,96 @@ export const setupAuth = (app: Express) => {
       role: user.role,
       organizationId: user.organizationId,
     });
+  });
+
+  // Google OAuth routes
+  app.get("/api/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+
+  app.get("/api/auth/google/callback", 
+    passport.authenticate("google", { failureRedirect: "/login" }),
+    (req, res) => {
+      res.redirect("/");
+    }
+  );
+
+  // Password reset endpoints
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
+
+      const user = await storage.getUserByEmail(email);
+      
+      if (!user) {
+        return res.json({ message: "If the email exists, a reset link has been sent" });
+      }
+
+      if (user.provider !== "local") {
+        return res.status(400).json({ error: "This account uses Google sign-in. No password reset needed." });
+      }
+
+      await storage.deleteExpiredPasswordResetTokens();
+
+      const token = randomBytes(32).toString("hex");
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+      await storage.createPasswordResetToken(user.id, token, expiresAt);
+
+      const resetLink = `${req.protocol}://${req.get("host")}/reset-password?token=${token}`;
+
+      await sendPasswordResetEmail({
+        toEmail: user.email,
+        toName: user.name,
+        resetLink,
+      });
+
+      res.json({ message: "If the email exists, a reset link has been sent" });
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      res.status(500).json({ error: "Failed to process request" });
+    }
+  });
+
+  app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const { token, newPassword } = req.body;
+
+      if (!token || !newPassword) {
+        return res.status(400).json({ error: "Token and new password are required" });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ error: "Password must be at least 6 characters" });
+      }
+
+      const resetToken = await storage.getPasswordResetToken(token);
+
+      if (!resetToken) {
+        return res.status(400).json({ error: "Invalid or expired reset token" });
+      }
+
+      if (resetToken.expiresAt < new Date()) {
+        await storage.deletePasswordResetToken(token);
+        return res.status(400).json({ error: "Reset token has expired" });
+      }
+
+      const salt = randomBytes(16).toString("hex");
+      const hash = hashPassword(newPassword, salt);
+
+      await storage.updateUser(resetToken.userId, {
+        passwordHash: `${salt}:${hash}`,
+      });
+
+      await storage.deletePasswordResetToken(token);
+
+      res.json({ message: "Password successfully reset" });
+    } catch (error) {
+      console.error("Reset password error:", error);
+      res.status(500).json({ error: "Failed to reset password" });
+    }
   });
 };
 
