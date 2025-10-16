@@ -310,7 +310,10 @@ export function DataImportCard() {
   const calculateProgress = (): number => {
     if (!jobStatus || !jobStatus.progress) return 0;
     
-    const dataTypes = Object.keys(jobStatus.progress);
+    // Filter to only data type progress (not apiCallCount or importStartTime)
+    const dataTypes = Object.keys(jobStatus.progress).filter(
+      key => key !== 'apiCallCount' && key !== 'importStartTime'
+    );
     if (dataTypes.length === 0) return 0;
 
     let totalProgress = 0;
@@ -318,7 +321,7 @@ export function DataImportCard() {
 
     dataTypes.forEach((type) => {
       const typeProgress = jobStatus.progress[type as keyof JobProgress];
-      if (typeProgress) {
+      if (typeProgress && typeof typeProgress === 'object' && 'completed' in typeProgress) {
         if (typeProgress.completed) {
           completedTypes++;
         } else if (typeProgress.total > 0) {
@@ -493,19 +496,86 @@ export function DataImportCard() {
 
             {/* Show detailed progress for each data type */}
             <div className="space-y-2 text-xs">
-              {Object.entries(jobStatus.progress).map(([type, data]) => (
-                <div key={type} className="flex justify-between text-muted-foreground">
-                  <span className="capitalize">{type}:</span>
-                  <span>
-                    {data.completed ? (
-                      <CheckCircle className="inline h-3 w-3 text-green-600" />
-                    ) : (
-                      `${data.current} / ${data.total || '?'}`
-                    )}
-                  </span>
-                </div>
-              ))}
+              {Object.entries(jobStatus.progress)
+                .filter(([type]) => type !== 'apiCallCount' && type !== 'importStartTime')
+                .map(([type, data]) => {
+                  if (typeof data === 'object' && 'completed' in data) {
+                    return (
+                      <div key={type} className="flex justify-between text-muted-foreground">
+                        <span className="capitalize">{type}:</span>
+                        <span>
+                          {data.completed ? (
+                            <CheckCircle className="inline h-3 w-3 text-green-600" />
+                          ) : (
+                            `${data.current} / ${data.total || '?'}`
+                          )}
+                        </span>
+                      </div>
+                    );
+                  }
+                  return null;
+                })}
             </div>
+
+            {/* API Call Tracking */}
+            {(() => {
+              const metrics = calculateApiMetrics(jobStatus.progress);
+              const isApproachingLimit = metrics.apiCallCount >= 900;
+              const hasExceededLimit = metrics.limitExceeded;
+
+              return (
+                <div className={`p-3 rounded-md space-y-2 ${
+                  hasExceededLimit 
+                    ? 'bg-destructive/10 border border-destructive/20' 
+                    : isApproachingLimit 
+                      ? 'bg-amber-500/10 border border-amber-500/20'
+                      : 'bg-muted'
+                }`}>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">API Calls</span>
+                    <span className={`font-semibold ${
+                      hasExceededLimit 
+                        ? 'text-destructive' 
+                        : isApproachingLimit 
+                          ? 'text-amber-600 dark:text-amber-500'
+                          : ''
+                    }`}>
+                      {metrics.apiCallCount} / 1000
+                    </span>
+                  </div>
+                  
+                  {metrics.rate > 0 && (
+                    <div className="text-xs space-y-1 text-muted-foreground">
+                      <div className="flex justify-between">
+                        <span>Rate:</span>
+                        <span>{metrics.rate.toFixed(1)} calls/min</span>
+                      </div>
+                      
+                      {!hasExceededLimit && metrics.limitReachedAt && (
+                        <div className="flex justify-between">
+                          <span>Limit reached at:</span>
+                          <span className={isApproachingLimit ? 'font-medium text-amber-600 dark:text-amber-500' : ''}>
+                            {format(metrics.limitReachedAt, 'MMM d, h:mm a')}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {hasExceededLimit && (
+                        <div className="text-destructive font-medium">
+                          ⚠️ Daily API limit exceeded
+                        </div>
+                      )}
+                      
+                      {isApproachingLimit && !hasExceededLimit && (
+                        <div className="text-amber-600 dark:text-amber-500 font-medium">
+                          ⚠️ Approaching daily limit - consider pausing
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Loader2 className="h-3 w-3 animate-spin" />
@@ -614,6 +684,9 @@ export function DataImportCard() {
                 )}
                 {jobStatus.progress.sales && (
                   <p>Sales: {jobStatus.progress.sales.imported} imported</p>
+                )}
+                {jobStatus.progress.apiCallCount !== undefined && jobStatus.progress.apiCallCount > 0 && (
+                  <p>API Calls: {jobStatus.progress.apiCallCount} / 1000</p>
                 )}
               </div>
             </div>
