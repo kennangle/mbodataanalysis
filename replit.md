@@ -44,6 +44,43 @@ An enterprise-grade analytics platform designed to import and analyze data from 
 - AI insights now reflect full population (not just first 100 rows)
 - No architectural or performance concerns
 
+### October 16, 2025 - Resume Import Rate Limiting ⏰
+**Problem Solved:** Resume button showed "resumed successfully" toast but job stayed paused when trying to resume too soon after last download. Solution: Smart 24-hour rate limit check with helpful error messages showing last download time.
+
+#### Implementation
+- **Smart Rate Limit Logic** in resume endpoint
+  - Only enforces 24-hour wait if job made progress (fetched data) AND wasn't manually cancelled
+  - Manually cancelled imports → Resume immediately (no wait)
+  - Imports with progress that paused/failed → 24-hour wait required
+  - Checks: `hasProgress && !wasManuallyCancelled`
+
+- **Detailed Error Response (429 Too Many Requests)**
+  ```json
+  {
+    "message": "Mindbody API has a 24-hour limit. Please wait 5 more hours.",
+    "lastDownloadTime": "2025-10-16T10:00:00Z",
+    "nextAvailableTime": "2025-10-17T10:00:00Z",
+    "hoursRemaining": 5
+  }
+  ```
+
+- **Enhanced Frontend Error Handling**
+  - Parses 429 rate limit responses
+  - Shows formatted error with timestamps in toast
+  - Example: "Please wait 5 more hours. Last download at 10/16/2025, 10:00 AM. Next available at 10/17/2025, 10:00 AM."
+
+#### Testing Results
+✅ Manually cancelled imports resume immediately (no 24-hour wait)  
+✅ Rate limit errors show helpful timestamps  
+✅ Toast displays clear, actionable messages  
+✅ Backend correctly transitions 'paused' → 'running'
+
+#### Architect Reviewed & Approved ✅
+- Two-part check correctly guards against premature restarts
+- 429 payload includes actionable timing context
+- Frontend parsing and toast display verified
+- No security issues observed
+
 ### October 16, 2025 - Cancel Import Feature 🛑
 **Problem Solved:** Users needed ability to stop long-running imports (especially when hitting API rate limits or importing wrong date ranges). Solution: Cancel button with comprehensive race condition protection.
 
