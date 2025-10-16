@@ -12,13 +12,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, MoreVertical } from "lucide-react";
+import { Search, MoreVertical, Calendar as CalendarIcon, X } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface Student {
   id: string;
@@ -29,10 +40,30 @@ interface Student {
   membershipType: string | null;
 }
 
+interface DateRange {
+  from: Date | undefined;
+  to: Date | undefined;
+}
+
 export function StudentsTable() {
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [dateRange, setDateRange] = useState<DateRange>({ from: undefined, to: undefined });
+  
+  const queryParams = new URLSearchParams();
+  if (statusFilter && statusFilter !== "all") {
+    queryParams.append("status", statusFilter);
+  }
+  if (dateRange.from) {
+    queryParams.append("startDate", dateRange.from.toISOString());
+  }
+  if (dateRange.to) {
+    queryParams.append("endDate", dateRange.to.toISOString());
+  }
+  
+  const queryString = queryParams.toString();
   const { data, isLoading } = useQuery<{ students: Student[]; count: number }>({
-    queryKey: ["/api/students"],
+    queryKey: ["/api/students", queryString],
   });
 
   const filteredStudents = (data?.students || []).filter((student) =>
@@ -40,23 +71,93 @@ export function StudentsTable() {
     student.email?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const clearDateRange = () => {
+    setDateRange({ from: undefined, to: undefined });
+  };
+
   return (
     <Card>
       <CardHeader>
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <CardTitle>Students</CardTitle>
-            <CardDescription>Manage and view your student roster</CardDescription>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <CardTitle>Students</CardTitle>
+              <CardDescription>Manage and view your student roster</CardDescription>
+            </div>
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search students..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-8"
+                data-testid="input-search-students"
+              />
+            </div>
           </div>
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search students..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-8"
-              data-testid="input-search-students"
-            />
+          
+          <div className="flex flex-wrap gap-2">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[160px]" data-testid="select-status-filter">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-[280px] justify-start text-left font-normal",
+                    !dateRange.from && !dateRange.to && "text-muted-foreground"
+                  )}
+                  data-testid="button-date-range"
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateRange.from ? (
+                    dateRange.to ? (
+                      <>
+                        {format(dateRange.from, "MMM d, yyyy")} - {format(dateRange.to, "MMM d, yyyy")}
+                      </>
+                    ) : (
+                      format(dateRange.from, "MMM d, yyyy")
+                    )
+                  ) : (
+                    <span>Pick join date range</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={dateRange.from}
+                  selected={{ from: dateRange.from, to: dateRange.to }}
+                  onSelect={(range) => setDateRange({ from: range?.from, to: range?.to })}
+                  numberOfMonths={2}
+                />
+              </PopoverContent>
+            </Popover>
+            
+            {(statusFilter !== "all" || dateRange.from || dateRange.to) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setStatusFilter("all");
+                  clearDateRange();
+                }}
+                data-testid="button-clear-filters"
+              >
+                <X className="h-4 w-4 mr-1" />
+                Clear Filters
+              </Button>
+            )}
           </div>
         </div>
       </CardHeader>
