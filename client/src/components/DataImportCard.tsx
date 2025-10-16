@@ -27,6 +27,8 @@ interface JobProgress {
   classes?: { current: number; total: number; imported: number; completed: boolean };
   visits?: { current: number; total: number; imported: number; completed: boolean };
   sales?: { current: number; total: number; imported: number; completed: boolean };
+  apiCallCount?: number;
+  importStartTime?: string;
 }
 
 interface JobStatus {
@@ -76,6 +78,58 @@ export function DataImportCard() {
 
   const getDefaultEndDate = () => {
     return new Date().toISOString().split('T')[0];
+  };
+
+  // Calculate API rate and estimated time to reach 1000 calls
+  const calculateApiMetrics = (progress: JobProgress) => {
+    const apiCallCount = progress.apiCallCount || 0;
+    const importStartTime = progress.importStartTime;
+    
+    if (!importStartTime || apiCallCount === 0) {
+      return {
+        apiCallCount,
+        rate: 0,
+        estimatedTimeToLimit: null,
+        limitReachedAt: null,
+      };
+    }
+    
+    const startTime = new Date(importStartTime);
+    const now = new Date();
+    const elapsedMinutes = (now.getTime() - startTime.getTime()) / (1000 * 60);
+    
+    if (elapsedMinutes === 0) {
+      return {
+        apiCallCount,
+        rate: 0,
+        estimatedTimeToLimit: null,
+        limitReachedAt: null,
+      };
+    }
+    
+    const rate = apiCallCount / elapsedMinutes; // calls per minute
+    const remainingCalls = 1000 - apiCallCount;
+    
+    if (remainingCalls <= 0) {
+      return {
+        apiCallCount,
+        rate,
+        estimatedTimeToLimit: 0,
+        limitReachedAt: now,
+        limitExceeded: true,
+      };
+    }
+    
+    const minutesToLimit = remainingCalls / rate;
+    const limitReachedAt = new Date(now.getTime() + minutesToLimit * 60 * 1000);
+    
+    return {
+      apiCallCount,
+      rate,
+      estimatedTimeToLimit: minutesToLimit,
+      limitReachedAt,
+      limitExceeded: false,
+    };
   };
 
   const [importConfig, setImportConfig] = useState<ImportConfig>({
