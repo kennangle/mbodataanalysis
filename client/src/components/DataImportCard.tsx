@@ -55,7 +55,9 @@ export function DataImportCard() {
           setJobStatus(job);
         }
       } catch (error) {
-        // No active job found - this is expected
+        // No active job found or error fetching - reset to clean state
+        setCurrentJobId(null);
+        setJobStatus(null);
       } finally {
         setIsLoadingActiveJob(false);
       }
@@ -114,6 +116,17 @@ export function DataImportCard() {
         }
       } catch (error) {
         console.error("Failed to fetch job status:", error);
+        // If job not found (404) or other error, clear state and stop polling
+        if (error instanceof Error && error.message.includes('404')) {
+          clearInterval(pollInterval);
+          setCurrentJobId(null);
+          setJobStatus(null);
+          toast({
+            variant: "destructive",
+            title: "Import job not found",
+            description: "The import job no longer exists. Please start a new import.",
+          });
+        }
       }
     }, 2000); // Poll every 2 seconds
 
@@ -151,6 +164,11 @@ export function DataImportCard() {
       
       const data = await response.json();
       
+      // Handle 404 - job not found
+      if (response.status === 404) {
+        throw new Error("Import job not found. It may have been deleted or completed.");
+      }
+      
       // Handle 429 rate limit error with detailed message
       if (response.status === 429) {
         const lastDownload = new Date(data.lastDownloadTime);
@@ -180,6 +198,12 @@ export function DataImportCard() {
         title: "Failed to resume import",
         description: error.message,
       });
+      
+      // If job not found, reset state
+      if (error.message.includes("not found")) {
+        setCurrentJobId(null);
+        setJobStatus(null);
+      }
     },
   });
 
