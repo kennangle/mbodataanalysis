@@ -27,7 +27,7 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
 - Responsive mobile-first design
 
 ### Core Features & Implementations
-- **Resumable Background Import System**: Utilizes a database-backed job queue for asynchronous, checkpointed data imports to overcome HTTP connection timeouts. Features include:
+- **Resumable Background Import System**: Utilizes a database-backed job queue for asynchronous, checkpointed data imports to overcome HTTP connection timeouts. All imports use resumable methods only (`importClientsResumable`, `importClassesResumable`, `importVisitsResumable`, `importSalesResumable`). Legacy non-resumable methods have been removed. Features include:
   - Sequential batching for Mindbody API rate limiting
   - Real-time progress tracking with live polling
   - Session resilience (survives page reloads)
@@ -35,6 +35,7 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
   - Proper cancellation with terminal 'cancelled' status
   - Auto-cleanup of stale jobs when starting new imports
   - Race condition protection between worker and cancel operations
+  - Clean logging that retains failure/completion signals while eliminating per-batch noise
   - **API Call Tracking & Limit Management**: Tracks Mindbody API calls (1,000/day free tier limit) with real-time rate calculation and estimated time to reach daily limit, enabling users to schedule chunked imports strategically. Implementation updates `progress.apiCallCount` during batch processing (in progress callback and after each batch) to ensure real-time accuracy in both the database and UI
 - **Automatic Pagination**: Implements a generic helper (`fetchAllPages<T>()`) to retrieve all records from the Mindbody API, optimized for large datasets.
 - **User Management**: An admin-only interface for managing users within an organization, including CRUD operations, role-based access (admin/user), and multi-tenancy support.
