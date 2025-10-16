@@ -38,6 +38,12 @@ export class ImportWorker {
         return;
       }
 
+      // Check if job was cancelled before it started processing
+      if (job.status === 'paused') {
+        console.log(`Job ${jobId} was cancelled before processing started, skipping`);
+        return;
+      }
+
       // Set job to running
       await storage.updateImportJob(jobId, { status: 'running' });
 
