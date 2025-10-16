@@ -257,10 +257,11 @@ export class MindbodyService {
     baseEndpoint: string,
     resultsKey: string,
     pageSize: number = 200
-  ): Promise<T[]> {
+  ): Promise<{ results: T[], apiCalls: number }> {
     let allResults: T[] = [];
     let offset = 0;
     let hasMorePages = true;
+    let apiCallCount = 0;
 
     console.log(`Starting paginated fetch from ${baseEndpoint} with page size ${pageSize}`);
 
@@ -270,6 +271,7 @@ export class MindbodyService {
       
       console.log(`Fetching page at offset ${offset}...`);
       const data = await this.makeAuthenticatedRequest(organizationId, endpoint);
+      apiCallCount++; // Track API call
 
       const results = data[resultsKey] || [];
       allResults = allResults.concat(results);
@@ -306,8 +308,8 @@ export class MindbodyService {
       }
     }
 
-    console.log(`Pagination complete: ${allResults.length} total items fetched`);
-    return allResults;
+    console.log(`Pagination complete: ${allResults.length} total items fetched with ${apiCallCount} API calls`);
+    return { results: allResults, apiCalls: apiCallCount };
   }
 
   async importClients(organizationId: string, startDate?: Date, endDate?: Date): Promise<number> {
@@ -319,12 +321,14 @@ export class MindbodyService {
     })();
     
     // Fetch all pages of clients using pagination
-    const clients = await this.fetchAllPages<MindbodyClient>(
+    const { results: clients, apiCalls } = await this.fetchAllPages<MindbodyClient>(
       organizationId,
       `/client/clients?LastModifiedDate=${lastModifiedDate.toISOString()}`,
       'Clients',
       200
     );
+
+    console.log(`Clients fetch used ${apiCalls} API calls`);
 
     // Load existing students for duplicate detection
     console.log('Loading existing students for duplicate detection...');
@@ -389,12 +393,14 @@ export class MindbodyService {
     })();
 
     // Fetch all pages of classes using pagination
-    const classes = await this.fetchAllPages<MindbodyClass>(
+    const { results: classes, apiCalls } = await this.fetchAllPages<MindbodyClass>(
       organizationId,
       `/class/classes?StartDateTime=${classStartDate.toISOString()}&EndDateTime=${classEndDate.toISOString()}`,
       'Classes',
       200
     );
+
+    console.log(`Classes fetch used ${apiCalls} API calls`);
 
     // Load existing classes once for efficient lookup
     console.log('Loading existing classes for import...');
@@ -469,7 +475,7 @@ export class MindbodyService {
     const importPromises = students.map((student, index) =>
       limit(async () => {
         try {
-          const visits = await this.fetchAllPages<MindbodyVisit>(
+          const { results: visits } = await this.fetchAllPages<MindbodyVisit>(
             organizationId,
             `/client/clientvisits?ClientId=${student.mindbodyClientId}&StartDate=${visitStartDate.toISOString()}`,
             'Visits',
@@ -539,7 +545,7 @@ export class MindbodyService {
     const importPromises = students.map((student, index) =>
       limit(async () => {
         try {
-          const sales = await this.fetchAllPages<MindbodySale>(
+          const { results: sales } = await this.fetchAllPages<MindbodySale>(
             organizationId,
             `/sale/sales?ClientId=${student.mindbodyClientId}&StartSaleDateTime=${saleStartDate.toISOString()}`,
             'Sales',
@@ -860,7 +866,7 @@ export class MindbodyService {
     // Process students sequentially in this batch
     for (const student of studentBatch) {
       try {
-        const visits = await this.fetchAllPages<MindbodyVisit>(
+        const { results: visits } = await this.fetchAllPages<MindbodyVisit>(
           organizationId,
           `/client/clientvisits?ClientId=${student.mindbodyClientId}&StartDate=${startDate.toISOString()}`,
           'Visits',
@@ -933,7 +939,7 @@ export class MindbodyService {
     // Process students sequentially in this batch
     for (const student of studentBatch) {
       try {
-        const sales = await this.fetchAllPages<MindbodySale>(
+        const { results: sales } = await this.fetchAllPages<MindbodySale>(
           organizationId,
           `/sale/sales?ClientId=${student.mindbodyClientId}&StartSaleDateTime=${startDate.toISOString()}`,
           'Sales',
