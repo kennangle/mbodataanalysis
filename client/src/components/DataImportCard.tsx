@@ -136,8 +136,8 @@ export function DataImportCard() {
     startDate: getDefaultStartDate(),
     endDate: getDefaultEndDate(),
     dataTypes: {
-      clients: true,
-      classes: true,
+      clients: false,
+      classes: false,
       visits: false,
       sales: false,
     },
