@@ -879,6 +879,7 @@ export class MindbodyService {
     const scheduleMap = new Map(schedules.map(s => [s.mindbodyScheduleId, s]));
     
     let imported = 0;
+    let processedStudents = 0;
     
     // Process students sequentially in this batch
     for (const student of studentBatch) {
@@ -913,13 +914,14 @@ export class MindbodyService {
       } catch (error) {
         console.error(`Failed to fetch visits for client ${student.mindbodyClientId}:`, error);
       }
+      
+      // Update progress after each student to show real-time API count
+      processedStudents++;
+      await onProgress(startStudentIndex + processedStudents, totalStudents);
     }
     
     const nextStudentIndex = endIndex;
     const completed = nextStudentIndex >= totalStudents;
-    
-    // Report progress
-    await onProgress(nextStudentIndex, totalStudents);
     
     // Delay before next batch (unless completed)
     if (!completed) {
@@ -952,6 +954,7 @@ export class MindbodyService {
     const studentBatch = allStudents.slice(startStudentIndex, endIndex);
     
     let imported = 0;
+    let processedStudents = 0;
     
     // Process students sequentially in this batch
     for (const student of studentBatch) {
@@ -985,13 +988,14 @@ export class MindbodyService {
       } catch (error) {
         console.error(`Failed to fetch sales for client ${student.mindbodyClientId}:`, error);
       }
+      
+      // Update progress after each student to show real-time API count
+      processedStudents++;
+      await onProgress(startStudentIndex + processedStudents, totalStudents);
     }
     
     const nextStudentIndex = endIndex;
     const completed = nextStudentIndex >= totalStudents;
-    
-    // Report progress
-    await onProgress(nextStudentIndex, totalStudents);
     
     // Delay before next batch (unless completed)
     if (!completed) {
