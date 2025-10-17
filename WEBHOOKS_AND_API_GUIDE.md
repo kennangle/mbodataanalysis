@@ -102,58 +102,60 @@ Removes the subscription from both Mindbody and your database.
 
 ---
 
-## 2. Multi-Day Import Scheduling
+## 2. Multi-Session Import Scheduling
 
 ### The Challenge
-With 18,000+ visit records and a 1,000 API call/day limit on the free tier, a complete import takes multiple days.
+With 18,000+ visit records and a 5,000 API call/month free tier, large imports may exceed the free tier limit.
 
 ### Current Platform Features
 
 #### API Call Tracking
 The platform tracks your API usage in real-time:
-- **Current Count**: Shows total API calls made today
+- **Current Count**: Shows total API calls made this month
 - **Rate Calculation**: Displays calls per hour
-- **Time to Limit**: Estimates when you'll hit the 1,000 call limit
+- **Time to Limit**: Estimates when you'll hit the 5,000 free tier limit
 
 #### Pause & Resume Capability
 - **Automatic Checkpointing**: Import progress saved after each batch
 - **Resume Support**: Continue exactly where you left off
 - **Session Resilience**: Survives page reloads and disconnections
 - **Clean Cancellation**: Proper cleanup with terminal 'cancelled' status
+- **No Wait Time**: Resume immediately - no 24-hour restrictions
 
 ### Strategic Import Planning
 
-#### Option 1: Chunked Daily Imports
-**Best for**: Organizations with 1,000-5,000 clients
+#### Option 1: Single Session Import (Within Free Tier)
+**Best for**: Organizations with up to 5,000 clients
 
 ```
-Day 1: Import 900 clients (leave 100 calls for buffer)
-Day 2: Import next 900 clients
-Day 3: Import remaining clients
+Session 1: Import all data (Students, Classes, Visits, Sales)
+Monitor: Pause at ~4,500 calls to stay in free tier
+Resume: Continue immediately if needed
 ```
 
 **Steps:**
 1. Start import with all data types selected
 2. Monitor API call counter
-3. When approaching ~900 calls, click "Pause Import"
-4. Next day, click "Resume Import" to continue
+3. When approaching ~4,500 calls, click "Pause Import" (to avoid paid charges)
+4. Resume immediately or continue into paid tier ($0.002/call after 5,000)
 
 #### Option 2: Data Type Segmentation
-**Best for**: Selective data needs
+**Best for**: Selective data needs or budget control
 
 ```
-Day 1: Import Clients only (~500-800 calls)
-Day 2: Import Classes (~100-200 calls)
-Day 3: Import Visits (~1000+ calls, may take multiple days)
-Day 4+: Continue Visits import
-Day N: Import Sales
+Session 1: Import Clients only (~500-800 calls)
+Session 2: Import Classes (~100-200 calls)
+Session 3: Import Visits (~1000+ calls, pause at free tier limit if desired)
+Session 4+: Continue Visits import
+Session N: Import Sales
 ```
 
 **Steps:**
 1. Start import with only "Clients" selected
 2. Wait for completion
-3. Next day, start new import with only "Classes" selected
+3. Start new import with only "Classes" selected
 4. Continue pattern for Visits and Sales
+5. Resume immediately if you pause - no waiting required
 
 #### Option 3: Date Range Splitting
 **Best for**: Historical data imports
@@ -182,30 +184,30 @@ The platform shows:
 
 ### Optimization Tips
 
-1. **Import During Off-Peak Hours**: Start imports late in your day to maximize the 24-hour window
+1. **No Wait Time**: Resume imports immediately - no 24-hour restrictions
 2. **Use Webhooks for Ongoing Sync**: After initial import, webhooks eliminate need for repeated imports
-3. **Monitor Rate Carefully**: The platform shows API call rate - use it to schedule pauses
+3. **Monitor Rate Carefully**: The platform shows API call rate - use it to decide when to pause
 4. **Plan for Visits Last**: Visits consume the most API calls (one per client)
-5. **Keep Buffer**: Don't use all 1,000 calls - leave 50-100 for testing/manual operations
+5. **Budget Wisely**: Pause at ~4,500 calls to stay in free tier, or accept affordable paid rate ($2 per 1,000 calls)
 
-### Example: 18,000 Visits Across 1,000 Clients
+### Example: 18,000 Visits Across 5,000 Clients
 
-**Scenario**: 1,000 clients, each with ~18 visit records
+**Scenario**: 5,000 clients, each with ~3-4 visit records
 
 **API Call Math**:
 - Clients import: ~5-10 calls (pagination)
 - Classes import: ~5-10 calls (pagination)
-- Visits import: ~1,000 calls (one per client)
-- Sales import: ~1,000 calls (one per client)
+- Visits import: ~5,000 calls (one per client)
+- Sales import: ~5,000 calls (one per client)
 
-**5-Day Strategy**:
+**Strategic Approach**:
 ```
-Day 1: Import Clients + Classes (~20 calls)
-Day 2: Start Visits import, pause at 900 calls (~900 clients processed)
-Day 3: Resume Visits import, complete remaining 100 clients
-Day 4: Import Sales, pause at 900 calls if needed
-Day 5: Resume Sales import to completion
-Day 6+: Enable webhooks for real-time sync
+Session 1: Import Clients + Classes (~20 calls)
+Session 2: Start Visits import, pause at ~4,500 calls to stay in free tier
+Session 3: Resume Visits (enter paid tier at $0.002/call - only $1 for 500 more calls)
+Session 4: Import Sales (paid tier - $10 for 5,000 calls)
+Final: Enable webhooks for ongoing real-time sync
+Total Cost: ~$11 for complete 10,000+ call import - very affordable!
 ```
 
 ### After Import Completion
@@ -215,49 +217,48 @@ Day 6+: Enable webhooks for real-time sync
 
 ---
 
-## 3. API Tier Upgrade Guide
+## 3. API Tier & Pricing Guide
 
-### Why Upgrade?
-The Mindbody free tier (1,000 calls/day) is sufficient for:
-- ✅ Small studios (<500 clients)
-- ✅ Monthly syncs
-- ✅ Webhook-based ongoing sync
-
-You should upgrade if:
-- ❌ You have 1,000+ clients
-- ❌ You need same-day bulk imports
-- ❌ You run frequent reports requiring live data
-- ❌ You integrate multiple Mindbody locations
-
-### Mindbody API Tiers
+### Understanding Mindbody API Pricing
+The Mindbody API uses a simple, affordable pay-as-you-go model:
 
 #### Free Tier
 - **Cost**: $0/month
-- **Daily Limit**: 1,000 API calls
+- **Monthly Limit**: 5,000 API calls FREE
 - **Rate Limit**: Standard
 - **Support**: Community only
-- **Best For**: Small studios, testing, development
+- **Best For**: Small to medium studios, testing, development
 
-#### Standard Tier
-- **Cost**: Contact Mindbody sales
-- **Daily Limit**: ~10,000 API calls
-- **Rate Limit**: Higher concurrency
-- **Support**: Email support
-- **Best For**: Medium studios (500-2,000 clients)
+#### Pay-As-You-Go (After Free Tier)
+- **Cost**: $0.002 per API call after 5,000 calls
+- **Pricing**: $2 per 1,000 calls - very affordable!
+- **No Monthly Fee**: Only pay for what you use
+- **Example Costs**:
+  - 10,000 calls = $10 ($0 for first 5,000 + $10 for next 5,000)
+  - 20,000 calls = $30 ($0 for first 5,000 + $30 for next 15,000)
+  - 50,000 calls = $90 ($0 for first 5,000 + $90 for next 45,000)
 
-#### Premium Tier
-- **Cost**: Contact Mindbody sales
-- **Daily Limit**: 50,000+ (custom)
-- **Rate Limit**: Enterprise-grade
-- **Support**: Priority support + dedicated account manager
-- **Best For**: Large studios, franchises, multi-location businesses
+### When is the Paid Tier Worth It?
 
-#### Enterprise Tier
-- **Cost**: Custom pricing
-- **Daily Limit**: Unlimited
-- **Rate Limit**: Custom SLA
-- **Support**: 24/7 support + custom integration assistance
-- **Best For**: Large-scale integrations, resellers, platforms
+The free tier (5,000 calls/month) is sufficient for:
+- ✅ Studios with up to 5,000 clients
+- ✅ Initial bulk import + webhook-based ongoing sync
+- ✅ Quarterly full re-syncs
+
+The paid tier makes sense when:
+- ✅ You have 5,000+ clients (only $2 per 1,000 calls!)
+- ✅ You need complete historical data import
+- ✅ You run frequent bulk reports
+- ✅ You integrate multiple Mindbody locations
+- ✅ **Cost is minimal**: Even 50,000 calls costs only $90
+
+### Why Paid Tier is Affordable
+
+Unlike traditional API pricing that charges hundreds per month:
+- **No base fee**: $0 if you stay under 5,000 calls
+- **Pay only what you use**: $0.002/call is industry-leading low price
+- **No commitment**: No contracts or minimum spend
+- **Transparent**: Simple per-call pricing, no hidden fees
 
 ### How to Upgrade
 
