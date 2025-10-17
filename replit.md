@@ -110,8 +110,8 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
 
 ## Development Workflow
 
-### Slash Commands for Enhanced Productivity
-The platform supports AI-powered slash commands accessible via the command palette (Cmd+K or Ctrl+K) for rapid workflow automation:
+### Slash Commands for Enhanced Productivity (Development Only)
+The platform includes a development-only CommandPalette UI component that provides AI-powered slash commands accessible via keyboard shortcut (Cmd+K or Ctrl+K) for rapid workflow automation. This feature is only available when running in development mode (`import.meta.env.DEV`) and is automatically excluded from production builds:
 
 #### Core Workflow Commands
 - **`/ask`**: Request confirmation before implementing changes

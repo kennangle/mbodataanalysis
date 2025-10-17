@@ -1,5 +1,7 @@
 # Development Workflow and AI Interaction Commands
 
+**Note: Development Mode Only** - These slash commands are available exclusively in development mode through the CommandPalette UI component (`client/src/components/CommandPalette.tsx`). The CommandPalette is accessible via keyboard shortcut (Cmd+K or Ctrl+K) and automatically excluded from production builds using `import.meta.env.DEV`.
+
 This application supports enhanced AI interaction through slash commands for automated development workflow and quality assurance.
 
 ## Available Slash Commands
