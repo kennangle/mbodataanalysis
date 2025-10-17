@@ -89,6 +89,10 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
 - **Google OAuth 2.0**: Provides single sign-on authentication for users.
 - **Brevo (SendinBlue)**: Transactional email service used for password reset emails.
 
+## User Documentation
+- **DATA_IMPORT_GUIDE.md**: Comprehensive guide for data import sequence, dependencies, and troubleshooting. Critical reading for understanding the required import order: Students → Classes → Visits → Sales.
+- **WEBHOOKS_AND_API_GUIDE.md**: Multi-day import strategies, webhook setup, and API tier upgrade guidance.
+
 ## Environment Variables
 
 ### Required for Core Functionality
