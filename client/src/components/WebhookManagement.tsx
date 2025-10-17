@@ -227,7 +227,7 @@ export function WebhookManagement() {
         {/* Help Text */}
         {!isEnabled && (
           <div className="text-sm text-muted-foreground p-4 rounded-lg bg-muted/50">
-            <p className="font-medium mb-1">💡 Why enable webhooks?</p>
+            <p className="font-medium mb-1">Why enable webhooks?</p>
             <ul className="space-y-1 ml-4 list-disc">
               <li>Get instant updates when bookings are created</li>
               <li>No API calls consumed - completely free</li>
