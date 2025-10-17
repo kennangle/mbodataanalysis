@@ -1,13 +1,7 @@
 import type { Express } from "express";
 import { storage } from "../storage";
 import { requireAuth } from "../auth";
-import { insertStudentSchema, insertClassSchema, insertAttendanceSchema, insertRevenueSchema, insertUserSchema, organizations, webhookSubscriptions } from "@shared/schema";
-import { fromZodError } from "zod-validation-error";
 import type { User } from "@shared/schema";
-
-import { MindbodyService } from "../mindbody";
-import { openaiService } from "../openai";
-import { db } from "../db";
 
 
 export function registerReportRoutes(app: Express) {
