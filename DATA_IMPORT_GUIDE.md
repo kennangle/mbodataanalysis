@@ -342,16 +342,16 @@ Visits imported: 87
 ### API Call Counter
 
 ```
-API Calls: 456 / 1,000 (45.6 calls/hour)
-Estimated time to limit: 11.9 hours
+API Calls: 456 / 5,000 (45.6 calls/hour)
+Estimated time to limit: hours remaining
 ```
 
 **What this tells you**:
-- **456 calls made** today (out of 1,000 daily limit)
+- **456 calls made** this month (out of 5,000 monthly free tier)
 - **45.6 calls/hour**: Current rate  
-- **11.9 hours**: Time until you hit 1,000 limit at current rate
+- **Estimated time**: When you'll reach the 5,000 free tier limit at current rate
 
-**Strategy**: When you see "950 / 1,000", pause the import and resume tomorrow.
+**Strategy**: When you see "4,500 / 5,000", you're approaching the free tier limit. After 5,000 calls, Mindbody charges $0.002 per call ($2 per 1,000 calls).
 
 ---
 
@@ -359,10 +359,10 @@ Estimated time to limit: 11.9 hours
 
 ### When to Pause
 
-1. **API Limit Approaching**: ~900-950 calls used
+1. **Free Tier Limit Approaching**: ~4,500 calls used (to avoid paid charges)
 2. **End of Work Day**: Pause before leaving
 3. **Need to Test**: Pause to check imported data
-4. **Multi-Day Planning**: Spread import across several days
+4. **Multi-Session Planning**: Spread large imports across multiple sessions
 
 ### How to Pause
 
@@ -373,7 +373,7 @@ Estimated time to limit: 11.9 hours
 
 ### How to Resume
 
-1. Next day (or when ready), go to Dashboard
+1. When ready, go to Dashboard
 2. You'll see "Resume Import" button
 3. Click to continue exactly where you left off
 4. Progress, API count, and position all preserved
@@ -382,8 +382,9 @@ Estimated time to limit: 11.9 hours
 
 ✅ **No duplicates**: System tracks what's already imported  
 ✅ **Exact position**: Resumes at the right student/offset  
-✅ **API count preserved**: Yesterday's calls don't count toward today's limit  
+✅ **API count preserved**: Tracks monthly usage across all sessions  
 ✅ **Session resilient**: Survives page reloads and browser restarts  
+✅ **No wait time**: Resume immediately - no 24-hour restrictions  
 
 ---
 
@@ -484,15 +485,14 @@ Got: 300 visits
    Dashboard → Real-Time Sync → Toggle ON
 ```
 
-### Daily Import Strategy (Free Tier)
+### Monthly Import Strategy (Free Tier - 5,000 calls)
 
 ```
-Day 1: Students + Classes (~50 calls total)
-Day 2: Visits (pause at 900 calls)
-Day 3: Visits (resume, pause at 900 if needed)
-Day 4+: Continue Visits until complete
-Day N: Sales (same multi-day pattern)
-Final: Enable Webhooks
+Session 1: Students + Classes (~50 calls total)
+Session 2: Visits (pause at ~4,500 calls to stay in free tier)
+Session 3+: Continue Visits until complete (or accept paid $0.002/call)
+Session N: Sales (monitor usage, paid tier is affordable at $2/1,000 calls)
+Final: Enable Webhooks for ongoing real-time sync
 ```
 
 ### Minimum Viable Import (MVF - Minimum Viable Fitness Data)
@@ -539,27 +539,29 @@ Once initial import is complete:
 
 ## API Call Budgeting
 
-### Free Tier (1,000 calls/day)
+### Free Tier (5,000 calls/month)
 
 **Budget Allocation**:
 - Students import: 10-20 calls
 - Classes import: 20-50 calls  
 - **Visits import: 1 call per student** ⚠️ (biggest cost)
 - Sales import: 1 call per student ⚠️
-- Buffer/testing: 50-100 calls
+- Buffer/testing: 100-200 calls
 
-**Multi-Day Planning**:
+**Monthly Planning**:
 ```
-1,000 students × 1 call = 1,000 calls just for visits
-Strategy: 900 students per day = 2 days for visits
+5,000 students × 1 call = 5,000 calls just for visits
+Free tier: Import up to ~4,900 students in free tier
+Paid tier: After 5,000 calls, only $0.002/call ($2 per 1,000 calls)
 ```
 
 ### Optimization Tips
 
-1. **Import students + classes on Day 1** (~50 calls total)
-2. **Use remaining 950 calls for visits** (950 students)
-3. **Day 2: Resume visits** (remaining students)
-4. **Enable webhooks** to avoid future bulk imports
+1. **Import students + classes first** (~50 calls total)
+2. **Use remaining ~4,950 calls for visits** (4,950 students in free tier)
+3. **Beyond free tier**: Paid rate is very affordable at $2 per 1,000 calls
+4. **Enable webhooks** after initial import to avoid future bulk imports
+5. **No waiting required**: Resume imports immediately - no 24-hour restrictions
 
 ---
 
