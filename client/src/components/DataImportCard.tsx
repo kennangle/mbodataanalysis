@@ -41,6 +41,7 @@ interface JobStatus {
   currentDataType: string | null;
   error: string | null;
   pausedAt?: string | null;
+  updatedAt?: string;
 }
 
 export function DataImportCard() {
@@ -153,6 +154,28 @@ export function DataImportCard() {
       try {
         const response = await apiRequest("GET", `/api/mindbody/import/${currentJobId}/status`);
         const status = await response.json() as JobStatus;
+        
+        // Check for stalled import - job hasn't been updated in 2+ minutes
+        if (status.updatedAt && status.status === 'running') {
+          const lastUpdate = new Date(status.updatedAt);
+          const now = new Date();
+          const minutesSinceUpdate = (now.getTime() - lastUpdate.getTime()) / (1000 * 60);
+          
+          if (minutesSinceUpdate > 2) {
+            // Import is stalled - hasn't updated in 2+ minutes
+            clearInterval(pollInterval);
+            setCurrentJobId(null);
+            setJobStatus(null);
+            toast({
+              variant: "destructive",
+              title: "Import appears stalled",
+              description: "The import hasn't updated in over 2 minutes. Please refresh your browser (Ctrl+Shift+R or Cmd+Shift+R) and start a new import.",
+              duration: 10000,
+            });
+            return;
+          }
+        }
+        
         setJobStatus(status);
 
         if (status.status === 'completed') {
@@ -182,7 +205,8 @@ export function DataImportCard() {
           toast({
             variant: "destructive",
             title: "Import job not found",
-            description: "The import job no longer exists. Please start a new import.",
+            description: "The import job no longer exists. Please refresh your browser (Ctrl+Shift+R or Cmd+Shift+R) and start a new import.",
+            duration: 10000,
           });
         }
       }
