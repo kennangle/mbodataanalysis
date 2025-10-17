@@ -145,7 +145,12 @@ export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
 
+  // Only enable in development mode
+  const isDevelopment = import.meta.env.DEV;
+
   useEffect(() => {
+    if (!isDevelopment) return;
+
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
@@ -155,7 +160,7 @@ export function CommandPalette() {
 
     document.addEventListener("keydown", down);
     return () => document.removeEventListener("keydown", down);
-  }, []);
+  }, [isDevelopment]);
 
   const handleCommandSelect = (command: Command) => {
     setOpen(false);
@@ -174,6 +179,11 @@ export function CommandPalette() {
       command.action();
     }
   };
+
+  // Only render in development mode
+  if (!isDevelopment) {
+    return null;
+  }
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
@@ -209,7 +219,7 @@ export function CommandPalette() {
           <span>Press <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
             <span className="text-xs">⌘</span>K
           </kbd> to open</span>
-          <span>Commands are AI-powered workflow shortcuts</span>
+          <span>Dev-only: AI-powered workflow commands</span>
         </div>
       </div>
     </CommandDialog>
