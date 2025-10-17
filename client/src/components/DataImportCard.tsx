@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -54,15 +54,15 @@ export function DataImportCard() {
   // Track last progress snapshot to detect stalled imports
   const lastProgressRef = useRef<{ snapshot: string; timestamp: number } | null>(null);
 
-  // Helper to create progress snapshot for staleness detection
-  const getProgressSnapshot = (progress: JobProgress): string => {
+  // Helper to create progress snapshot for staleness detection (memoized to prevent effect restarts)
+  const getProgressSnapshot = useCallback((progress: JobProgress): string => {
     return JSON.stringify({
       clients: progress.clients?.current || 0,
       classes: progress.classes?.current || 0,
       visits: progress.visits?.current || 0,
       sales: progress.sales?.current || 0,
     });
-  };
+  }, []);
 
   // Fetch active job on mount to restore progress after page reload
   useEffect(() => {
