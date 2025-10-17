@@ -1,0 +1,603 @@
+injected.js:3 The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+Xe @ injected.js:3
+addShadowHostToDOM @ injected.js:19
+Zo.draw @ injected.js:19
+Er._drawNotification @ injected.js:47
+Er._handleShowOrReplaceNotification @ injected.js:47
+(anonymous) @ injected.js:47
+(anonymous) @ injected.js:5
+n @ injected.js:5
+injected.js:3 The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+Xe @ injected.js:3
+addShadowHostToDOM @ injected.js:19
+Zo.draw @ injected.js:19
+Er._drawNotification @ injected.js:47
+Er._handleShowOrReplaceNotification @ injected.js:47
+(anonymous) @ injected.js:47
+(anonymous) @ injected.js:5
+n @ injected.js:5
+injected.js:3 The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+Xe @ injected.js:3
+addShadowHostToDOM @ injected.js:19
+Zo.draw @ injected.js:19
+Er._drawNotification @ injected.js:47
+Er._handleShowOrReplaceNotification @ injected.js:47
+(anonymous) @ injected.js:47
+(anonymous) @ injected.js:5
+n @ injected.js:5
+injected.js:3 The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+Xe @ injected.js:3
+addShadowHostToDOM @ injected.js:109
+draw @ injected.js:95
+Pr._attach @ injected.js:109
+handleInlineMenuPosition @ injected.js:19
+(anonymous) @ injected.js:5
+n @ injected.js:5
+injected.js:3 The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+Xe @ injected.js:3
+addShadowHostToDOM @ injected.js:109
+draw @ injected.js:95
+Pr._attach @ injected.js:109
+handleInlineMenuPosition @ injected.js:19
+(anonymous) @ injected.js:5
+n @ injected.js:5
+injected.js:3 The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+Xe @ injected.js:3
+addShadowHostToDOM @ injected.js:109
+draw @ injected.js:95
+Pr._attach @ injected.js:109
+handleInlineMenuPosition @ injected.js:19
+(anonymous) @ injected.js:5
+n @ injected.js:5
+f386cdaa-d0da-4c09-ad65-6babba92af83-00-300c0um87326b.worf.replit.dev.png:1  GET https://c.1password.com/richicons/images/login/120/f386cdaa-d0da-4c09-ad65-6babba92af83-00-300c0um87326b.worf.replit.dev.png 404 (Not Found)
+Image
+J @ chunk-UVKO6OCU.js:6
+c @ menu.js:101
+Ln @ chunk-UVKO6OCU.js:6
+c @ menu.js:101
+c @ menu.js:101
+c @ menu.js:101
+c @ menu.js:101
+Ln @ chunk-UVKO6OCU.js:6
+c @ menu.js:101
+Ln @ chunk-UVKO6OCU.js:6
+c @ menu.js:101
+c @ menu.js:101
+Ln @ chunk-UVKO6OCU.js:6
+c @ menu.js:101
+c @ menu.js:101
+c @ menu.js:101
+c @ menu.js:101
+Ln @ chunk-UVKO6OCU.js:6
+c @ menu.js:101
+Ln @ chunk-UVKO6OCU.js:6
+c @ menu.js:101
+p @ menu.js:101
+pe @ chunk-UVKO6OCU.js:6
+Y @ chunk-UVKO6OCU.js:6
+Promise.then
+Pt @ chunk-UVKO6OCU.js:6
+$e @ chunk-UVKO6OCU.js:6
+(anonymous) @ chunk-UVKO6OCU.js:6
+(anonymous) @ menu.js:101
+o @ chunk-UVKO6OCU.js:6
+i @ chunk-UVKO6OCU.js:6
+(anonymous) @ menu.js:3
+Promise.then
+gr @ menu.js:3
+ve @ menu.js:3
+Lt @ chunk-UVKO6OCU.js:6
+Rn @ menu.js:3
+Eo @ menu.js:101
+yt @ chunk-UVKO6OCU.js:6
+we @ menu.js:3
+Lt @ chunk-UVKO6OCU.js:6
+Ln @ menu.js:3
+Ro @ menu.js:101
+yt @ chunk-UVKO6OCU.js:6
+br @ menu.js:3
+p @ menu.js:3
+pe @ chunk-UVKO6OCU.js:6
+Y @ chunk-UVKO6OCU.js:6
+Promise.then
+Pt @ chunk-UVKO6OCU.js:6
+$e @ chunk-UVKO6OCU.js:6
+(anonymous) @ chunk-UVKO6OCU.js:6
+(anonymous) @ menu.js:3
+Promise.then
+Se @ menu.js:3
+Lt @ chunk-UVKO6OCU.js:6
+jn @ menu.js:3
+Lo @ menu.js:101
+yt @ chunk-UVKO6OCU.js:6
+me @ menu.js:3
+Lt @ chunk-UVKO6OCU.js:6
+zn @ menu.js:3
+jo @ menu.js:101
+yt @ chunk-UVKO6OCU.js:6
+le @ menu.js:3
+Lt @ chunk-UVKO6OCU.js:6
+In @ menu.js:3
+qo @ menu.js:101
+Lt @ chunk-UVKO6OCU.js:6
+Un @ menu.js:101
+Xr @ menu.js:101
+(anonymous) @ menu.js:101
+_app-a6f83a19f0763ffd.js:28  POST https://prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760734449050&sid=dcbeb057-d03d-4cb8-a50d-819e4790980e&ec=506&gz=1 net::ERR_BLOCKED_BY_CLIENT
+(anonymous) @ _app-a6f83a19f0763ffd.js:28
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+_sendRequest @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+a @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+post @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+_sendEventsViaPost @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+_sendEvents @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+_retryFailedLogs @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+_safeRetryFailedLogs @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+t._notifyVisibilityChanged @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+o @ injected.js:19
+Promise.then
+(anonymous) @ injected.js:19
+Zo.erase @ injected.js:19
+Er._hideAndReplace @ injected.js:47
+(anonymous) @ injected.js:47
+(anonymous) @ injected.js:5
+n @ injected.js:5
+_app-a6f83a19f0763ffd.js:28  POST https://prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760734449559&sid=dcbeb057-d03d-4cb8-a50d-819e4790980e&ec=506&gz=1 net::ERR_BLOCKED_BY_CLIENT
+(anonymous) @ _app-a6f83a19f0763ffd.js:28
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+_sendRequest @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+a @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+a @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+o @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+_sendRequest @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+a @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+post @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+_sendEventsViaPost @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+_sendEvents @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+_retryFailedLogs @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+_safeRetryFailedLogs @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+t._notifyVisibilityChanged @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+o @ injected.js:19
+Promise.then
+(anonymous) @ injected.js:19
+Zo.erase @ injected.js:19
+Er._hideAndReplace @ injected.js:47
+(anonymous) @ injected.js:47
+(anonymous) @ injected.js:5
+n @ injected.js:5
+_app-a6f83a19f0763ffd.js:28  POST https://prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760734451568&sid=dcbeb057-d03d-4cb8-a50d-819e4790980e&ec=506&gz=1 net::ERR_BLOCKED_BY_CLIENT
+(anonymous) @ _app-a6f83a19f0763ffd.js:28
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+_sendRequest @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+a @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+a @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+o @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+_sendRequest @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+a @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+a @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+o @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+_sendRequest @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+a @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+post @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+_sendEventsViaPost @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+_sendEvents @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+_retryFailedLogs @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+_safeRetryFailedLogs @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+t._notifyVisibilityChanged @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+o @ injected.js:19
+Promise.then
+(anonymous) @ injected.js:19
+Zo.erase @ injected.js:19
+Er._hideAndReplace @ injected.js:47
+(anonymous) @ injected.js:47
+(anonymous) @ injected.js:5
+n @ injected.js:5
+workspace_iframe.html?initialPath=%2F&id=%3Ar4g%3A:1 Unrecognized feature: 'ambient-light-sensor'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar4g%3A:1 Unrecognized feature: 'battery'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar4g%3A:1 Unrecognized feature: 'execution-while-not-rendered'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar4g%3A:1 Unrecognized feature: 'execution-while-out-of-viewport'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar4g%3A:1 Unrecognized feature: 'layout-animations'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar4g%3A:1 Unrecognized feature: 'legacy-image-formats'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar4g%3A:1 Unrecognized feature: 'navigation-override'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar4g%3A:1 Unrecognized feature: 'oversized-images'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar4g%3A:1 Unrecognized feature: 'publickey-credentials'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar4g%3A:1 Unrecognized feature: 'speaker-selection'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar4g%3A:1 Unrecognized feature: 'unoptimized-images'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar4g%3A:1 Unrecognized feature: 'unsized-media'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar4g%3A:1 Allow attribute will take precedence over 'allowfullscreen'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar4g%3A:1 Allow attribute will take precedence over 'allowpaymentrequest'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar4g%3A:142  GET https://replit.com/public/js/beacon.js net::ERR_BLOCKED_BY_CLIENT
+onIframeLoad @ workspace_iframe.html?initialPath=%2F&id=%3Ar4g%3A:142
+_app-a6f83a19f0763ffd.js:28  POST https://prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760734456076&sid=dcbeb057-d03d-4cb8-a50d-819e4790980e&ec=506&gz=1 net::ERR_BLOCKED_BY_CLIENT
+(anonymous) @ _app-a6f83a19f0763ffd.js:28
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+_sendRequest @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+a @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+a @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+o @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+_sendRequest @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+a @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+a @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+o @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+_sendRequest @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+a @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+a @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+o @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+_sendRequest @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+a @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+post @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+_sendEventsViaPost @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+_sendEvents @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+_retryFailedLogs @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+_safeRetryFailedLogs @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+t._notifyVisibilityChanged @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+o @ injected.js:19
+Promise.then
+(anonymous) @ injected.js:19
+Zo.erase @ injected.js:19
+Er._hideAndReplace @ injected.js:47
+(anonymous) @ injected.js:47
+(anonymous) @ injected.js:5
+n @ injected.js:5
+_app-a6f83a19f0763ffd.js:28  ERROR  [Statsig] A networking error occurred during POST request to https://prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760734456076&sid=dcbeb057-d03d-4cb8-a50d-819e4790980e&ec=506&gz=1. TypeError: Failed to fetch TypeError: Failed to fetch
+    at _app-a6f83a19f0763ffd.js:28:9046
+    at a.<anonymous> (6609-19885da77bcf35c2.js:1:90452)
+    at Generator.next (<anonymous>)
+    at 6609-19885da77bcf35c2.js:1:88045
+    at new Promise (<anonymous>)
+    at i (6609-19885da77bcf35c2.js:1:87794)
+    at a._sendRequest (6609-19885da77bcf35c2.js:1:89675)
+    at 6609-19885da77bcf35c2.js:1:57974
+    at l._capture (6609-19885da77bcf35c2.js:1:58272)
+    at e.<computed> [as _sendRequest] (6609-19885da77bcf35c2.js:1:57943)
+    at a.<anonymous> (6609-19885da77bcf35c2.js:1:91623)
+    at Generator.next (<anonymous>)
+    at a (6609-19885da77bcf35c2.js:1:87850)
+(anonymous) @ _app-a6f83a19f0763ffd.js:28
+error @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+a @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+o @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+_sendRequest @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+a @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+a @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+o @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+_sendRequest @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+a @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+a @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+o @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+_sendRequest @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+a @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+a @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+o @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+_sendRequest @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+a @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+post @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+_sendEventsViaPost @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+_sendEvents @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+_retryFailedLogs @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+_safeRetryFailedLogs @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+t._notifyVisibilityChanged @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+o @ injected.js:19
+Promise.then
+(anonymous) @ injected.js:19
+Zo.erase @ injected.js:19
+Er._hideAndReplace @ injected.js:47
+(anonymous) @ injected.js:47
+(anonymous) @ injected.js:5
+n @ injected.js:5
+_app-a6f83a19f0763ffd.js:28   WARN  [Statsig] Failed to flush events.
+(anonymous) @ _app-a6f83a19f0763ffd.js:28
+warn @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+a @ 6609-19885da77bcf35c2.js:1
+Promise.then
+l @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+_sendEvents @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+i @ 6609-19885da77bcf35c2.js:1
+_retryFailedLogs @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+_capture @ 6609-19885da77bcf35c2.js:1
+e.<computed> @ 6609-19885da77bcf35c2.js:1
+_safeRetryFailedLogs @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+t._notifyVisibilityChanged @ 6609-19885da77bcf35c2.js:1
+(anonymous) @ 6609-19885da77bcf35c2.js:1
+o @ injected.js:19
+Promise.then
+(anonymous) @ injected.js:19
+Zo.erase @ injected.js:19
+Er._hideAndReplace @ injected.js:47
+(anonymous) @ injected.js:47
+(anonymous) @ injected.js:5
+n @ injected.js:5
