@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/lib/auth";
+import { CommandPalette } from "@/components/CommandPalette";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
 import Login from "@/pages/Login";
@@ -50,6 +51,7 @@ function App() {
         <AuthProvider>
           <TooltipProvider>
             <Toaster />
+            <CommandPalette />
             <Router />
           </TooltipProvider>
         </AuthProvider>
