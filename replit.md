@@ -106,6 +106,38 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
 ## User Documentation
 - **DATA_IMPORT_GUIDE.md**: Comprehensive guide for data import sequence, dependencies, and troubleshooting. Critical reading for understanding the required import order: Students → Classes → Visits → Sales.
 - **WEBHOOKS_AND_API_GUIDE.md**: Multi-day import strategies, webhook setup, and API tier upgrade guidance.
+- **slashcommands.md**: Development workflow and AI interaction commands for enhanced productivity. Includes commands for diagnostics (`/deep`, `/diagnose`), analysis (`/anal`), design standards (`/design`), mobile optimization (`/mobile`), code quality checks (`/es`, `/gr`), and bug tracking (`/bug`).
+
+## Development Workflow
+
+### Slash Commands for Enhanced Productivity
+The platform supports AI-powered slash commands accessible via the command palette (Cmd+K or Ctrl+K) for rapid workflow automation:
+
+#### Core Workflow Commands
+- **`/ask`**: Request confirmation before implementing changes
+- **`/deep`**: Comprehensive diagnosis with thorough research and impact analysis
+- **`/diagnose`**: Systematic problem investigation and solution identification
+- **`/anal`**: Advanced multi-dimensional analysis (performance, security, business, data)
+- **`/suggest`**: Detailed solution proposals without immediate implementation
+
+#### Design & Mobile Optimization
+- **`/design`**: Apply established design patterns and standards automatically
+- **`/mobile`**: Mobile-first optimization with 13 specialized sub-commands:
+  - `/mobile touch`: Touch target audit (44px minimum)
+  - `/mobile overflow`: Viewport overflow detection
+  - `/mobile typography`: Text optimization for readability
+  - `/mobile forms`: Mobile form layout optimization
+  - `/mobile navigation`: Navigation UX review
+  - `/mobile performance`: Mobile performance analysis
+  - `/mobile audit`: Comprehensive mobile review
+  - And 6 more specialized checks
+
+#### Code Quality & Compliance
+- **`/es`**: Run ESLint across entire codebase
+- **`/gr`**: Guardrails compliance review for policy violations
+- **`/bug`**: Systematically document reported issues
+
+For complete command reference and usage examples, see [slashcommands.md](./slashcommands.md).
 
 ## Environment Variables
 
