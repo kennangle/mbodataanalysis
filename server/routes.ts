@@ -790,6 +790,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Event type is required" });
       }
 
+      // Check if organization has Mindbody site ID configured
+      const org = await storage.getOrganization(organizationId);
+      if (!org?.mindbodySiteId) {
+        return res.status(400).json({ 
+          error: "Mindbody integration not configured. Please complete a data import first to configure your Mindbody site ID." 
+        });
+      }
+
       // Build webhook URL for this deployment
       let webhookUrl = 'http://localhost:5000/api/webhooks/mindbody';
       if (process.env.REPLIT_DOMAINS) {
