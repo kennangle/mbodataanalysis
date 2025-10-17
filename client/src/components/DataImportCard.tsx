@@ -58,6 +58,28 @@ export function DataImportCard() {
         const response = await apiRequest("GET", "/api/mindbody/import/active");
         if (response.ok) {
           const job = await response.json() as JobStatus;
+          
+          // Validate job has updatedAt and check if it's stale
+          if (job.updatedAt && job.status === 'running') {
+            const lastUpdate = new Date(job.updatedAt);
+            const now = new Date();
+            const minutesSinceUpdate = (now.getTime() - lastUpdate.getTime()) / (1000 * 60);
+            
+            if (minutesSinceUpdate > 2) {
+              // Job is stale - clear it and show message
+              setCurrentJobId(null);
+              setJobStatus(null);
+              toast({
+                variant: "destructive",
+                title: "Previous import was stalled",
+                description: "Found an import that hasn't updated in over 2 minutes. It has been cleared. You can start a new import.",
+                duration: 8000,
+              });
+              setIsLoadingActiveJob(false);
+              return;
+            }
+          }
+          
           setCurrentJobId(job.id);
           setJobStatus(job);
         }
@@ -71,7 +93,7 @@ export function DataImportCard() {
     };
 
     fetchActiveJob();
-  }, []);
+  }, [toast]);
 
   const getDefaultStartDate = () => {
     const date = new Date();
