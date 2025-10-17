@@ -867,6 +867,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/webhooks/events", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.user as User)?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const events = await storage.getWebhookEvents(organizationId);
+      res.json(events);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch webhook events" });
+    }
+  });
+
   // Webhook receiver endpoints (no auth required - validated by signature)
   app.head("/api/webhooks/mindbody", async (req, res) => {
     // Mindbody validation endpoint

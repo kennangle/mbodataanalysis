@@ -10,6 +10,7 @@ import { AttendanceChart } from "@/components/AttendanceChart";
 import { DataImportCard } from "@/components/DataImportCard";
 import { AIQueryInterface } from "@/components/AIQueryInterface";
 import { StudentsTable } from "@/components/StudentsTable";
+import { WebhookManagement } from "@/components/WebhookManagement";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 
@@ -78,6 +79,8 @@ export default function Dashboard() {
                 <AIQueryInterface />
                 <DataImportCard />
               </div>
+
+              <WebhookManagement />
 
               <StudentsTable />
             </div>
