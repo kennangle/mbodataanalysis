@@ -194,7 +194,7 @@ export function registerMindbodyRoutes(app: Express) {
       });
 
       // Start processing in background (don't await)
-      const { importWorker } = await import("../import-worker");
+      const { importWorker } = await import("../import-worker.js");
       importWorker.processJob(job.id).catch((error: Error) => {
         console.error(`Background job ${job.id} failed:`, error);
       });
@@ -286,7 +286,7 @@ export function registerMindbodyRoutes(app: Express) {
       });
 
       // Start processing in background (don't await)
-      const { importWorker } = await import("../import-worker");
+      const { importWorker } = await import("../import-worker.js");
       importWorker.processJob(jobId).catch((error: Error) => {
         console.error(`Background job ${jobId} failed:`, error);
       });
