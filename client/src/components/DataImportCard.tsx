@@ -35,6 +35,8 @@ interface JobStatus {
   id: string;
   status: 'pending' | 'running' | 'completed' | 'failed' | 'paused' | 'cancelled';
   dataTypes: string[];
+  startDate?: string;
+  endDate?: string;
   progress: JobProgress;
   currentDataType: string | null;
   error: string | null;
@@ -491,6 +493,11 @@ export function DataImportCard() {
                 </span>
                 <span className="font-medium">{calculateProgress()}%</span>
               </div>
+              {jobStatus.startDate && jobStatus.endDate && (
+                <div className="text-xs text-muted-foreground">
+                  {format(new Date(jobStatus.startDate), 'MMM d, yyyy')} - {format(new Date(jobStatus.endDate), 'MMM d, yyyy')}
+                </div>
+              )}
               <Progress value={calculateProgress()} />
             </div>
 
