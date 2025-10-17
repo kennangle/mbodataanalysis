@@ -504,23 +504,35 @@ export class MindbodyService {
     
     let imported = 0;
     let processedStudents = 0;
+    let totalVisitsFound = 0;
+    let unmatchedClassIds = new Set<string>();
     
     // Process students sequentially in this batch
     for (const student of studentBatch) {
       try {
         const { results: visits } = await this.fetchAllPages<MindbodyVisit>(
           organizationId,
-          `/client/clientvisits?ClientId=${student.mindbodyClientId}&StartDate=${startDate.toISOString()}`,
+          `/client/clientvisits?ClientId=${student.mindbodyClientId}&StartDate=${startDate.toISOString()}&EndDate=${endDate.toISOString()}`,
           'Visits',
           200
         );
         
+        if (visits.length > 0) {
+          totalVisitsFound += visits.length;
+        }
+        
         for (const visit of visits) {
           try {
-            if (!visit.ClassId || !visit.VisitDateTime) continue;
+            if (!visit.ClassId || !visit.VisitDateTime) {
+              console.log(`Skipping visit without ClassId or VisitDateTime for client ${student.mindbodyClientId}`);
+              continue;
+            }
             
             const schedule = scheduleMap.get(visit.ClassId.toString());
-            if (!schedule) continue;
+            if (!schedule) {
+              unmatchedClassIds.add(visit.ClassId.toString());
+              continue;
+            }
             
             await storage.createAttendance({
               organizationId,
@@ -532,7 +544,7 @@ export class MindbodyService {
             
             imported++;
           } catch (error) {
-            console.error(`Failed to import visit:`, error);
+            console.error(`Failed to import visit for client ${student.mindbodyClientId}:`, error);
           }
         }
       } catch (error) {
@@ -542,6 +554,14 @@ export class MindbodyService {
       // Update progress after each student to show real-time API count
       processedStudents++;
       await onProgress(startStudentIndex + processedStudents, totalStudents);
+    }
+    
+    // Log diagnostic information
+    if (totalVisitsFound > 0) {
+      console.log(`Visit import batch: Found ${totalVisitsFound} visits, imported ${imported} attendance records`);
+      if (unmatchedClassIds.size > 0) {
+        console.log(`Unmatched ClassIds (visits skipped):`, Array.from(unmatchedClassIds).slice(0, 10).join(', '));
+      }
     }
     
     const nextStudentIndex = endIndex;
