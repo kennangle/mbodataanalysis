@@ -3,6 +3,8 @@
 ## Overview
 This platform is an enterprise-grade analytics solution for Mindbody data, covering students, classes, schedules, attendance, memberships, purchases, and income. Its core purpose is to provide robust data synchronization, AI-powered natural language querying, real-time analytics dashboards, custom report generation, and role-based access control. The platform solves the challenge of unreliable long-running data imports by implementing a resumable background import system with proper cancellation handling, ensuring accurate and comprehensive business intelligence for large datasets.
 
+**Deployment Architecture**: Multi-tenancy SaaS platform designed for deployment on Heroku, supporting multiple Mindbody site implementations with complete data isolation per organization.
+
 ## User Preferences
 - Professional business intelligence interface
 - Data clarity over decoration
@@ -105,3 +107,36 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
 - `BREVO_API_KEY`: Brevo (SendinBlue) API key for transactional emails
 
 Note: If Google OAuth credentials are not provided, the Google sign-in buttons will not be functional but the app will work with email/password authentication. Similarly, password reset requires Brevo API key to be configured.
+
+## Deployment
+
+### Platform: Heroku Multi-Tenancy SaaS
+
+This application is designed as a **multi-site, multi-tenant SaaS platform** for deployment on Heroku with the following architecture:
+
+**Multi-Tenancy Design:**
+- Complete data isolation per organization via `organizationId` foreign keys
+- Each organization can connect to a different Mindbody site
+- Shared database with row-level organization separation
+- Users belong to a single organization (set during registration)
+- All data (students, classes, visits, sales, webhooks) scoped to organization
+
+**Heroku Deployment Considerations:**
+- Uses PostgreSQL add-on for production database
+- Session-based authentication with connect-pg-simple for session store
+- Environment variables configured via Heroku config vars
+- Webhook URLs automatically configured using REPLIT_DOMAINS (Heroku domain in production)
+- Resumable imports handle Heroku's 30-second request timeout via background jobs
+
+**Multi-Site Support:**
+- Each organization stores their unique `mindbodySiteId`
+- Site ID configured automatically during first data import
+- Webhooks use site-specific subscriptions
+- API calls tracked per organization for accurate limit monitoring
+- Multiple Mindbody sites can be served from single deployment
+
+**Scaling Considerations:**
+- Database indexes on organizationId for query performance
+- Background job system for long-running imports
+- Webhook-based real-time sync reduces API call volume
+- Session management scaled via PostgreSQL session store
