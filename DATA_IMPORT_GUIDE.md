@@ -612,16 +612,30 @@ Paid tier: After 5,000 calls, only $0.002/call ($2 per 1,000 calls)
 2. Verify import sequence was followed
 3. Check browser console for errors
 4. Review import logs for specific errors
+5. Use `/diagnose` command (Cmd+K) for AI-powered troubleshooting
 
 **API Limit Issues?**
 1. See WEBHOOKS_AND_API_GUIDE.md for multi-day strategies
 2. Consider Mindbody API tier upgrade
 3. Use webhooks to reduce ongoing API usage
+4. Use `/anal performance` command (Cmd+K) for API usage analysis
 
 **Technical Issues?**
 1. Check replit.md for system architecture
 2. Review database schema in shared/schema.ts
 3. Examine server/mindbody.ts for import logic
+4. Use `/deep` command (Cmd+K) for comprehensive diagnosis
+
+### AI Workflow Commands
+
+Press **Cmd+K** (or **Ctrl+K**) to access the command palette with AI-powered workflow shortcuts:
+
+- **`/diagnose`**: Systematic problem investigation for import issues
+- **`/deep`**: Comprehensive diagnosis with thorough research
+- **`/anal`**: Advanced analysis (performance, data, business insights)
+- **`/bug`**: Document reported issues systematically
+
+For complete command reference, see [slashcommands.md](./slashcommands.md).
 
 ---
 

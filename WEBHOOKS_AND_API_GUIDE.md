@@ -466,4 +466,25 @@ A: Use Mindbody sandbox environment with test site ID.
 
 ---
 
+## AI Workflow Commands
+
+Press **Cmd+K** (or **Ctrl+K**) to access the command palette with AI-powered workflow shortcuts:
+
+### Import & API Optimization
+- **`/diagnose`**: Investigate webhook or import issues systematically
+- **`/anal performance`**: Analyze API usage patterns and optimization opportunities
+- **`/deep`**: Comprehensive diagnosis for complex multi-day import problems
+
+### Planning & Strategy
+- **`/suggest`**: Get detailed solution proposals for import strategies
+- **`/ask`**: Request confirmation before implementing API tier changes
+
+### Monitoring & Debugging
+- **`/bug`**: Document webhook failures or import issues
+- **`/mobile`**: Optimize mobile experience for on-the-go import monitoring
+
+For complete command reference and usage examples, see [slashcommands.md](./slashcommands.md).
+
+---
+
 *Last Updated: October 2025*
