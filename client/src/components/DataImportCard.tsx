@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,6 +50,19 @@ export function DataImportCard() {
   const [isLoadingActiveJob, setIsLoadingActiveJob] = useState(true);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  
+  // Track last progress snapshot to detect stalled imports
+  const lastProgressRef = useRef<{ snapshot: string; timestamp: number } | null>(null);
+
+  // Helper to create progress snapshot for staleness detection
+  const getProgressSnapshot = (progress: JobProgress): string => {
+    return JSON.stringify({
+      clients: progress.clients?.current || 0,
+      classes: progress.classes?.current || 0,
+      visits: progress.visits?.current || 0,
+      sales: progress.sales?.current || 0,
+    });
+  };
 
   // Fetch active job on mount to restore progress after page reload
   useEffect(() => {
@@ -175,52 +188,9 @@ export function DataImportCard() {
     const pollInterval = setInterval(async () => {
       try {
         const response = await apiRequest("GET", `/api/mindbody/import/${currentJobId}/status`);
-        const status = await response.json() as JobStatus;
         
-        // Check for stalled import - job hasn't been updated in 2+ minutes
-        if (status.updatedAt && status.status === 'running') {
-          const lastUpdate = new Date(status.updatedAt);
-          const now = new Date();
-          const minutesSinceUpdate = (now.getTime() - lastUpdate.getTime()) / (1000 * 60);
-          
-          if (minutesSinceUpdate > 2) {
-            // Import is stalled - hasn't updated in 2+ minutes
-            clearInterval(pollInterval);
-            setCurrentJobId(null);
-            setJobStatus(null);
-            toast({
-              variant: "destructive",
-              title: "Import appears stalled",
-              description: "The import hasn't updated in over 2 minutes. Please refresh your browser (Ctrl+Shift+R or Cmd+Shift+R) and start a new import.",
-              duration: 10000,
-            });
-            return;
-          }
-        }
-        
-        setJobStatus(status);
-
-        if (status.status === 'completed') {
-          clearInterval(pollInterval);
-          queryClient.invalidateQueries();
-          toast({
-            title: "Import completed",
-            description: "All data has been imported successfully",
-          });
-        } else if (status.status === 'failed') {
-          clearInterval(pollInterval);
-          toast({
-            variant: "destructive",
-            title: "Import failed",
-            description: status.error || "Unknown error occurred",
-          });
-        } else if (status.status === 'paused') {
-          clearInterval(pollInterval);
-        }
-      } catch (error) {
-        console.error("Failed to fetch job status:", error);
-        // If job not found (404) or other error, clear state and stop polling
-        if (error instanceof Error && error.message.includes('404')) {
+        // Check for 404 directly from response
+        if (response.status === 404) {
           clearInterval(pollInterval);
           setCurrentJobId(null);
           setJobStatus(null);
@@ -230,12 +200,89 @@ export function DataImportCard() {
             description: "The import job no longer exists. Please refresh your browser (Ctrl+Shift+R or Cmd+Shift+R) and start a new import.",
             duration: 10000,
           });
+          return;
         }
+        
+        const status = await response.json() as JobStatus;
+        
+        // Check for stalled import - progress hasn't changed in 2+ minutes
+        if (status.status === 'running') {
+          const currentSnapshot = getProgressSnapshot(status.progress);
+          const now = Date.now();
+          
+          if (lastProgressRef.current) {
+            const { snapshot: lastSnapshot, timestamp: lastTimestamp } = lastProgressRef.current;
+            
+            // If progress hasn't changed
+            if (currentSnapshot === lastSnapshot) {
+              const minutesSinceChange = (now - lastTimestamp) / (1000 * 60);
+              
+              if (minutesSinceChange > 2) {
+                // Import is stalled - no progress in 2+ minutes
+                clearInterval(pollInterval);
+                setCurrentJobId(null);
+                setJobStatus(null);
+                lastProgressRef.current = null;
+                toast({
+                  variant: "destructive",
+                  title: "Import appears stalled",
+                  description: "The import hasn't made progress in over 2 minutes. Please refresh your browser (Ctrl+Shift+R or Cmd+Shift+R) and start a new import.",
+                  duration: 10000,
+                });
+                return;
+              }
+            } else {
+              // Progress changed - update snapshot
+              lastProgressRef.current = { snapshot: currentSnapshot, timestamp: now };
+            }
+          } else {
+            // First snapshot
+            lastProgressRef.current = { snapshot: currentSnapshot, timestamp: now };
+          }
+        }
+        
+        setJobStatus(status);
+
+        if (status.status === 'completed') {
+          clearInterval(pollInterval);
+          lastProgressRef.current = null;
+          queryClient.invalidateQueries();
+          toast({
+            title: "Import completed",
+            description: "All data has been imported successfully",
+          });
+        } else if (status.status === 'failed') {
+          clearInterval(pollInterval);
+          lastProgressRef.current = null;
+          toast({
+            variant: "destructive",
+            title: "Import failed",
+            description: status.error || "Unknown error occurred",
+          });
+        } else if (status.status === 'paused') {
+          clearInterval(pollInterval);
+          lastProgressRef.current = null;
+        }
+      } catch (error) {
+        console.error("Failed to fetch job status:", error);
+        clearInterval(pollInterval);
+        setCurrentJobId(null);
+        setJobStatus(null);
+        lastProgressRef.current = null;
+        toast({
+          variant: "destructive",
+          title: "Error checking import status",
+          description: "Please refresh your browser (Ctrl+Shift+R or Cmd+Shift+R) and start a new import.",
+          duration: 10000,
+        });
       }
     }, 2000); // Poll every 2 seconds
 
-    return () => clearInterval(pollInterval);
-  }, [currentJobId, queryClient, toast]);
+    return () => {
+      clearInterval(pollInterval);
+      lastProgressRef.current = null;
+    };
+  }, [currentJobId, queryClient, toast, getProgressSnapshot]);
 
   const startImportMutation = useMutation({
     mutationFn: async (config: ImportConfig) => {
