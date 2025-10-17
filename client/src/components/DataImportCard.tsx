@@ -85,8 +85,8 @@ export function DataImportCard() {
               toast({
                 variant: "destructive",
                 title: "Previous import was stalled",
-                description: "Found an import that hasn't updated in over 2 minutes. It has been cleared. You can start a new import.",
-                duration: 8000,
+                description: "Found an import that hasn't updated in over 2 minutes. Please refresh your browser (Ctrl+Shift+R or Cmd+Shift+R) to ensure a clean state, then start a new import.",
+                duration: 10000,
               });
               setIsLoadingActiveJob(false);
               return;
