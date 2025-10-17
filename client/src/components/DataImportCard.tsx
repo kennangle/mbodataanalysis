@@ -82,7 +82,7 @@ export function DataImportCard() {
     return new Date().toISOString().split('T')[0];
   };
 
-  // Calculate API rate and estimated time to reach 1000 calls
+  // Calculate API rate and estimated time to reach 5000 calls (monthly free tier)
   const calculateApiMetrics = (progress: JobProgress) => {
     const apiCallCount = progress.apiCallCount || 0;
     const importStartTime = progress.importStartTime;
@@ -110,7 +110,7 @@ export function DataImportCard() {
     }
     
     const rate = apiCallCount / elapsedMinutes; // calls per minute
-    const remainingCalls = 1000 - apiCallCount;
+    const remainingCalls = 5000 - apiCallCount;
     
     if (remainingCalls <= 0) {
       return {
@@ -527,7 +527,7 @@ export function DataImportCard() {
             {/* API Call Tracking */}
             {(() => {
               const metrics = calculateApiMetrics(jobStatus.progress);
-              const isApproachingLimit = metrics.apiCallCount >= 900;
+              const isApproachingLimit = metrics.apiCallCount >= 4500;
               const hasExceededLimit = metrics.limitExceeded;
 
               return (
@@ -539,7 +539,7 @@ export function DataImportCard() {
                       : 'bg-muted'
                 }`}>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium">API Calls</span>
+                    <span className="font-medium">API Calls (Monthly)</span>
                     <span className={`font-semibold ${
                       hasExceededLimit 
                         ? 'text-destructive' 
@@ -547,7 +547,7 @@ export function DataImportCard() {
                           ? 'text-amber-600 dark:text-amber-500'
                           : ''
                     }`}>
-                      {metrics.apiCallCount} / 1000
+                      {metrics.apiCallCount} / 5,000
                     </span>
                   </div>
                   
@@ -560,7 +560,7 @@ export function DataImportCard() {
                       
                       {!hasExceededLimit && metrics.limitReachedAt && (
                         <div className="flex justify-between">
-                          <span>Limit reached at:</span>
+                          <span>Free tier limit at:</span>
                           <span className={isApproachingLimit ? 'font-medium text-amber-600 dark:text-amber-500' : ''}>
                             {format(metrics.limitReachedAt, 'MMM d, h:mm a')}
                           </span>
@@ -569,13 +569,13 @@ export function DataImportCard() {
                       
                       {hasExceededLimit && (
                         <div className="text-destructive font-medium">
-                          ⚠️ Daily API limit exceeded
+                          ⚠️ Free tier limit exceeded - $0.002/call after 5,000
                         </div>
                       )}
                       
                       {isApproachingLimit && !hasExceededLimit && (
                         <div className="text-amber-600 dark:text-amber-500 font-medium">
-                          ⚠️ Approaching daily limit - consider pausing
+                          ⚠️ Approaching free tier limit - consider pausing
                         </div>
                       )}
                     </div>
