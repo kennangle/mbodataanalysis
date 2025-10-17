@@ -48,13 +48,13 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <AuthProvider>
-          <TooltipProvider>
-            <Toaster />
-            <CommandPalette />
+        <TooltipProvider>
+          <Toaster />
+          <CommandPalette />
+          <AuthProvider>
             <Router />
-          </TooltipProvider>
-        </AuthProvider>
+          </AuthProvider>
+        </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );
