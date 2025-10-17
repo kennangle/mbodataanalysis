@@ -21,6 +21,20 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
 - **Authentication**: Passport.js with session management
 - **External APIs**: OpenAI (GPT-4), Mindbody Public API
 
+### Backend Architecture
+- **Modular Route Structure**: Routes organized into 10 specialized modules in `server/routes/` directory for maintainability and scalability:
+  - `users.ts`: User management and admin operations
+  - `students.ts`: Student roster and filtering
+  - `classes.ts`: Class schedule management
+  - `attendance.ts`: Attendance tracking
+  - `revenue.ts`: Revenue and sales data
+  - `mindbody.ts`: Mindbody API integration (OAuth, imports, sync)
+  - `webhooks.ts`: Webhook subscription and event handling
+  - `ai.ts`: AI-powered natural language queries
+  - `dashboard.ts`: Real-time analytics and metrics
+  - `reports.ts`: Custom report generation and exports
+  - `index.ts`: Central router that registers all route modules
+
 ### Design System
 - Modern SaaS aesthetic inspired by Linear/Vercel
 - Primary color: Blue (hsl(217 91% 60%))
