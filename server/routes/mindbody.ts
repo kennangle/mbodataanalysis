@@ -4,6 +4,20 @@ import { requireAuth } from "../auth";
 import type { User } from "@shared/schema";
 import { MindbodyService } from "../mindbody";
 
+// Safe JSON parser that handles null, objects, and invalid JSON
+function safeJsonParse<T = any>(value: any, fallback: T = {} as T): T {
+  if (value === null || value === undefined) {
+    return fallback;
+  }
+  if (typeof value === 'object') {
+    return value as T;
+  }
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
+}
 
 export function registerMindbodyRoutes(app: Express) {
   app.get("/api/mindbody/auth-url", requireAuth, async (req, res) => {
@@ -124,7 +138,7 @@ export function registerMindbodyRoutes(app: Express) {
         dataTypes: activeJob.dataTypes,
         startDate: activeJob.startDate,
         endDate: activeJob.endDate,
-        progress: JSON.parse(activeJob.progress),
+        progress: safeJsonParse(activeJob.progress, {}),
         currentDataType: activeJob.currentDataType,
         currentOffset: activeJob.currentOffset,
         error: activeJob.error,
@@ -262,7 +276,7 @@ export function registerMindbodyRoutes(app: Express) {
         dataTypes: job.dataTypes,
         startDate: job.startDate,
         endDate: job.endDate,
-        progress: JSON.parse(job.progress),
+        progress: safeJsonParse(job.progress, {}),
         existingCounts,
         currentDataType: job.currentDataType,
         currentOffset: job.currentOffset,

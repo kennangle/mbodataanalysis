@@ -2,6 +2,21 @@ import { storage } from "./storage";
 import { mindbodyService } from "./mindbody";
 import type { ImportJob } from "@shared/schema";
 
+// Safe JSON parser that handles null, objects, and invalid JSON
+function safeJsonParse<T = any>(value: any, fallback: T = {} as T): T {
+  if (value === null || value === undefined) {
+    return fallback;
+  }
+  if (typeof value === 'object') {
+    return value as T;
+  }
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
+}
+
 export class ImportWorker {
   private jobQueue: string[] = [];
   private isProcessing = false;
@@ -47,7 +62,7 @@ export class ImportWorker {
       const startDate = new Date(job.startDate);
       const endDate = new Date(job.endDate);
       const dataTypes = job.dataTypes;
-      const progress = JSON.parse(job.progress);
+      const progress: any = safeJsonParse(job.progress, {});
       
       // Initialize API tracking if not present
       if (!progress.apiCallCount) {
