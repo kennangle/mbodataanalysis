@@ -44,6 +44,17 @@ interface JobStatus {
   updatedAt?: string;
 }
 
+// Map internal data type names to user-friendly display names
+const getDisplayName = (dataType: string): string => {
+  const displayNames: Record<string, string> = {
+    'clients': 'Students',
+    'classes': 'Classes',
+    'visits': 'Visits',
+    'sales': 'Sales'
+  };
+  return displayNames[dataType] || dataType;
+};
+
 export function DataImportCard() {
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
@@ -503,7 +514,7 @@ export function DataImportCard() {
                       data-testid="checkbox-clients"
                     />
                     <label htmlFor="clients" className="text-sm font-normal cursor-pointer">
-                      Clients (Students/Members)
+                      Students
                     </label>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -582,7 +593,7 @@ export function DataImportCard() {
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">
-                  Importing {jobStatus.currentDataType || 'data'}...
+                  Importing {jobStatus.currentDataType ? getDisplayName(jobStatus.currentDataType).toLowerCase() : 'data'}...
                 </span>
                 <span className="font-medium">{calculateProgress()}%</span>
               </div>
@@ -602,7 +613,7 @@ export function DataImportCard() {
                   if (typeof data === 'object' && 'completed' in data) {
                     return (
                       <div key={type} className="flex justify-between text-muted-foreground">
-                        <span className="capitalize">{type}:</span>
+                        <span>{getDisplayName(type)}:</span>
                         <span>
                           {data.completed ? (
                             <CheckCircle className="inline h-3 w-3 text-green-600" />
@@ -706,7 +717,7 @@ export function DataImportCard() {
               </p>
               <div className="text-xs text-green-700 dark:text-green-300 mt-2 space-y-1">
                 {jobStatus.progress.clients && (
-                  <p>Clients: {jobStatus.progress.clients.imported} new, {jobStatus.progress.clients.updated} updated</p>
+                  <p>Students: {jobStatus.progress.clients.imported} new, {jobStatus.progress.clients.updated} updated</p>
                 )}
                 {jobStatus.progress.classes && (
                   <p>Classes: {jobStatus.progress.classes.imported} imported</p>
@@ -774,7 +785,7 @@ export function DataImportCard() {
               <div className="text-xs text-amber-700 dark:text-amber-300 mt-3 space-y-1">
                 <p className="font-medium">Progress at pause:</p>
                 {jobStatus.progress.clients && (
-                  <p>Clients: {jobStatus.progress.clients.imported} new, {jobStatus.progress.clients.updated} updated</p>
+                  <p>Students: {jobStatus.progress.clients.imported} new, {jobStatus.progress.clients.updated} updated</p>
                 )}
                 {jobStatus.progress.classes && (
                   <p>Classes: {jobStatus.progress.classes.imported} imported</p>
