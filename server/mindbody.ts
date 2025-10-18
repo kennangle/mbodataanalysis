@@ -503,6 +503,12 @@ export class MindbodyService {
     const schedules = await storage.getClassSchedules(organizationId);
     const schedulesByTime = new Map(schedules.map(s => [s.startTime.toISOString(), s]));
     
+    // DEBUG: Log sample schedule times
+    const sampleTimes = Array.from(schedulesByTime.keys()).slice(0, 5);
+    console.log('=== DEBUG: Sample schedule times in map ===');
+    console.log(sampleTimes);
+    console.log('===========================================');
+    
     let imported = 0;
     let processedStudents = 0;
     let totalVisitsFound = 0;
@@ -541,6 +547,15 @@ export class MindbodyService {
             // Match by StartDateTime instead of ClassId
             const visitStartTime = new Date(visit.StartDateTime).toISOString();
             const schedule = schedulesByTime.get(visitStartTime);
+            
+            // DEBUG: Log first few match attempts
+            if (totalVisitsFound <= 5) {
+              console.log(`=== DEBUG: Matching attempt ===`);
+              console.log(`Visit time: ${visit.StartDateTime} -> ${visitStartTime}`);
+              console.log(`Found schedule: ${schedule ? 'YES' : 'NO'}`);
+              console.log(`==============================`);
+            }
+            
             if (!schedule) {
               unmatchedClassIds.add(`${visit.ClassId} at ${visit.StartDateTime}`);
               continue;
