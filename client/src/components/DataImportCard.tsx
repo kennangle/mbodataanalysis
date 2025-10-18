@@ -665,6 +665,8 @@ export function DataImportCard() {
                           <span>
                             {data.completed ? (
                               <CheckCircle className="inline h-3 w-3 text-green-600" />
+                            ) : type === 'visits' ? (
+                              `Checking student ${data.current} / ${data.total || '?'}`
                             ) : (
                               `${data.current} / ${data.total || '?'}`
                             )}
