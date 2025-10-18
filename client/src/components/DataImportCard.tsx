@@ -55,6 +55,16 @@ const getDisplayName = (dataType: string): string => {
   return displayNames[dataType] || dataType;
 };
 
+// Parse date string without timezone issues
+// Handles formats like "2024-01-01", "2024-01-01T00:00:00", "2024-01-01 00:00:00"
+const parseDateSafe = (dateStr: string): Date => {
+  // Extract just the date part (YYYY-MM-DD)
+  const datePart = dateStr.split('T')[0].split(' ')[0];
+  const [year, month, day] = datePart.split('-').map(Number);
+  // Create date in local timezone (month is 0-indexed)
+  return new Date(year, month - 1, day);
+};
+
 export function DataImportCard() {
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
@@ -626,7 +636,7 @@ export function DataImportCard() {
               </div>
               {jobStatus.startDate && jobStatus.endDate && (
                 <div className="text-xs text-muted-foreground">
-                  {format(new Date(jobStatus.startDate), 'MMM d, yyyy')} - {format(new Date(jobStatus.endDate), 'MMM d, yyyy')}
+                  {format(parseDateSafe(jobStatus.startDate), 'MMM d, yyyy')} - {format(parseDateSafe(jobStatus.endDate), 'MMM d, yyyy')}
                 </div>
               )}
               <Progress value={calculateProgress()} />
