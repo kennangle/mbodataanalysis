@@ -166,9 +166,27 @@ export function registerMindbodyRoutes(app: Express) {
         }
       }
 
-      // Parse config
-      const startDate = config?.startDate ? new Date(config.startDate) : new Date(new Date().setMonth(new Date().getMonth() - 12));
-      const endDate = config?.endDate ? new Date(config.endDate) : new Date();
+      // Parse config - avoid timezone issues by parsing date components
+      let startDate: Date;
+      let endDate: Date;
+      
+      if (config?.startDate) {
+        // Parse YYYY-MM-DD format avoiding timezone issues
+        const [year, month, day] = config.startDate.split('-').map(Number);
+        startDate = new Date(year, month - 1, day);
+      } else {
+        const defaultStart = new Date();
+        defaultStart.setFullYear(defaultStart.getFullYear() - 1);
+        startDate = defaultStart;
+      }
+      
+      if (config?.endDate) {
+        // Parse YYYY-MM-DD format avoiding timezone issues
+        const [year, month, day] = config.endDate.split('-').map(Number);
+        endDate = new Date(year, month - 1, day);
+      } else {
+        endDate = new Date();
+      }
       const dataTypes = [];
       
       if (config?.dataTypes?.clients) dataTypes.push('clients');
