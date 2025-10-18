@@ -390,6 +390,29 @@ export function DataImportCard() {
     },
   });
 
+  const forceStopImportMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/mindbody/import/force-cancel");
+      const result = await response.json() as { success: boolean; message: string; jobId?: string };
+      return result;
+    },
+    onSuccess: (data) => {
+      setCurrentJobId(null);
+      setJobStatus(null);
+      toast({
+        title: "Import stopped",
+        description: "All active imports have been cancelled. You can now start a new import.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Failed to stop import",
+        description: error.message,
+      });
+    },
+  });
+
   const handleStartImport = () => {
     startImportMutation.mutate(importConfig);
   };
@@ -404,6 +427,10 @@ export function DataImportCard() {
     if (currentJobId) {
       pauseImportMutation.mutate(currentJobId);
     }
+  };
+
+  const handleForceStopImport = () => {
+    forceStopImportMutation.mutate();
   };
 
   const handleReset = () => {
@@ -824,6 +851,29 @@ export function DataImportCard() {
                 Cancel
               </Button>
             </div>
+          </div>
+        )}
+
+        {/* Force Stop Import - Always visible for emergency situations */}
+        {!isJobCompleted && !isJobCancelled && (
+          <div className="pt-4 border-t">
+            <Button
+              variant="destructive"
+              onClick={handleForceStopImport}
+              disabled={forceStopImportMutation.isPending}
+              className="w-full"
+              size="sm"
+              data-testid="button-force-stop-import"
+            >
+              {forceStopImportMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Force Stop Import"
+              )}
+            </Button>
+            <p className="text-xs text-muted-foreground mt-2 text-center">
+              Use this if an import is stuck or blocking new imports
+            </p>
           </div>
         )}
       </CardContent>

@@ -348,4 +348,44 @@ export function registerMindbodyRoutes(app: Express) {
     }
   });
 
+  // Force cancel any active import - bypasses all status checks
+  app.post("/api/mindbody/import/force-cancel", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.user as User)?.organizationId;
+      
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      // Find any active import job for this organization
+      const activeJob = await storage.getActiveImportJob(organizationId);
+      
+      if (!activeJob) {
+        return res.json({
+          success: true,
+          message: "No active import found"
+        });
+      }
+
+      console.log(`Force cancelling job ${activeJob.id} (current status: ${activeJob.status})`);
+      
+      // Force cancel regardless of status
+      await storage.updateImportJob(activeJob.id, {
+        status: 'cancelled',
+        error: 'Force cancelled by user',
+      });
+      
+      console.log(`Job ${activeJob.id} force cancelled successfully`);
+
+      res.json({
+        success: true,
+        message: "Import job cancelled",
+        jobId: activeJob.id
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to force cancel import";
+      res.status(500).json({ error: errorMessage });
+    }
+  });
+
 }
