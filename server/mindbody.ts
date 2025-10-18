@@ -520,17 +520,19 @@ export class MindbodyService {
         if (visits.length > 0) {
           totalVisitsFound += visits.length;
           // DEBUG: Log first visit structure to understand API response
-          if (processedStudents === 0 && visits.length > 0) {
-            console.log('DEBUG: First visit structure:', JSON.stringify(visits[0], null, 2));
+          if (totalVisitsFound <= 3) {
+            console.log('=== DEBUG: Visit structure from API ===');
+            console.log(JSON.stringify(visits[0], null, 2));
+            console.log('=======================================');
           }
         }
         
         for (const visit of visits) {
           try {
             if (!visit.ClassId || !visit.VisitDateTime) {
-              // Only log first few skipped visits to avoid spam
-              if (processedStudents < 3) {
-                console.log(`Skipping visit without ClassId or VisitDateTime for client ${student.mindbodyClientId}. Visit data:`, JSON.stringify(visit, null, 2));
+              // Log first few skipped visits with full data
+              if (totalVisitsFound <= 5) {
+                console.log(`Skipping visit for client ${student.mindbodyClientId}. Full visit data:`, JSON.stringify(visit, null, 2));
               }
               continue;
             }
