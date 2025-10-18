@@ -38,8 +38,8 @@ interface MindbodyClass {
 
 interface MindbodyVisit {
   ClientId: string;
-  ClassId: number;
-  VisitDateTime: string;
+  ClassID: number;  // Uppercase "ID" per Mindbody API
+  StartDateTime: string;  // Not "VisitDateTime"
   SignedIn: boolean;
 }
 
@@ -529,7 +529,7 @@ export class MindbodyService {
         
         for (const visit of visits) {
           try {
-            if (!visit.ClassId || !visit.VisitDateTime) {
+            if (!visit.ClassID || !visit.StartDateTime) {
               // Log first few skipped visits with full data
               if (totalVisitsFound <= 5) {
                 console.log(`Skipping visit for client ${student.mindbodyClientId}. Full visit data:`, JSON.stringify(visit, null, 2));
@@ -537,9 +537,9 @@ export class MindbodyService {
               continue;
             }
             
-            const schedule = scheduleMap.get(visit.ClassId.toString());
+            const schedule = scheduleMap.get(visit.ClassID.toString());
             if (!schedule) {
-              unmatchedClassIds.add(visit.ClassId.toString());
+              unmatchedClassIds.add(visit.ClassID.toString());
               continue;
             }
             
@@ -547,7 +547,7 @@ export class MindbodyService {
               organizationId,
               studentId: student.id,
               scheduleId: schedule.id,
-              attendedAt: new Date(visit.VisitDateTime),
+              attendedAt: new Date(visit.StartDateTime),
               status: visit.SignedIn ? "attended" : "noshow",
             });
             
