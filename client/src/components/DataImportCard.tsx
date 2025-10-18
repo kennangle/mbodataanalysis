@@ -84,10 +84,10 @@ export function DataImportCard() {
   // Helper to create progress snapshot for staleness detection (memoized to prevent effect restarts)
   const getProgressSnapshot = useCallback((progress: JobProgress): string => {
     return JSON.stringify({
-      clients: progress.clients?.current || 0,
-      classes: progress.classes?.current || 0,
-      visits: progress.visits?.current || 0,
-      sales: progress.sales?.current || 0,
+      clients: { current: progress.clients?.current || 0, imported: progress.clients?.imported || 0 },
+      classes: { current: progress.classes?.current || 0, imported: progress.classes?.imported || 0 },
+      visits: { current: progress.visits?.current || 0, imported: progress.visits?.imported || 0 },
+      sales: { current: progress.sales?.current || 0, imported: progress.sales?.imported || 0 },
     });
   }, []);
 
