@@ -499,8 +499,9 @@ export class MindbodyService {
     const studentBatch = allStudents.slice(startStudentIndex, endIndex);
     
     // Load schedules once for efficient lookup
+    // Match by StartDateTime since ClassId in visits != ClassScheduleId in schedules
     const schedules = await storage.getClassSchedules(organizationId);
-    const scheduleMap = new Map(schedules.map(s => [s.mindbodyScheduleId, s]));
+    const schedulesByTime = new Map(schedules.map(s => [s.startTime.toISOString(), s]));
     
     let imported = 0;
     let processedStudents = 0;
@@ -537,9 +538,11 @@ export class MindbodyService {
               continue;
             }
             
-            const schedule = scheduleMap.get(visit.ClassId.toString());
+            // Match by StartDateTime instead of ClassId
+            const visitStartTime = new Date(visit.StartDateTime).toISOString();
+            const schedule = schedulesByTime.get(visitStartTime);
             if (!schedule) {
-              unmatchedClassIds.add(visit.ClassId.toString());
+              unmatchedClassIds.add(`${visit.ClassId} at ${visit.StartDateTime}`);
               continue;
             }
             
