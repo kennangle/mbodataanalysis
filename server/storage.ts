@@ -69,6 +69,7 @@ export interface IStorage {
   createClass(classData: InsertClass): Promise<Class>;
   updateClass(id: string, classData: Partial<InsertClass>): Promise<void>;
   deleteClass(id: string): Promise<void>;
+  getClassesCount(organizationId: string): Promise<number>;
   
   getClassSchedules(organizationId: string, startDate?: Date, endDate?: Date): Promise<ClassSchedule[]>;
   createClassSchedule(schedule: InsertClassSchedule): Promise<ClassSchedule>;
@@ -76,9 +77,11 @@ export interface IStorage {
   getAttendance(organizationId: string, startDate?: Date, endDate?: Date): Promise<Attendance[]>;
   getAttendanceByStudent(studentId: string): Promise<Attendance[]>;
   createAttendance(attendance: InsertAttendance): Promise<Attendance>;
+  getAttendanceCount(organizationId: string): Promise<number>;
   
   getRevenue(organizationId: string, startDate?: Date, endDate?: Date): Promise<Revenue[]>;
   createRevenue(revenue: InsertRevenue): Promise<Revenue>;
+  getSalesCount(organizationId: string): Promise<number>;
   getRevenueStats(organizationId: string, startDate: Date, endDate: Date): Promise<{ total: number; count: number }>;
   getMonthlyRevenueTrend(organizationId: string): Promise<Array<{ month: string; revenue: number; students: number }>>;
   getAttendanceByTimeSlot(organizationId: string): Promise<Array<{ day: string; morning: number; afternoon: number; evening: number }>>;
@@ -284,6 +287,13 @@ export class DbStorage implements IStorage {
     await db.delete(classes).where(eq(classes.id, id));
   }
 
+  async getClassesCount(organizationId: string): Promise<number> {
+    const result = await db.select({ count: sql<number>`count(*)` })
+      .from(classes)
+      .where(eq(classes.organizationId, organizationId));
+    return Number(result[0].count);
+  }
+
   async getClassSchedules(organizationId: string, startDate?: Date, endDate?: Date): Promise<ClassSchedule[]> {
     if (startDate && endDate) {
       return await db.select()
@@ -339,6 +349,13 @@ export class DbStorage implements IStorage {
     return result[0];
   }
 
+  async getAttendanceCount(organizationId: string): Promise<number> {
+    const result = await db.select({ count: sql<number>`count(*)` })
+      .from(attendance)
+      .where(eq(attendance.organizationId, organizationId));
+    return Number(result[0].count);
+  }
+
   async getRevenue(organizationId: string, startDate?: Date, endDate?: Date): Promise<Revenue[]> {
     if (startDate && endDate) {
       return await db.select()
@@ -362,6 +379,13 @@ export class DbStorage implements IStorage {
   async createRevenue(revenueData: InsertRevenue): Promise<Revenue> {
     const result = await db.insert(revenue).values(revenueData).returning();
     return result[0];
+  }
+
+  async getSalesCount(organizationId: string): Promise<number> {
+    const result = await db.select({ count: sql<number>`count(*)` })
+      .from(revenue)
+      .where(eq(revenue.organizationId, organizationId));
+    return Number(result[0].count);
   }
 
   async getRevenueStats(organizationId: string, startDate: Date, endDate: Date): Promise<{ total: number; count: number }> {

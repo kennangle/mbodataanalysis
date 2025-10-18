@@ -248,6 +248,14 @@ export function registerMindbodyRoutes(app: Express) {
         return res.status(403).json({ error: "Forbidden" });
       }
 
+      // Get existing record counts from database
+      const existingCounts = {
+        students: await storage.getStudentCount(organizationId),
+        classes: await storage.getClassesCount(organizationId),
+        visits: await storage.getAttendanceCount(organizationId),
+        sales: await storage.getSalesCount(organizationId),
+      };
+
       res.json({
         id: job.id,
         status: job.status,
@@ -255,6 +263,7 @@ export function registerMindbodyRoutes(app: Express) {
         startDate: job.startDate,
         endDate: job.endDate,
         progress: JSON.parse(job.progress),
+        existingCounts,
         currentDataType: job.currentDataType,
         currentOffset: job.currentOffset,
         error: job.error,

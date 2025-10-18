@@ -38,6 +38,12 @@ interface JobStatus {
   startDate?: string;
   endDate?: string;
   progress: JobProgress;
+  existingCounts?: {
+    students: number;
+    classes: number;
+    visits: number;
+    sales: number;
+  };
   currentDataType: string | null;
   error: string | null;
   pausedAt?: string | null;
@@ -648,16 +654,35 @@ export function DataImportCard() {
                 .filter(([type]) => type !== 'apiCallCount' && type !== 'importStartTime')
                 .map(([type, data]) => {
                   if (typeof data === 'object' && 'completed' in data) {
+                    const existingCount = jobStatus.existingCounts?.[type as keyof typeof jobStatus.existingCounts] || 0;
+                    const sessionImported = (data as any).imported || 0;
+                    const totalRecords = existingCount + sessionImported;
+                    
                     return (
-                      <div key={type} className="flex justify-between text-muted-foreground">
-                        <span>{getDisplayName(type)}:</span>
-                        <span>
-                          {data.completed ? (
-                            <CheckCircle className="inline h-3 w-3 text-green-600" />
-                          ) : (
-                            `${data.current} / ${data.total || '?'}`
-                          )}
-                        </span>
+                      <div key={type} className="space-y-1">
+                        <div className="flex justify-between text-muted-foreground">
+                          <span>{getDisplayName(type)}:</span>
+                          <span>
+                            {data.completed ? (
+                              <CheckCircle className="inline h-3 w-3 text-green-600" />
+                            ) : (
+                              `${data.current} / ${data.total || '?'}`
+                            )}
+                          </span>
+                        </div>
+                        {(existingCount > 0 || sessionImported > 0) && (
+                          <div className="flex justify-between text-muted-foreground pl-4 text-[11px]">
+                            <span>Total records:</span>
+                            <span className="font-medium">
+                              {totalRecords.toLocaleString()}
+                              {existingCount > 0 && sessionImported > 0 && (
+                                <span className="text-muted-foreground font-normal">
+                                  {' '}({existingCount.toLocaleString()} + {sessionImported.toLocaleString()} new)
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     );
                   }
