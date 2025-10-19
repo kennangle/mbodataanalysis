@@ -9,6 +9,7 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
 - Real-time analytics with interactive visualizations
 - AI-powered natural language query interface
 - Multi-tenancy for multiple organizations
+- **Always use established React component libraries when possible** (e.g., react-datepicker, react-table) instead of building custom components from scratch
 
 ## System Architecture
 
