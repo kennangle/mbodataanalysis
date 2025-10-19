@@ -84,7 +84,7 @@ export interface IStorage {
   getSalesCount(organizationId: string): Promise<number>;
   getRevenueStats(organizationId: string, startDate: Date, endDate: Date): Promise<{ total: number; count: number }>;
   getMonthlyRevenueTrend(organizationId: string): Promise<Array<{ month: string; revenue: number; students: number }>>;
-  getAttendanceByTimeSlot(organizationId: string): Promise<Array<{ day: string; morning: number; afternoon: number; evening: number }>>;
+  getAttendanceByTimeSlot(organizationId: string, startDate?: Date, endDate?: Date): Promise<Array<{ day: string; morning: number; afternoon: number; evening: number }>>;
   
   createAIQuery(query: InsertAIQuery): Promise<AIQuery>;
   getAIQueries(organizationId: string, limit?: number): Promise<AIQuery[]>;
@@ -462,8 +462,20 @@ export class DbStorage implements IStorage {
     return monthsData;
   }
 
-  async getAttendanceByTimeSlot(organizationId: string): Promise<Array<{ day: string; morning: number; afternoon: number; evening: number }>> {
+  async getAttendanceByTimeSlot(organizationId: string, startDate?: Date, endDate?: Date): Promise<Array<{ day: string; morning: number; afternoon: number; evening: number }>> {
     const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    
+    const whereConditions = [
+      eq(attendance.organizationId, organizationId),
+      eq(classSchedules.organizationId, organizationId)
+    ];
+    
+    if (startDate) {
+      whereConditions.push(gte(classSchedules.startTime, startDate));
+    }
+    if (endDate) {
+      whereConditions.push(lte(classSchedules.startTime, endDate));
+    }
     
     const result = await db.select({
       dayOfWeek: sql<number>`extract(dow from ${classSchedules.startTime})`,
@@ -478,12 +490,7 @@ export class DbStorage implements IStorage {
     })
     .from(attendance)
     .innerJoin(classSchedules, eq(attendance.scheduleId, classSchedules.id))
-    .where(
-      and(
-        eq(attendance.organizationId, organizationId),
-        eq(classSchedules.organizationId, organizationId)
-      )
-    )
+    .where(and(...whereConditions))
     .groupBy(
       sql`extract(dow from ${classSchedules.startTime})`,
       sql`

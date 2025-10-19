@@ -94,7 +94,10 @@ export function registerDashboardRoutes(app: Express) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const data = await storage.getAttendanceByTimeSlot(organizationId);
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+
+      const data = await storage.getAttendanceByTimeSlot(organizationId, startDate, endDate);
       res.json(data);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch attendance by time" });
