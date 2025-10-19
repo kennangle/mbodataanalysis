@@ -142,8 +142,14 @@ export class ImportWorker {
       }
 
       // Process sales
+      console.log(`[ImportWorker] Checking if should process sales...`);
+      console.log(`[ImportWorker] dataTypes.includes('sales'):`, dataTypes.includes('sales'));
+      console.log(`[ImportWorker] progress.sales?.completed:`, progress.sales?.completed);
+      
       if (dataTypes.includes('sales') && !progress.sales?.completed) {
+        console.log(`[ImportWorker] Starting sales processing for job ${jobId}...`);
         await this.processSales(job, startDate, endDate, progress, baselineApiCallCount);
+        console.log(`[ImportWorker] Sales processing completed for job ${jobId}`);
         
         // API call count is already updated within processSales
         
