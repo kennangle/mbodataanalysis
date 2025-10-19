@@ -641,14 +641,14 @@ export class MindbodyService {
     for (const student of studentBatch) {
       console.log(`[MindbodyService] Processing student ${student.mindbodyClientId} (${processedStudents + 1}/${studentBatch.length})`);
       try {
-        console.log(`[MindbodyService] Calling fetchAllPages for sales...`);
+        console.log(`[MindbodyService] Calling fetchAllPages for transactions...`);
         const { results: sales } = await this.fetchAllPages<MindbodySale>(
           organizationId,
-          `/sale/sales?ClientId=${student.mindbodyClientId}&StartSaleDateTime=${startDate.toISOString()}`,
-          'Sales',
+          `/sale/transactions?ClientId=${student.mindbodyClientId}&StartSaleDateTime=${startDate.toISOString()}`,
+          'Transactions',
           200
         );
-        console.log(`[MindbodyService] Found ${sales.length} sales for student ${student.mindbodyClientId}`);
+        console.log(`[MindbodyService] Found ${sales.length} transactions for student ${student.mindbodyClientId}`);
         
         for (const sale of sales) {
           for (const item of sale.PurchasedItems) {
