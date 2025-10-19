@@ -129,6 +129,8 @@ export const revenue = pgTable("revenue", {
   id: uuid("id").defaultRandom().primaryKey(),
   organizationId: uuid("organization_id").notNull(),
   studentId: uuid("student_id"),
+  mindbodySaleId: text("mindbody_sale_id"),
+  mindbodyItemId: text("mindbody_item_id"),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   type: text("type").notNull(),
   description: text("description"),
@@ -138,6 +140,7 @@ export const revenue = pgTable("revenue", {
   orgIdx: index("revenue_org_idx").on(table.organizationId),
   studentIdx: index("revenue_student_idx").on(table.studentId),
   dateIdx: index("revenue_date_idx").on(table.transactionDate),
+  uniqueSaleItem: index("revenue_unique_sale_item_idx").on(table.organizationId, table.mindbodySaleId, table.mindbodyItemId),
 }));
 
 export const insertRevenueSchema = createInsertSchema(revenue).omit({

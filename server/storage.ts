@@ -81,6 +81,7 @@ export interface IStorage {
   
   getRevenue(organizationId: string, startDate?: Date, endDate?: Date): Promise<Revenue[]>;
   createRevenue(revenue: InsertRevenue): Promise<Revenue>;
+  upsertRevenue(revenue: InsertRevenue): Promise<Revenue>;
   getSalesCount(organizationId: string): Promise<number>;
   getRevenueStats(organizationId: string, startDate: Date, endDate: Date): Promise<{ total: number; count: number }>;
   getMonthlyRevenueTrend(organizationId: string): Promise<Array<{ month: string; revenue: number; students: number }>>;
@@ -378,6 +379,23 @@ export class DbStorage implements IStorage {
 
   async createRevenue(revenueData: InsertRevenue): Promise<Revenue> {
     const result = await db.insert(revenue).values(revenueData).returning();
+    return result[0];
+  }
+
+  async upsertRevenue(revenueData: InsertRevenue): Promise<Revenue> {
+    const result = await db.insert(revenue)
+      .values(revenueData)
+      .onConflictDoUpdate({
+        target: [revenue.organizationId, revenue.mindbodySaleId, revenue.mindbodyItemId],
+        set: {
+          studentId: revenueData.studentId,
+          amount: revenueData.amount,
+          type: revenueData.type,
+          description: revenueData.description,
+          transactionDate: revenueData.transactionDate,
+        }
+      })
+      .returning();
     return result[0];
   }
 
