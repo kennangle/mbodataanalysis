@@ -116,7 +116,7 @@ export function DashboardStats({ startDate, endDate }: DashboardStatsProps) {
               <Icon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold break-all" data-testid={`text-stat-value-${index}`}>
+              <div className="text-xl font-bold truncate" data-testid={`text-stat-value-${index}`}>
                 {stat.value}
               </div>
               <div className={`flex items-center gap-1 text-xs ${trendColor} mt-1`}>
