@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp, boolean, decimal, uuid, index } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, boolean, decimal, uuid, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -140,7 +140,7 @@ export const revenue = pgTable("revenue", {
   orgIdx: index("revenue_org_idx").on(table.organizationId),
   studentIdx: index("revenue_student_idx").on(table.studentId),
   dateIdx: index("revenue_date_idx").on(table.transactionDate),
-  uniqueSaleItem: index("revenue_unique_sale_item_idx").on(table.organizationId, table.mindbodySaleId, table.mindbodyItemId),
+  uniqueSaleItem: uniqueIndex("revenue_unique_sale_item_idx").on(table.organizationId, table.mindbodySaleId, table.mindbodyItemId),
 }));
 
 export const insertRevenueSchema = createInsertSchema(revenue).omit({
