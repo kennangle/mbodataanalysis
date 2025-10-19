@@ -669,10 +669,33 @@ export class MindbodyService {
         
         console.log(`[Sales Import] Fetched ${transactions.length} transactions from /sale/transactions`);
         
+        // Log first transaction to see structure
+        if (transactions.length > 0) {
+          console.log(`[Sales Import] Sample transaction fields:`, Object.keys(transactions[0]));
+          console.log(`[Sales Import] Sample transaction:`, JSON.stringify(transactions[0], null, 2));
+        }
+        
         let imported = 0;
+        let skipped = 0;
         
         for (const transaction of transactions) {
           try {
+            // Find a valid date field
+            const dateStr = transaction.SaleDateTime || transaction.CreatedDateTime || transaction.TransactionDate || transaction.CompletedDate;
+            
+            if (!dateStr) {
+              console.log(`[Sales Import] Transaction ${transaction.Id} has no valid date field, skipping`);
+              skipped++;
+              continue;
+            }
+            
+            const transactionDate = new Date(dateStr);
+            if (isNaN(transactionDate.getTime())) {
+              console.log(`[Sales Import] Transaction ${transaction.Id} has invalid date "${dateStr}", skipping`);
+              skipped++;
+              continue;
+            }
+            
             // Get student ID from ClientId
             const studentId = studentMap.get(transaction.ClientId?.toString());
             
@@ -690,13 +713,17 @@ export class MindbodyService {
               amount: transaction.Amount?.toString() || '0',
               type: paymentMethod,
               description,
-              transactionDate: new Date(transaction.SaleDateTime || transaction.CreatedDateTime),
+              transactionDate,
             });
             imported++;
           } catch (error) {
             console.error(`Failed to import transaction ${transaction.Id}:`, error);
+            skipped++;
           }
         }
+        
+        console.log(`[Sales Import] Results: ${imported} imported, ${skipped} skipped (invalid dates)`);
+
         
         await onProgress(transactions.length, transactions.length);
         console.log(`[Sales Import] Completed - imported ${imported} revenue records from ${transactions.length} transactions`);
