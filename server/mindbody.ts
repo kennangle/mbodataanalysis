@@ -631,44 +631,48 @@ export class MindbodyService {
     // Process students sequentially in this batch
     for (const student of studentBatch) {
       try {
-        const { results: sales } = await this.fetchAllPages<MindbodySale>(
+        // Fetch payment transactions for this student within date range
+        const { results: transactions } = await this.fetchAllPages<any>(
           organizationId,
-          `/sale/transactions?ClientId=${student.mindbodyClientId}&StartSaleDateTime=${startDate.toISOString()}`,
+          `/sale/transactions?ClientId=${student.mindbodyClientId}&StartSaleDateTime=${startDate.toISOString()}&EndSaleDateTime=${endDate.toISOString()}`,
           'Transactions',
           200
         );
         
-        for (const sale of sales) {
-          // Handle both array and single object for PurchasedItems
-          const purchasedItems = Array.isArray(sale.PurchasedItems) 
-            ? sale.PurchasedItems 
-            : (sale.PurchasedItems ? [sale.PurchasedItems] : []);
-          
-          if (purchasedItems.length === 0) {
-            console.log(`Skipping sale with no PurchasedItems for client ${student.mindbodyClientId}`);
-            continue;
-          }
-          
-          for (const item of purchasedItems) {
-            try {
-              if (!item.AmountPaid && item.AmountPaid !== 0) continue;
-              
-              await storage.createRevenue({
-                organizationId,
-                studentId: student.id,
-                amount: item.AmountPaid.toString(),
-                type: item.Type || 'Unknown',
-                description: item.Description || 'No description',
-                transactionDate: new Date(sale.SaleDateTime),
-              });
-              imported++;
-            } catch (error) {
-              console.error(`Failed to import sale item:`, error);
+        for (const transaction of transactions) {
+          try {
+            // Skip if no amount or invalid status
+            if (!transaction.Amount || transaction.Amount === 0) continue;
+            if (transaction.Status && transaction.Status !== 'Approved') continue;
+            
+            // Skip if missing transaction time
+            if (!transaction.TransactionTime) {
+              console.error(`Transaction ${transaction.TransactionId} missing TransactionTime, skipping`);
+              continue;
             }
+            
+            // Build description from available fields
+            const description = [
+              transaction.CardType ? `${transaction.CardType} payment` : 'Payment',
+              transaction.CCLastFour ? `ending in ${transaction.CCLastFour}` : null,
+              transaction.Status ? `(${transaction.Status})` : null
+            ].filter(Boolean).join(' ');
+            
+            await storage.createRevenue({
+              organizationId,
+              studentId: student.id,
+              amount: transaction.Amount.toString(),
+              type: transaction.CardType || 'Payment',
+              description,
+              transactionDate: new Date(transaction.TransactionTime),
+            });
+            imported++;
+          } catch (error) {
+            console.error(`Failed to import transaction ${transaction.TransactionId}:`, error);
           }
         }
       } catch (error) {
-        console.error(`Failed to fetch sales for client ${student.mindbodyClientId}:`, error);
+        console.error(`Failed to fetch transactions for client ${student.mindbodyClientId}:`, error);
       }
       
       // Update progress after each student to show real-time API count
