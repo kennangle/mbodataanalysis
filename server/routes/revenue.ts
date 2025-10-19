@@ -93,8 +93,13 @@ export function registerRevenueRoutes(app: Express) {
         });
       }
 
-      // Parse CSV
-      const csvText = req.file.buffer.toString('utf-8');
+      // Parse CSV (handle BOM if present)
+      let csvText = req.file.buffer.toString('utf-8');
+      // Remove BOM if present
+      if (csvText.charCodeAt(0) === 0xFEFF) {
+        csvText = csvText.slice(1);
+      }
+      
       const parseResult = Papa.parse(csvText, {
         header: true,
         skipEmptyLines: true,
@@ -215,6 +220,11 @@ export function registerRevenueRoutes(app: Express) {
           errors.push(`Row ${index + 1}: ${error.message}`);
           skipped++;
         }
+      }
+
+      // Log errors for debugging
+      if (errors.length > 0) {
+        console.error(`CSV import errors (showing first 10 of ${errors.length}):`, errors.slice(0, 10));
       }
 
       res.json({
