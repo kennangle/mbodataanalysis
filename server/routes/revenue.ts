@@ -108,8 +108,11 @@ export function registerRevenueRoutes(app: Express) {
         });
       }
 
-      // Get student map for matching by email/name
+      // Get student maps for matching by Mindbody ID, email, or name
       const students = await storage.getStudents(organizationId);
+      const studentMapByMindbodyId = new Map(
+        students.filter(s => s.mindbodyClientId).map(s => [s.mindbodyClientId!, s.id])
+      );
       const studentMapByEmail = new Map(
         students.filter(s => s.email).map(s => [s.email!.toLowerCase(), s.id])
       );
@@ -128,9 +131,10 @@ export function registerRevenueRoutes(app: Express) {
         const row = rows[index];
         try {
           // Map CSV columns to revenue fields (flexible column matching)
+          // Mindbody format: "Sale ID", "Item Total", "Client ID", "Client", "Item name", "Payment Method"
           const saleId = row['Sale ID'] || row['SaleId'] || row['ID'] || null;
           const itemId = row['Item ID'] || row['ItemId'] || null;
-          const amountStr = row['Amount'] || row['Total'] || row['Price'];
+          const amountStr = row['Item Total'] || row['Amount'] || row['Total'] || row['Price'];
           
           // Validate amount is present
           if (!amountStr || amountStr.toString().trim() === '') {
@@ -148,11 +152,11 @@ export function registerRevenueRoutes(app: Express) {
             continue;
           }
           
-          const type = row['Type'] || row['Category'] || row['Payment Method'] || 'Sale';
-          const description = row['Description'] || row['Item'] || row['Product'] || row['Service'] || '';
+          const type = row['Payment Method'] || row['Type'] || row['Category'] || 'Sale';
+          const description = row['Item name'] || row['Description'] || row['Item'] || row['Product'] || row['Service'] || '';
           
           // Handle various date formats
-          const dateStr = row['Date'] || row['Sale Date'] || row['Transaction Date'] || row['SaleDate'];
+          const dateStr = row['Sale Date'] || row['Date'] || row['Transaction Date'] || row['SaleDate'];
           if (!dateStr) {
             errors.push(`Row ${index + 1}: Missing date field`);
             skipped++;
@@ -166,15 +170,31 @@ export function registerRevenueRoutes(app: Express) {
             continue;
           }
 
-          // Try to match student by email or name
+          // Try to match student by Mindbody Client ID, email, or name
           let studentId: string | null = null;
+          const clientId = row['Client ID'] || row['ClientID'] || row['Client Id'];
           const clientEmail = row['Client Email'] || row['Email'] || row['ClientEmail'];
-          const clientName = row['Client Name'] || row['Client'] || row['ClientName'];
+          let clientName = row['Client'] || row['Client Name'] || row['ClientName'];
           
-          if (clientEmail) {
+          // First, try matching by Mindbody Client ID (most accurate)
+          if (clientId) {
+            studentId = studentMapByMindbodyId.get(clientId) || null;
+          }
+          
+          // If no match, try email
+          if (!studentId && clientEmail) {
             studentId = studentMapByEmail.get(clientEmail.toLowerCase()) || null;
           }
+          
+          // If no match, try name (handle "Last, First" format from Mindbody)
           if (!studentId && clientName) {
+            // Convert "Last, First" to "First Last" for matching
+            if (clientName.includes(',')) {
+              const parts = clientName.split(',').map((p: string) => p.trim());
+              if (parts.length === 2) {
+                clientName = `${parts[1]} ${parts[0]}`; // "First Last"
+              }
+            }
             studentId = studentMapByName.get(clientName.toLowerCase()) || null;
           }
 
