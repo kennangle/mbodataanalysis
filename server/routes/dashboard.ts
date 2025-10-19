@@ -83,7 +83,25 @@ export function registerDashboardRoutes(app: Express) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const data = await storage.getMonthlyRevenueTrend(organizationId);
+      // Parse dates and normalize to UTC to avoid timezone issues
+      let startDate: Date | undefined;
+      let endDate: Date | undefined;
+      
+      if (req.query.startDate) {
+        const dateStr = req.query.startDate as string;
+        startDate = new Date(dateStr);
+        // Ensure it's treated as start of day UTC
+        startDate = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate()));
+      }
+      
+      if (req.query.endDate) {
+        const dateStr = req.query.endDate as string;
+        endDate = new Date(dateStr);
+        // Ensure it's treated as start of day UTC
+        endDate = new Date(Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate()));
+      }
+
+      const data = await storage.getMonthlyRevenueTrend(organizationId, startDate, endDate);
       res.json(data);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch revenue trend" });

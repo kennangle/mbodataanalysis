@@ -1,10 +1,28 @@
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { useQuery } from "@tanstack/react-query";
+import { DateRange } from "react-day-picker";
+import { DatePickerWithRange } from "./DateRangePicker";
 
 export function RevenueChart() {
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+
+  const queryParams = new URLSearchParams();
+  if (dateRange?.from) {
+    queryParams.append("startDate", dateRange.from.toISOString());
+  }
+  if (dateRange?.to) {
+    queryParams.append("endDate", dateRange.to.toISOString());
+  }
+
+  const queryString = queryParams.toString();
+  const queryKey = queryString 
+    ? `/api/dashboard/revenue-trend?${queryString}`
+    : "/api/dashboard/revenue-trend";
+
   const { data, isLoading } = useQuery<Array<{ month: string; revenue: number; students: number }>>({
-    queryKey: ["/api/dashboard/revenue-trend"],
+    queryKey: [queryKey],
   });
 
   if (isLoading) {
@@ -28,8 +46,13 @@ export function RevenueChart() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Revenue & Growth Trend</CardTitle>
-        <CardDescription>Monthly revenue and student enrollment over the past year</CardDescription>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <CardTitle>Revenue & Growth Trend</CardTitle>
+            <CardDescription>Monthly revenue and student enrollment over the past year</CardDescription>
+          </div>
+          <DatePickerWithRange value={dateRange} onChange={setDateRange} />
+        </div>
       </CardHeader>
       <CardContent>
         <div className="h-[350px]">

@@ -7,7 +7,46 @@ import type { User } from "@shared/schema";
 import multer from "multer";
 import Papa from "papaparse";
 
+// In-memory progress tracking for CSV imports
+interface ImportProgress {
+  total: number;
+  processed: number;
+  imported: number;
+  skipped: number;
+  startTime: number;
+}
+
+const importProgressMap = new Map<string, ImportProgress>();
+
 export function registerRevenueRoutes(app: Express) {
+  // Get CSV import progress
+  app.get("/api/revenue/import-progress", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.user as User)?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const progress = importProgressMap.get(organizationId);
+      if (!progress) {
+        return res.status(404).json({ error: "No import in progress" });
+      }
+
+      const elapsed = (Date.now() - progress.startTime) / 1000;
+      // Guard against division by zero for empty CSV files
+      const percentage = progress.total > 0 
+        ? Math.round((progress.processed / progress.total) * 100)
+        : 0;
+      
+      res.json({
+        ...progress,
+        percentage,
+        elapsed,
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch import progress" });
+    }
+  });
   // Get revenue records
   app.get("/api/revenue", requireAuth, async (req, res) => {
     try {
@@ -135,13 +174,32 @@ export function registerRevenueRoutes(app: Express) {
       console.log(`[CSV Import] Starting import of ${rows.length} rows...`);
       const startTime = Date.now();
 
+      // Initialize progress tracking
+      importProgressMap.set(organizationId, {
+        total: rows.length,
+        processed: 0,
+        imported: 0,
+        skipped: 0,
+        startTime,
+      });
+
       for (let index = 0; index < rows.length; index++) {
+        const row = rows[index];
+        
+        // Update progress on every row for real-time accuracy
+        importProgressMap.set(organizationId, {
+          total: rows.length,
+          processed: index + 1, // +1 because we're processing this row now
+          imported,
+          skipped,
+          startTime,
+        });
+        
         // Log progress every 1000 rows
         if (index > 0 && index % 1000 === 0) {
           const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
           console.log(`[CSV Import] Progress: ${index}/${rows.length} rows processed (${elapsed}s, ${imported} imported, ${skipped} skipped)`);
         }
-        const row = rows[index];
         try {
           // Map CSV columns to revenue fields (flexible column matching)
           // Mindbody format: "Sale ID", "Item Total", "Client ID", "Client", "Item name", "Payment Method"
@@ -239,6 +297,9 @@ export function registerRevenueRoutes(app: Express) {
         console.error(`[CSV Import] Errors (showing first 10 of ${errors.length}):`, errors.slice(0, 10));
       }
 
+      // Clear progress tracking
+      importProgressMap.delete(organizationId);
+
       res.json({
         success: true,
         imported,
@@ -248,6 +309,13 @@ export function registerRevenueRoutes(app: Express) {
       });
     } catch (error: any) {
       console.error('CSV import error:', error);
+      
+      // Clear progress on error
+      const organizationId = (req.user as User)?.organizationId;
+      if (organizationId) {
+        importProgressMap.delete(organizationId);
+      }
+      
       res.status(500).json({ error: "Failed to import CSV", details: error.message });
     }
   });

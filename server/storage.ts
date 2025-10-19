@@ -36,7 +36,8 @@ import {
   type WebhookEvent,
   type InsertWebhookEvent,
 } from "@shared/schema";
-import { eq, and, desc, gte, lte, sql } from "drizzle-orm";
+import { eq, and, desc, gte, lt, lte, sql } from "drizzle-orm";
+import { addDays } from "date-fns";
 
 export interface IStorage {
   getUserById(id: string): Promise<User | undefined>;
@@ -84,7 +85,7 @@ export interface IStorage {
   upsertRevenue(revenue: InsertRevenue): Promise<Revenue>;
   getSalesCount(organizationId: string): Promise<number>;
   getRevenueStats(organizationId: string, startDate: Date, endDate: Date): Promise<{ total: number; count: number }>;
-  getMonthlyRevenueTrend(organizationId: string): Promise<Array<{ month: string; revenue: number; students: number }>>;
+  getMonthlyRevenueTrend(organizationId: string, startDate?: Date, endDate?: Date): Promise<Array<{ month: string; revenue: number; students: number }>>;
   getAttendanceByTimeSlot(organizationId: string, startDate?: Date, endDate?: Date): Promise<Array<{ day: string; morning: number; afternoon: number; evening: number }>>;
   
   createAIQuery(query: InsertAIQuery): Promise<AIQuery>;
@@ -407,8 +408,11 @@ export class DbStorage implements IStorage {
   }
 
   async getRevenueStats(organizationId: string, startDate: Date, endDate: Date): Promise<{ total: number; count: number }> {
+    // Make end date inclusive by adding one day and using < comparison
+    const nextDay = addDays(endDate, 1);
+    
     const result = await db.select({
-      total: sql<number>`sum(${revenue.amount})`,
+      total: sql<number>`sum(CAST(${revenue.amount} AS NUMERIC))`,
       count: sql<number>`count(*)`
     })
     .from(revenue)
@@ -416,7 +420,7 @@ export class DbStorage implements IStorage {
       and(
         eq(revenue.organizationId, organizationId),
         gte(revenue.transactionDate, startDate),
-        lte(revenue.transactionDate, endDate)
+        lt(revenue.transactionDate, nextDay)
       )
     );
     
@@ -426,22 +430,28 @@ export class DbStorage implements IStorage {
     };
   }
 
-  async getMonthlyRevenueTrend(organizationId: string): Promise<Array<{ month: string; revenue: number; students: number }>> {
+  async getMonthlyRevenueTrend(organizationId: string, startDate?: Date, endDate?: Date): Promise<Array<{ month: string; revenue: number; students: number }>> {
     const now = new Date();
-    const oneYearAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+    const effectiveStartDate = startDate || new Date(now.getFullYear(), now.getMonth() - 11, 1);
+    const effectiveEndDate = endDate || now;
+    
+    // Make end date inclusive by adding one day and using < comparison
+    // This ensures all revenue on the selected end date is included
+    const nextDay = addDays(effectiveEndDate, 1);
+    
+    const whereConditions = [
+      eq(revenue.organizationId, organizationId),
+      gte(revenue.transactionDate, effectiveStartDate),
+      lt(revenue.transactionDate, nextDay)
+    ];
     
     const revenueByMonth = await db.select({
       monthNum: sql<number>`extract(month from ${revenue.transactionDate})`,
       yearNum: sql<number>`extract(year from ${revenue.transactionDate})`,
-      total: sql<number>`sum(${revenue.amount})`
+      total: sql<number>`sum(CAST(${revenue.amount} AS NUMERIC))`
     })
     .from(revenue)
-    .where(
-      and(
-        eq(revenue.organizationId, organizationId),
-        gte(revenue.transactionDate, oneYearAgo)
-      )
-    )
+    .where(and(...whereConditions))
     .groupBy(
       sql`extract(month from ${revenue.transactionDate})`,
       sql`extract(year from ${revenue.transactionDate})`
@@ -458,23 +468,48 @@ export class DbStorage implements IStorage {
       revenueByMonth.map(r => [`${r.yearNum}-${r.monthNum}`, Number(r.total || 0)])
     );
     
+    // Calculate months to show based on date range
     const monthsData = [];
+    const startMonth = new Date(effectiveStartDate.getFullYear(), effectiveStartDate.getMonth(), 1);
+    const endMonth = new Date(effectiveEndDate.getFullYear(), effectiveEndDate.getMonth(), 1);
     const currentYear = now.getFullYear();
     
-    for (let i = 11; i >= 0; i--) {
-      const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const year = monthDate.getFullYear();
-      const month = monthDate.getMonth() + 1;
-      const key = `${year}-${month}`;
-      
-      const monthName = monthDate.toLocaleString('en-US', { month: 'short' });
-      const displayMonth = year !== currentYear ? `${monthName} ${year}` : monthName;
-      
-      monthsData.push({
-        month: displayMonth,
-        revenue: revenueMap.get(key) || 0,
-        students: totalStudents
-      });
+    // If no custom range, show last 12 months
+    if (!startDate && !endDate) {
+      for (let i = 11; i >= 0; i--) {
+        const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const year = monthDate.getFullYear();
+        const month = monthDate.getMonth() + 1;
+        const key = `${year}-${month}`;
+        
+        const monthName = monthDate.toLocaleString('en-US', { month: 'short' });
+        const displayMonth = year !== currentYear ? `${monthName} ${year}` : monthName;
+        
+        monthsData.push({
+          month: displayMonth,
+          revenue: revenueMap.get(key) || 0,
+          students: totalStudents
+        });
+      }
+    } else {
+      // Show months within the date range
+      let currentMonth = new Date(startMonth);
+      while (currentMonth <= endMonth) {
+        const year = currentMonth.getFullYear();
+        const month = currentMonth.getMonth() + 1;
+        const key = `${year}-${month}`;
+        
+        const monthName = currentMonth.toLocaleString('en-US', { month: 'short' });
+        const displayMonth = year !== currentYear ? `${monthName} ${year}` : monthName;
+        
+        monthsData.push({
+          month: displayMonth,
+          revenue: revenueMap.get(key) || 0,
+          students: totalStudents
+        });
+        
+        currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1);
+      }
     }
     
     return monthsData;

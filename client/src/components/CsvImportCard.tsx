@@ -1,7 +1,8 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { Upload, CheckCircle, AlertCircle, Loader2, FileSpreadsheet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -14,17 +15,81 @@ interface CsvImportResult {
   errors?: string[];
 }
 
+interface ImportProgress {
+  total: number;
+  processed: number;
+  imported: number;
+  skipped: number;
+  percentage: number;
+  elapsed: number;
+}
+
 export function CsvImportCard() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [importResult, setImportResult] = useState<CsvImportResult | null>(null);
+  const [progress, setProgress] = useState<ImportProgress | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const progressIntervalRef = useRef<number | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  // Poll for import progress
+  const pollProgress = async () => {
+    try {
+      const response = await fetch('/api/revenue/import-progress', {
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        const data = await response.json() as ImportProgress;
+        setProgress(data);
+      } else if (response.status === 404) {
+        // Import completed or not started
+        if (progressIntervalRef.current) {
+          clearInterval(progressIntervalRef.current);
+          progressIntervalRef.current = null;
+        }
+        setProgress(null);
+      }
+    } catch (error) {
+      console.error('Failed to fetch progress:', error);
+    }
+  };
+
+  const startProgressPolling = () => {
+    // Clear any existing interval
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+    }
+    
+    // Poll every 500ms for smooth progress updates
+    progressIntervalRef.current = window.setInterval(pollProgress, 500);
+  };
+
+  const stopProgressPolling = () => {
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+    setProgress(null);
+  };
+
+  // Cleanup interval on unmount
+  useEffect(() => {
+    return () => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+    };
+  }, []);
 
   const importMutation = useMutation({
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append('file', file);
+      
+      // Start polling for progress
+      startProgressPolling();
       
       // Create abort controller with 5 minute timeout for large files
       const controller = new AbortController();
@@ -53,6 +118,9 @@ export function CsvImportCard() {
           throw new Error('Import timed out - file may be too large. Try splitting into smaller files.');
         }
         throw error;
+      } finally {
+        // Stop polling when import completes or fails
+        stopProgressPolling();
       }
     },
     onSuccess: (data) => {
@@ -174,11 +242,36 @@ export function CsvImportCard() {
               {selectedFile && (
                 <>
                   {importMutation.isPending && (
-                    <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-md p-3">
-                      <p className="text-sm text-blue-900 dark:text-blue-100">
-                        <Loader2 className="inline h-4 w-4 animate-spin mr-2" />
-                        Processing large file... This may take several minutes for files with thousands of records.
-                      </p>
+                    <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-md p-4 space-y-3">
+                      {progress ? (
+                        <>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-blue-900 dark:text-blue-100 font-medium">
+                              Processing CSV...
+                            </span>
+                            <span className="text-blue-700 dark:text-blue-200 font-mono">
+                              {progress.percentage}%
+                            </span>
+                          </div>
+                          <Progress value={progress.percentage} className="h-2" data-testid="progress-import" />
+                          <div className="flex items-center justify-between text-xs text-blue-800 dark:text-blue-300">
+                            <span>
+                              {progress.processed.toLocaleString()} / {progress.total.toLocaleString()} rows
+                            </span>
+                            <span>
+                              {Math.floor(progress.elapsed)}s elapsed
+                            </span>
+                          </div>
+                          <div className="text-xs text-blue-700 dark:text-blue-300">
+                            {progress.imported.toLocaleString()} imported • {progress.skipped.toLocaleString()} skipped
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-sm text-blue-900 dark:text-blue-100">
+                          <Loader2 className="inline h-4 w-4 animate-spin mr-2" />
+                          Initializing import... This may take several minutes for large files.
+                        </p>
+                      )}
                     </div>
                   )}
                   <div className="flex gap-2">
