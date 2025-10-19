@@ -30,7 +30,7 @@ export function registerDashboardRoutes(app: Express) {
         storage.getActiveStudentCount(organizationId),
         storage.getRevenueStats(organizationId, thisMonth, now),
         storage.getRevenueStats(organizationId, lastMonth, thisMonth),
-        storage.getAttendance(organizationId, thisMonth, now),
+        storage.getAttendance(organizationId), // Get ALL attendance records
         storage.getAttendance(organizationId, lastMonth, thisMonth),
         storage.getClasses(organizationId)
       ]);
