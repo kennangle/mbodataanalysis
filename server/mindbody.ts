@@ -631,60 +631,81 @@ export class MindbodyService {
     // Process students sequentially in this batch
     for (const student of studentBatch) {
       try {
-        // Fetch sales with purchased items for this student within date range
-        const { results: sales } = await this.fetchAllPages<any>(
+        // Fetch payment transactions for this student within date range
+        // Note: Using /sale/transactions as /sale/sales returns no data for this site
+        const { results: transactions } = await this.fetchAllPages<any>(
           organizationId,
-          `/sale/sales?ClientId=${student.mindbodyClientId}&StartDate=${startDate.toISOString().split('T')[0]}&EndDate=${endDate.toISOString().split('T')[0]}`,
-          'Sales',
+          `/sale/transactions?ClientId=${student.mindbodyClientId}&StartSaleDateTime=${startDate.toISOString()}&EndSaleDateTime=${endDate.toISOString()}`,
+          'Transactions',
           200
         );
         
-        for (const sale of sales) {
+        // Diagnostic logging for first few batches
+        if (startStudentIndex < 200 && transactions.length > 0) {
+          console.log(`[Sales Import] Client ${student.mindbodyClientId}: Found ${transactions.length} transactions, inspecting first:`, JSON.stringify(transactions[0]).substring(0, 500));
+        }
+        
+        for (const transaction of transactions) {
           try {
-            // Skip if missing sale date/time
-            if (!sale.SaleDateTime) {
-              console.error(`Sale ${sale.Id} missing SaleDateTime, skipping`);
+            // Skip if no amount or invalid status
+            if (!transaction.Amount || transaction.Amount === 0) continue;
+            if (transaction.Status && transaction.Status !== 'Approved') continue;
+            
+            // Skip if missing transaction time
+            if (!transaction.TransactionTime) {
+              console.error(`Transaction ${transaction.TransactionId} missing TransactionTime, skipping`);
               continue;
             }
             
-            // Handle both array and single object for PurchasedItems
-            const purchasedItems = Array.isArray(sale.PurchasedItems) 
-              ? sale.PurchasedItems 
-              : (sale.PurchasedItems ? [sale.PurchasedItems] : []);
+            // Check if transaction has PurchasedItems (some transactions may include line items)
+            const purchasedItems = Array.isArray(transaction.PurchasedItems) 
+              ? transaction.PurchasedItems 
+              : (transaction.PurchasedItems ? [transaction.PurchasedItems] : []);
             
-            if (purchasedItems.length === 0) {
-              console.log(`Sale ${sale.Id} has no purchased items, skipping`);
-              continue;
-            }
-            
-            // Create a revenue record for each purchased item (line-item tracking)
-            for (const item of purchasedItems) {
-              try {
-                // Skip items with no amount or zero amount
-                if (!item.AmountPaid && item.AmountPaid !== 0) continue;
-                if (item.AmountPaid === 0) continue;
-                
-                // Build description: Item name + quantity (if > 1)
-                let description = item.Name || item.Description || 'Unknown item';
-                if (item.Quantity && item.Quantity > 1) {
-                  description = `${description} (Qty: ${item.Quantity})`;
+            if (purchasedItems.length > 0) {
+              // Transaction has line items - create separate revenue records for each
+              for (const item of purchasedItems) {
+                try {
+                  if (!item.AmountPaid || item.AmountPaid === 0) continue;
+                  
+                  let description = item.Name || item.Description || 'Unknown item';
+                  if (item.Quantity && item.Quantity > 1) {
+                    description = `${description} (Qty: ${item.Quantity})`;
+                  }
+                  
+                  await storage.createRevenue({
+                    organizationId,
+                    studentId: student.id,
+                    amount: item.AmountPaid.toString(),
+                    type: item.Type || 'Unknown',
+                    description,
+                    transactionDate: new Date(transaction.TransactionTime),
+                  });
+                  imported++;
+                } catch (error) {
+                  console.error(`Failed to import line item:`, error);
                 }
-                
-                await storage.createRevenue({
-                  organizationId,
-                  studentId: student.id,
-                  amount: item.AmountPaid.toString(),
-                  type: item.Type || 'Unknown',
-                  description,
-                  transactionDate: new Date(sale.SaleDateTime),
-                });
-                imported++;
-              } catch (error) {
-                console.error(`Failed to import purchased item from sale ${sale.Id}:`, error);
               }
+            } else {
+              // Transaction has no line items - use transaction amount
+              const description = [
+                transaction.CardType ? `${transaction.CardType} payment` : 'Payment',
+                transaction.CCLastFour ? `ending in ${transaction.CCLastFour}` : null,
+                transaction.Status ? `(${transaction.Status})` : null
+              ].filter(Boolean).join(' ');
+              
+              await storage.createRevenue({
+                organizationId,
+                studentId: student.id,
+                amount: transaction.Amount.toString(),
+                type: transaction.CardType || 'Payment',
+                description,
+                transactionDate: new Date(transaction.TransactionTime),
+              });
+              imported++;
             }
           } catch (error) {
-            console.error(`Failed to process sale ${sale.Id}:`, error);
+            console.error(`Failed to import transaction ${transaction.TransactionId}:`, error);
           }
         }
       } catch (error) {
