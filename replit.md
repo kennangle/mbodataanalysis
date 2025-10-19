@@ -52,6 +52,7 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
   - Auto-cleanup of stale jobs when starting new imports
   - Race condition protection between worker and cancel operations
   - Clean logging that retains failure/completion signals while eliminating per-batch noise
+  - **Orphaned Job Cleanup**: On application startup, automatically detects and marks orphaned "running" jobs as "failed" (in `server/index.ts`). Import worker is in-memory and doesn't survive app restarts, so this prevents jobs from being stuck as "running" indefinitely
   - **API Call Tracking & Limit Management**: Tracks Mindbody API calls (5,000/month free tier, then $0.002/call) with real-time rate calculation and estimated time to reach free tier limit, enabling users to budget imports effectively. Implementation updates `progress.apiCallCount` during batch processing (in progress callback and after each batch) to ensure real-time accuracy in both the database and UI. No wait time restrictions - users can resume imports immediately
 - **Real-Time Webhook Integration**: Mindbody webhook support for instant data synchronization without consuming API calls. After initial bulk import, webhooks provide continuous real-time updates for new bookings and visit changes. Features include:
   - HMAC-SHA256 signature verification for security
