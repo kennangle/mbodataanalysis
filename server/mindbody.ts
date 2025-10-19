@@ -629,8 +629,13 @@ export class MindbodyService {
       console.log(`[Sales Import] Test endpoint: ${testEndpoint}`);
       
       const testData = await this.makeAuthenticatedRequest(organizationId, testEndpoint);
-      console.log(`[Sales Import] API Response:`, JSON.stringify(testData).substring(0, 500));
+      console.log(`[Sales Import] API Response (first 2000 chars):`, JSON.stringify(testData).substring(0, 2000));
       console.log(`[Sales Import] PaginationResponse:`, JSON.stringify(testData.PaginationResponse));
+      
+      // DEBUG: Log first sale's PurchasedItems completely
+      if (testData.Sales && testData.Sales.length > 0 && testData.Sales[0].PurchasedItems) {
+        console.log(`[DEBUG] First sale PurchasedItems:`, JSON.stringify(testData.Sales[0].PurchasedItems, null, 2));
+      }
       
       const totalResults = testData.PaginationResponse?.TotalResults || 0;
       
