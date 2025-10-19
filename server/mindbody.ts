@@ -730,16 +730,24 @@ export class MindbodyService {
           }
           
           // Create a revenue record for each purchased item (line-item tracking)
+          let itemIndex = 0;
           for (const item of purchasedItems) {
             try {
-              // DEBUG: Log first item to see structure
-              if (imported === 0) {
-                console.log(`[DEBUG] First PurchasedItem structure:`, JSON.stringify(item, null, 2));
+              // DEBUG: Log first few items to see structure
+              if (itemIndex < 3) {
+                console.log(`[DEBUG] PurchasedItem #${itemIndex}:`, JSON.stringify(item, null, 2));
+                itemIndex++;
               }
               
               // Skip items with no amount or zero amount
-              if (!item.AmountPaid && item.AmountPaid !== 0) continue;
-              if (item.AmountPaid === 0) continue;
+              if (!item.AmountPaid && item.AmountPaid !== 0) {
+                console.log(`[DEBUG] Skipping item - no AmountPaid field. Available fields:`, Object.keys(item));
+                continue;
+              }
+              if (item.AmountPaid === 0) {
+                console.log(`[DEBUG] Skipping item - AmountPaid is 0`);
+                continue;
+              }
               
               // Build description: Item name + quantity (if > 1)
               let description = item.Name || item.Description || 'Unknown item';
