@@ -5,6 +5,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { DataImportCard } from "@/components/DataImportCard";
+import { CsvImportCard } from "@/components/CsvImportCard";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 
@@ -62,8 +63,9 @@ export default function Import() {
           </header>
           <main className="flex-1 overflow-y-auto p-6">
             <div className="max-w-screen-2xl mx-auto space-y-6">
-              <div className="max-w-2xl">
+              <div className="max-w-2xl space-y-6">
                 <DataImportCard />
+                <CsvImportCard />
               </div>
             </div>
           </main>

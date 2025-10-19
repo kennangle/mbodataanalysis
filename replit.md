@@ -1,9 +1,7 @@
 # Mindbody Data Analysis SaaS Platform
 
 ## Overview
-This platform is an enterprise-grade analytics solution for Mindbody data, covering students, classes, schedules, attendance, memberships, purchases, and income. Its core purpose is to provide robust data synchronization, AI-powered natural language querying, real-time analytics dashboards, custom report generation, and role-based access control. The platform solves the challenge of unreliable long-running data imports by implementing a resumable background import system with proper cancellation handling, ensuring accurate and comprehensive business intelligence for large datasets.
-
-**Deployment Architecture**: Multi-tenancy SaaS platform designed for deployment on Heroku, supporting multiple Mindbody site implementations with complete data isolation per organization.
+This platform is an enterprise-grade analytics solution for Mindbody data, covering students, classes, schedules, attendance, memberships, purchases, and income. Its core purpose is to provide robust data synchronization, AI-powered natural language querying, real-time analytics dashboards, custom report generation, and role-based access control. The platform solves the challenge of unreliable long-running data imports by implementing a resumable background import system with proper cancellation handling, ensuring accurate and comprehensive business intelligence for large datasets. It is designed as a multi-tenancy SaaS platform for deployment on Heroku, supporting multiple Mindbody site implementations with complete data isolation per organization.
 
 ## User Preferences
 - Professional business intelligence interface
@@ -22,18 +20,7 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
 - **External APIs**: OpenAI (GPT-4), Mindbody Public API
 
 ### Backend Architecture
-- **Modular Route Structure**: Routes organized into 10 specialized modules in `server/routes/` directory for maintainability and scalability:
-  - `users.ts`: User management and admin operations
-  - `students.ts`: Student roster and filtering
-  - `classes.ts`: Class schedule management
-  - `attendance.ts`: Attendance tracking
-  - `revenue.ts`: Revenue and sales data
-  - `mindbody.ts`: Mindbody API integration (OAuth, imports, sync)
-  - `webhooks.ts`: Webhook subscription and event handling
-  - `ai.ts`: AI-powered natural language queries
-  - `dashboard.ts`: Real-time analytics and metrics
-  - `reports.ts`: Custom report generation and exports
-  - `index.ts`: Central router that registers all route modules
+- **Modular Route Structure**: Routes are organized into specialized modules for maintainability and scalability.
 
 ### Design System
 - Modern SaaS aesthetic inspired by Linear/Vercel
@@ -43,156 +30,26 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
 - Responsive mobile-first design
 
 ### Core Features & Implementations
-- **Resumable Background Import System**: Utilizes a database-backed job queue for asynchronous, checkpointed data imports to overcome HTTP connection timeouts. All imports use resumable methods only (`importClientsResumable`, `importClassesResumable`, `importVisitsResumable`, `importSalesResumable`). Legacy non-resumable methods have been removed. Features include:
-  - Sequential batching for Mindbody API rate limiting
-  - Real-time progress tracking with live polling
-  - Session resilience (survives page reloads)
-  - Resume capabilities for failed jobs
-  - Proper cancellation with terminal 'cancelled' status
-  - Auto-cleanup of stale jobs when starting new imports
-  - Race condition protection between worker and cancel operations
-  - Clean logging that retains failure/completion signals while eliminating per-batch noise
-  - **Orphaned Job Cleanup**: On application startup, automatically detects and marks orphaned "running" jobs as "failed" (in `server/index.ts`). Import worker is in-memory and doesn't survive app restarts, so this prevents jobs from being stuck as "running" indefinitely
-  - **API Call Tracking & Limit Management**: Tracks Mindbody API calls (5,000/month free tier, then $0.002/call) with real-time rate calculation and estimated time to reach free tier limit, enabling users to budget imports effectively. Implementation updates `progress.apiCallCount` during batch processing (in progress callback and after each batch) to ensure real-time accuracy in both the database and UI. No wait time restrictions - users can resume imports immediately
-- **Real-Time Webhook Integration**: Mindbody webhook support for instant data synchronization without consuming API calls. After initial bulk import, webhooks provide continuous real-time updates for new bookings and visit changes. Features include:
-  - HMAC-SHA256 signature verification for security
-  - Raw request body preservation for authentic signature validation
-  - Deduplication by messageId to prevent duplicate processing
-  - Asynchronous event processing with error tracking
-  - Support for `classVisit.created` and `classVisit.updated` events
-  - Automatic attendance record creation from webhook payloads
-  - Subscription management (create, list, delete) through API
-  - Event history tracking in webhookEvents table
-- **Automatic Pagination**: Implements a generic helper (`fetchAllPages<T>()`) to retrieve all records from the Mindbody API, optimized for large datasets.
-- **User Management**: An admin-only interface for managing users within an organization, including CRUD operations, role-based access (admin/user), and multi-tenancy support.
-- **Dashboard & Analytics**: Displays real-time data using live database queries for charts such as Revenue & Growth Trend and Class Attendance by Time, with optimized SQL for performance.
-- **Configurable Imports**: Allows users to specify date ranges and data types (Clients, Classes, Visits, Sales) for selective data fetching.
-- **Revenue Import with Fallback Strategy**: Sales import attempts `/sale/sales` endpoint for detailed line-item data (memberships, services, products, contracts). When `/sale/sales` returns zero results (confirmed API limitation for some sites), automatically falls back to `/sale/transactions` endpoint with proper `StartSaleDateTime`/`EndSaleDateTime` parameters for full historical range coverage. Features include:
-  - **Duplicate Prevention**: Revenue schema includes `mindbodySaleId` and `mindbodyItemId` fields with upsert logic to prevent duplicate imports on retry
-  - **Historical Range Support**: Fallback to `/sale/transactions` includes ISO datetime parameters to import full date ranges instead of defaulting to current day
-  - **Idempotent Imports**: Running the same import multiple times will not create duplicates - existing records are updated, new ones inserted
-  - **Line-Item Attribution**: When `/sale/sales` works, captures detailed purchased item breakdowns; when it doesn't, captures payment transaction data
-- **Students Data Management**: Comprehensive student roster management with advanced filtering (status, date range) and Excel export functionality using xlsx library. Filters respect search queries and export includes all filtered results with columns: First Name, Last Name, Email, Status, Membership.
-- **Authentication**: Multi-provider authentication system supporting:
-  - **Email/Password**: Session-based authentication using Passport.js with scrypt for password hashing
-  - **Google OAuth 2.0**: Single sign-on via Google with automatic account creation and organization setup
-  - **Password Reset**: Secure token-based password reset flow using Brevo email service (1-hour token expiry)
-  - Mindbody API authentication uses cached User Tokens for efficiency
-- **Database Schema**: A comprehensive PostgreSQL schema with 11 tables (users, organizations, students, classes, visits, sales, importJobs, sessions, mindbodyTokenCache, passwordResetTokens), designed for multi-tenancy via `organizationId` and optimized with indexing. Users table supports both local and OAuth providers via `provider` and `providerId` fields, with nullable `passwordHash` for OAuth users.
+- **Resumable Background Import System**: Utilizes a database-backed job queue for asynchronous, checkpointed data imports with real-time progress tracking, session resilience, resume capabilities, proper cancellation, and auto-cleanup of stale jobs. Includes API call tracking and limit management.
+- **Real-Time Webhook Integration**: Supports Mindbody webhooks for instant data synchronization, including HMAC-SHA256 signature verification, deduplication, asynchronous event processing, and automatic attendance record creation.
+- **Automatic Pagination**: Implements a generic helper to retrieve all records from the Mindbody API efficiently.
+- **User Management**: Admin-only interface for managing users, including CRUD operations, role-based access, and multi-tenancy support.
+- **Dashboard & Analytics**: Displays real-time data using live database queries for charts such as Revenue & Growth Trend and Class Attendance by Time.
+- **Configurable Imports**: Allows users to specify date ranges and data types for selective data fetching.
+- **Revenue Import with Fallback Strategy**: Imports sales data from Mindbody API, attempting detailed line-item data and falling back to transaction data when necessary, with duplicate prevention and historical range support.
+- **CSV Revenue Import**: Manual import feature for historical revenue data from Mindbody Business Intelligence CSV exports, featuring flexible column mapping, client matching, duplicate prevention, bulk processing, and validation.
+- **Students Data Management**: Comprehensive student roster management with advanced filtering and Excel export functionality.
+- **Authentication**: Multi-provider authentication supporting Email/Password and Google OAuth 2.0, with secure token-based password reset.
+- **Database Schema**: Comprehensive PostgreSQL schema with tables for users, organizations, students, classes, visits, sales, import jobs, and sessions, designed for multi-tenancy and optimized with indexing.
 
-### API Endpoints
-- `/api/auth/login`: Email/password login
-- `/api/auth/register`: User registration
-- `/api/auth/logout`: User logout
-- `/api/auth/me`: Get current user
-- `/api/auth/google`: Google OAuth login
-- `/api/auth/google/callback`: Google OAuth callback
-- `/api/auth/forgot-password`: Request password reset email
-- `/api/auth/reset-password`: Reset password with token
-- `/api/students`: Student management and search.
-- `/api/classes`: Class management.
-- `/api/attendance`: Attendance tracking.
-- `/api/revenue`: Revenue data.
-- `/api/dashboard/stats`: Aggregated dashboard metrics.
-- `/api/mindbody/import/start`: Initiates a background import job.
-- `/api/mindbody/import/active`: Fetches active import job status.
-- `/api/mindbody/import/:id/status`: Retrieves real-time status of an import job.
-- `/api/mindbody/import/:id/resume`: Resumes a paused/failed import job.
-- `/api/mindbody/import/:id/cancel`: Pauses an import job (can be resumed later).
-- `/api/dashboard/revenue-trend`: Provides revenue and student count trends.
-- `/api/dashboard/attendance-by-time`: Provides attendance by day/time.
+### Deployment
+- **Platform**: Heroku Multi-Tenancy SaaS
+- **Multi-Tenancy Design**: Complete data isolation per organization via `organizationId`, shared database with row-level separation, and users belonging to a single organization.
+- **Multi-Site Support**: Each organization can connect to a different Mindbody site, with site-specific webhooks and API call tracking.
 
 ## External Dependencies
-- **Mindbody Public API**: Used for importing client, class, visit, and sales data, authenticated via API Key and User Tokens.
+- **Mindbody Public API**: Used for importing client, class, visit, and sales data.
 - **OpenAI API**: Integrated for AI-powered natural language querying.
 - **Neon (PostgreSQL)**: Cloud-hosted PostgreSQL database service.
-- **Google OAuth 2.0**: Provides single sign-on authentication for users.
+- **Google OAuth 2.0**: Provides single sign-on authentication.
 - **Brevo (SendinBlue)**: Transactional email service used for password reset emails.
-
-## User Documentation
-- **DATA_IMPORT_GUIDE.md**: Comprehensive guide for data import sequence, dependencies, and troubleshooting. Critical reading for understanding the required import order: Students → Classes → Visits → Sales.
-- **WEBHOOKS_AND_API_GUIDE.md**: Multi-day import strategies, webhook setup, and API tier upgrade guidance.
-- **slashcommands.md**: Development workflow and AI interaction commands for enhanced productivity. Includes commands for diagnostics (`/deep`, `/diagnose`), analysis (`/anal`), design standards (`/design`), mobile optimization (`/mobile`), code quality checks (`/es`, `/gr`), and bug tracking (`/bug`).
-
-## Development Workflow
-
-### Slash Commands for Enhanced Productivity (Development Only)
-The platform includes a development-only CommandPalette UI component that provides AI-powered slash commands accessible via keyboard shortcut (Cmd+K or Ctrl+K) for rapid workflow automation. This feature is only available when running in development mode (`import.meta.env.DEV`) and is automatically excluded from production builds:
-
-#### Core Workflow Commands
-- **`/ask`**: Request confirmation before implementing changes
-- **`/deep`**: Comprehensive diagnosis with thorough research and impact analysis
-- **`/diagnose`**: Systematic problem investigation and solution identification
-- **`/anal`**: Advanced multi-dimensional analysis (performance, security, business, data)
-- **`/suggest`**: Detailed solution proposals without immediate implementation
-
-#### Design & Mobile Optimization
-- **`/design`**: Apply established design patterns and standards automatically
-- **`/mobile`**: Mobile-first optimization with 13 specialized sub-commands:
-  - `/mobile touch`: Touch target audit (44px minimum)
-  - `/mobile overflow`: Viewport overflow detection
-  - `/mobile typography`: Text optimization for readability
-  - `/mobile forms`: Mobile form layout optimization
-  - `/mobile navigation`: Navigation UX review
-  - `/mobile performance`: Mobile performance analysis
-  - `/mobile audit`: Comprehensive mobile review
-  - And 6 more specialized checks
-
-#### Code Quality & Compliance
-- **`/es`**: Run ESLint across entire codebase
-- **`/gr`**: Guardrails compliance review for policy violations
-- **`/bug`**: Systematically document reported issues
-
-For complete command reference and usage examples, see [slashcommands.md](./slashcommands.md).
-
-## Environment Variables
-
-### Required for Core Functionality
-- `DATABASE_URL`: PostgreSQL connection string (provided by Neon integration)
-- `SESSION_SECRET`: Secret key for session encryption
-- `MINDBODY_API_KEY`: Mindbody Public API key
-- `MINDBODY_CLIENT_ID`: Mindbody OAuth client ID
-- `MINDBODY_CLIENT_SECRET`: Mindbody OAuth client secret
-- `OPENAI_API_KEY`: OpenAI API key for AI features
-
-### Required for Google OAuth (Optional Feature)
-- `GOOGLE_CLIENT_ID`: Google OAuth 2.0 client ID
-- `GOOGLE_CLIENT_SECRET`: Google OAuth 2.0 client secret
-
-### Required for Password Reset (Optional Feature)
-- `BREVO_API_KEY`: Brevo (SendinBlue) API key for transactional emails
-
-Note: If Google OAuth credentials are not provided, the Google sign-in buttons will not be functional but the app will work with email/password authentication. Similarly, password reset requires Brevo API key to be configured.
-
-## Deployment
-
-### Platform: Heroku Multi-Tenancy SaaS
-
-This application is designed as a **multi-site, multi-tenant SaaS platform** for deployment on Heroku with the following architecture:
-
-**Multi-Tenancy Design:**
-- Complete data isolation per organization via `organizationId` foreign keys
-- Each organization can connect to a different Mindbody site
-- Shared database with row-level organization separation
-- Users belong to a single organization (set during registration)
-- All data (students, classes, visits, sales, webhooks) scoped to organization
-
-**Heroku Deployment Considerations:**
-- Uses PostgreSQL add-on for production database
-- Session-based authentication with connect-pg-simple for session store
-- Environment variables configured via Heroku config vars
-- Webhook URLs automatically configured using REPLIT_DOMAINS (Heroku domain in production)
-- Resumable imports handle Heroku's 30-second request timeout via background jobs
-
-**Multi-Site Support:**
-- Each organization stores their unique `mindbodySiteId`
-- Site ID configured automatically during first data import
-- Webhooks use site-specific subscriptions
-- API calls tracked per organization for accurate limit monitoring
-- Multiple Mindbody sites can be served from single deployment
-
-**Scaling Considerations:**
-- Database indexes on organizationId for query performance
-- Background job system for long-running imports
-- Webhook-based real-time sync reduces API call volume
-- Session management scaled via PostgreSQL session store

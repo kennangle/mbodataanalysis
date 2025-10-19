@@ -1,0 +1,224 @@
+import { useState, useRef } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Upload, CheckCircle, AlertCircle, Loader2, FileSpreadsheet } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+
+interface CsvImportResult {
+  success: boolean;
+  imported: number;
+  skipped: number;
+  total: number;
+  errors?: string[];
+}
+
+export function CsvImportCard() {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [importResult, setImportResult] = useState<CsvImportResult | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const importMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      // Use fetch directly for multipart/form-data instead of apiRequest
+      const response = await fetch('/api/revenue/import-csv', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include', // Include session cookie
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.details || error.error || 'Import failed');
+      }
+      
+      return await response.json() as CsvImportResult;
+    },
+    onSuccess: (data) => {
+      setImportResult(data);
+      setSelectedFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      
+      // Invalidate revenue queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['/api/revenue'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/revenue-trend'] });
+      
+      toast({
+        title: "CSV Import Complete",
+        description: `Successfully imported ${data.imported} of ${data.total} records. ${data.skipped} skipped.`,
+        variant: data.skipped > 0 ? "default" : "default",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Import Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (!file.name.endsWith('.csv')) {
+        toast({
+          title: "Invalid File Type",
+          description: "Please select a CSV file",
+          variant: "destructive",
+        });
+        return;
+      }
+      setSelectedFile(file);
+      setImportResult(null);
+    }
+  };
+
+  const handleImport = () => {
+    if (selectedFile) {
+      importMutation.mutate(selectedFile);
+    }
+  };
+
+  const handleReset = () => {
+    setSelectedFile(null);
+    setImportResult(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  return (
+    <Card data-testid="card-csv-import">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="h-5 w-5" />
+              CSV Revenue Import
+            </CardTitle>
+            <CardDescription>
+              Import historical revenue data from exported CSV files
+            </CardDescription>
+          </div>
+          {importResult && (
+            <CheckCircle className="h-6 w-6 text-green-600" data-testid="icon-success" />
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {!importResult ? (
+          <>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Upload a CSV file exported from Mindbody Business Intelligence with revenue/sales data.
+              </p>
+              <div className="bg-muted/50 p-3 rounded-md text-xs space-y-1">
+                <p className="font-medium">Expected CSV columns (flexible names):</p>
+                <ul className="list-disc list-inside space-y-0.5 text-muted-foreground">
+                  <li><span className="font-medium">Date</span> (or "Sale Date", "Transaction Date") - Required</li>
+                  <li><span className="font-medium">Amount</span> (or "Total", "Price") - Required</li>
+                  <li><span className="font-medium">Type</span> (or "Category", "Payment Method") - Optional</li>
+                  <li><span className="font-medium">Description</span> (or "Item", "Product", "Service") - Optional</li>
+                  <li><span className="font-medium">Client Email</span> (or "Email") - Optional, for student matching</li>
+                  <li><span className="font-medium">Client Name</span> (or "Client") - Optional, for student matching</li>
+                  <li><span className="font-medium">Sale ID</span> (or "SaleId", "ID") - Optional, prevents duplicates</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv"
+                onChange={handleFileSelect}
+                className="hidden"
+                data-testid="input-csv-file"
+              />
+              
+              <Button
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full"
+                data-testid="button-select-file"
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                {selectedFile ? selectedFile.name : 'Select CSV File'}
+              </Button>
+
+              {selectedFile && (
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleImport}
+                    disabled={importMutation.isPending}
+                    className="flex-1"
+                    data-testid="button-import-csv"
+                  >
+                    {importMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {importMutation.isPending ? 'Importing...' : 'Import CSV'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleReset}
+                    disabled={importMutation.isPending}
+                    data-testid="button-cancel"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="space-y-3">
+            <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-md p-4">
+              <h3 className="font-semibold text-green-900 dark:text-green-100 mb-2 flex items-center gap-2">
+                <CheckCircle className="h-5 w-5" />
+                Import Completed Successfully
+              </h3>
+              <div className="text-sm space-y-1 text-green-800 dark:text-green-200">
+                <p data-testid="text-imported">
+                  <span className="font-medium">Imported:</span> {importResult.imported} records
+                </p>
+                <p data-testid="text-skipped">
+                  <span className="font-medium">Skipped:</span> {importResult.skipped} records
+                </p>
+                <p data-testid="text-total">
+                  <span className="font-medium">Total:</span> {importResult.total} records
+                </p>
+              </div>
+            </div>
+
+            {importResult.errors && importResult.errors.length > 0 && (
+              <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900 rounded-md p-4">
+                <h4 className="font-semibold text-yellow-900 dark:text-yellow-100 mb-2 flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
+                  Import Warnings ({importResult.errors.length} {importResult.errors.length > 1 ? 'errors' : 'error'})
+                </h4>
+                <ul className="text-xs space-y-1 text-yellow-800 dark:text-yellow-200 max-h-32 overflow-y-auto">
+                  {importResult.errors.map((error, index) => (
+                    <li key={index} className="font-mono">{error}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <Button onClick={handleReset} className="w-full" data-testid="button-import-another">
+              Import Another File
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

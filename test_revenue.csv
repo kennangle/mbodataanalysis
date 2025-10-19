@@ -1,0 +1,6 @@
+Date,Amount,Type,Description,Client Email,Sale ID
+2024-01-15,125.00,Membership,Monthly Membership - Jan 2024,test@example.com,SALE001
+2024-01-20,50.00,Class Pack,10-Class Pack,john@test.com,SALE002
+2024-02-01,125.00,Membership,Monthly Membership - Feb 2024,test@example.com,SALE003
+2024-02-15,75.00,Drop-in,5 Drop-in Classes,jane@test.com,SALE004
+2024-03-01,125.00,Membership,Monthly Membership - Mar 2024,test@example.com,SALE005
