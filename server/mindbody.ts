@@ -607,125 +607,111 @@ export class MindbodyService {
     startDate: Date,
     endDate: Date,
     onProgress: (current: number, total: number) => Promise<void>,
-    startStudentIndex: number = 0,
-    cachedStudents?: any[] // OPTIMIZATION: Accept pre-loaded students to avoid repeated DB queries
+    startOffset: number = 0,
+    cachedStudents?: any[] // OPTIMIZATION: Accept pre-loaded students for ID lookup
   ): Promise<{ imported: number; nextStudentIndex: number; completed: boolean }> {
-    const BATCH_SIZE = 100; // Process 100 students per batch
-    const BATCH_DELAY = 250; // 250ms delay between batches
+    // Fetch sales at SITE LEVEL (not per-client) as ClientId filter may not be supported
+    const SALES_BATCH_SIZE = 200; // Fetch 200 sales at a time
+    const BATCH_DELAY = 250;
     
-    // Use cached students if provided, otherwise load from database
+    // Load all students once for ID lookup
     const allStudents = cachedStudents || await storage.getStudents(organizationId, 100000);
-    const totalStudents = allStudents.length;
+    const studentMap = new Map(allStudents.map(s => [s.mindbodyClientId, s.id]));
     
-    if (startStudentIndex >= totalStudents) {
-      return { imported: 0, nextStudentIndex: startStudentIndex, completed: true };
-    }
+    console.log(`[Sales Import] Fetching site-level sales from offset ${startOffset}, date range: ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`);
     
-    // Get batch of students to process
-    const endIndex = Math.min(startStudentIndex + BATCH_SIZE, totalStudents);
-    const studentBatch = allStudents.slice(startStudentIndex, endIndex);
-    
-    let imported = 0;
-    let processedStudents = 0;
-    
-    // Process students sequentially in this batch
-    for (const student of studentBatch) {
-      try {
-        // Fetch payment transactions for this student within date range
-        // Note: Using /sale/transactions as /sale/sales returns no data for this site
-        const { results: transactions } = await this.fetchAllPages<any>(
-          organizationId,
-          `/sale/transactions?ClientId=${student.mindbodyClientId}&StartSaleDateTime=${startDate.toISOString()}&EndSaleDateTime=${endDate.toISOString()}`,
-          'Transactions',
-          200
-        );
-        
-        // Diagnostic logging for first few batches
-        if (startStudentIndex < 200 && transactions.length > 0) {
-          console.log(`[Sales Import] Client ${student.mindbodyClientId}: Found ${transactions.length} transactions, inspecting first:`, JSON.stringify(transactions[0]).substring(0, 500));
-        }
-        
-        for (const transaction of transactions) {
-          try {
-            // Skip if no amount or invalid status
-            if (!transaction.Amount || transaction.Amount === 0) continue;
-            if (transaction.Status && transaction.Status !== 'Approved') continue;
-            
-            // Skip if missing transaction time
-            if (!transaction.TransactionTime) {
-              console.error(`Transaction ${transaction.TransactionId} missing TransactionTime, skipping`);
-              continue;
+    try {
+      // Fetch sales at site level with pagination
+      const { results: sales, pagination } = await this.fetchAllPages<any>(
+        organizationId,
+        `/sale/sales?StartDate=${startDate.toISOString().split('T')[0]}&EndDate=${endDate.toISOString().split('T')[0]}`,
+        'Sales',
+        SALES_BATCH_SIZE,
+        startOffset
+      );
+      
+      console.log(`[Sales Import] Found ${sales.length} sales, pagination total: ${pagination?.TotalResults || 'unknown'}`);
+      
+      let imported = 0;
+      
+      for (const sale of sales) {
+        try {
+          // Skip if missing sale date/time
+          if (!sale.SaleDateTime) {
+            console.log(`Sale ${sale.Id} missing SaleDateTime, skipping`);
+            continue;
+          }
+          
+          // Get student ID from MindbodyClientId
+          const studentId = studentMap.get(sale.ClientId?.toString());
+          if (!studentId) {
+            console.log(`Sale ${sale.Id} for unknown client ${sale.ClientId}, skipping`);
+            continue;
+          }
+          
+          // Handle both array and single object for PurchasedItems
+          const purchasedItems = Array.isArray(sale.PurchasedItems) 
+            ? sale.PurchasedItems 
+            : (sale.PurchasedItems ? [sale.PurchasedItems] : []);
+          
+          if (purchasedItems.length === 0) {
+            // Log first few instances for debugging
+            if (imported < 5) {
+              console.log(`Sale ${sale.Id} has no purchased items, structure:`, JSON.stringify(sale).substring(0, 300));
             }
-            
-            // Check if transaction has PurchasedItems (some transactions may include line items)
-            const purchasedItems = Array.isArray(transaction.PurchasedItems) 
-              ? transaction.PurchasedItems 
-              : (transaction.PurchasedItems ? [transaction.PurchasedItems] : []);
-            
-            if (purchasedItems.length > 0) {
-              // Transaction has line items - create separate revenue records for each
-              for (const item of purchasedItems) {
-                try {
-                  if (!item.AmountPaid || item.AmountPaid === 0) continue;
-                  
-                  let description = item.Name || item.Description || 'Unknown item';
-                  if (item.Quantity && item.Quantity > 1) {
-                    description = `${description} (Qty: ${item.Quantity})`;
-                  }
-                  
-                  await storage.createRevenue({
-                    organizationId,
-                    studentId: student.id,
-                    amount: item.AmountPaid.toString(),
-                    type: item.Type || 'Unknown',
-                    description,
-                    transactionDate: new Date(transaction.TransactionTime),
-                  });
-                  imported++;
-                } catch (error) {
-                  console.error(`Failed to import line item:`, error);
-                }
+            continue;
+          }
+          
+          // Create a revenue record for each purchased item (line-item tracking)
+          for (const item of purchasedItems) {
+            try {
+              // Skip items with no amount or zero amount
+              if (!item.AmountPaid && item.AmountPaid !== 0) continue;
+              if (item.AmountPaid === 0) continue;
+              
+              // Build description: Item name + quantity (if > 1)
+              let description = item.Name || item.Description || 'Unknown item';
+              if (item.Quantity && item.Quantity > 1) {
+                description = `${description} (Qty: ${item.Quantity})`;
               }
-            } else {
-              // Transaction has no line items - use transaction amount
-              const description = [
-                transaction.CardType ? `${transaction.CardType} payment` : 'Payment',
-                transaction.CCLastFour ? `ending in ${transaction.CCLastFour}` : null,
-                transaction.Status ? `(${transaction.Status})` : null
-              ].filter(Boolean).join(' ');
               
               await storage.createRevenue({
                 organizationId,
-                studentId: student.id,
-                amount: transaction.Amount.toString(),
-                type: transaction.CardType || 'Payment',
+                studentId,
+                amount: item.AmountPaid.toString(),
+                type: item.Type || 'Unknown',
                 description,
-                transactionDate: new Date(transaction.TransactionTime),
+                transactionDate: new Date(sale.SaleDateTime),
               });
               imported++;
+            } catch (error) {
+              console.error(`Failed to import purchased item from sale ${sale.Id}:`, error);
             }
-          } catch (error) {
-            console.error(`Failed to import transaction ${transaction.TransactionId}:`, error);
           }
+        } catch (error) {
+          console.error(`Failed to process sale ${sale.Id}:`, error);
         }
-      } catch (error) {
-        console.error(`Failed to fetch sales for client ${student.mindbodyClientId}:`, error);
       }
       
-      // Update progress after each student to show real-time API count
-      processedStudents++;
-      await onProgress(startStudentIndex + processedStudents, totalStudents);
+      // Report progress
+      const totalSales = pagination?.TotalResults || sales.length;
+      await onProgress(startOffset + sales.length, totalSales);
+      
+      // Determine if there are more sales to fetch
+      const completed = sales.length < SALES_BATCH_SIZE || (pagination && startOffset + sales.length >= pagination.TotalResults);
+      const nextOffset = startOffset + sales.length;
+      
+      console.log(`[Sales Import] Imported ${imported} revenue records, nextOffset: ${nextOffset}, completed: ${completed}`);
+      
+      if (!completed) {
+        await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+      }
+      
+      return { imported, nextStudentIndex: nextOffset, completed };
+    } catch (error) {
+      console.error(`Failed to fetch site-level sales:`, error);
+      throw error;
     }
-    
-    const nextStudentIndex = endIndex;
-    const completed = nextStudentIndex >= totalStudents;
-    
-    // Delay before next batch (unless completed)
-    if (!completed) {
-      await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
-    }
-    
-    return { imported, nextStudentIndex, completed };
   }
 
   async createWebhookSubscription(
