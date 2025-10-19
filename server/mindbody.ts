@@ -631,48 +631,64 @@ export class MindbodyService {
     // Process students sequentially in this batch
     for (const student of studentBatch) {
       try {
-        // Fetch payment transactions for this student within date range
-        const { results: transactions } = await this.fetchAllPages<any>(
+        // Fetch sales with purchased items for this student within date range
+        const { results: sales } = await this.fetchAllPages<any>(
           organizationId,
-          `/sale/transactions?ClientId=${student.mindbodyClientId}&StartSaleDateTime=${startDate.toISOString()}&EndSaleDateTime=${endDate.toISOString()}`,
-          'Transactions',
+          `/sale/sales?ClientId=${student.mindbodyClientId}&StartDate=${startDate.toISOString().split('T')[0]}&EndDate=${endDate.toISOString().split('T')[0]}`,
+          'Sales',
           200
         );
         
-        for (const transaction of transactions) {
+        for (const sale of sales) {
           try {
-            // Skip if no amount or invalid status
-            if (!transaction.Amount || transaction.Amount === 0) continue;
-            if (transaction.Status && transaction.Status !== 'Approved') continue;
-            
-            // Skip if missing transaction time
-            if (!transaction.TransactionTime) {
-              console.error(`Transaction ${transaction.TransactionId} missing TransactionTime, skipping`);
+            // Skip if missing sale date/time
+            if (!sale.SaleDateTime) {
+              console.error(`Sale ${sale.Id} missing SaleDateTime, skipping`);
               continue;
             }
             
-            // Build description from available fields
-            const description = [
-              transaction.CardType ? `${transaction.CardType} payment` : 'Payment',
-              transaction.CCLastFour ? `ending in ${transaction.CCLastFour}` : null,
-              transaction.Status ? `(${transaction.Status})` : null
-            ].filter(Boolean).join(' ');
+            // Handle both array and single object for PurchasedItems
+            const purchasedItems = Array.isArray(sale.PurchasedItems) 
+              ? sale.PurchasedItems 
+              : (sale.PurchasedItems ? [sale.PurchasedItems] : []);
             
-            await storage.createRevenue({
-              organizationId,
-              studentId: student.id,
-              amount: transaction.Amount.toString(),
-              type: transaction.CardType || 'Payment',
-              description,
-              transactionDate: new Date(transaction.TransactionTime),
-            });
-            imported++;
+            if (purchasedItems.length === 0) {
+              console.log(`Sale ${sale.Id} has no purchased items, skipping`);
+              continue;
+            }
+            
+            // Create a revenue record for each purchased item (line-item tracking)
+            for (const item of purchasedItems) {
+              try {
+                // Skip items with no amount or zero amount
+                if (!item.AmountPaid && item.AmountPaid !== 0) continue;
+                if (item.AmountPaid === 0) continue;
+                
+                // Build description: Item name + quantity (if > 1)
+                let description = item.Name || item.Description || 'Unknown item';
+                if (item.Quantity && item.Quantity > 1) {
+                  description = `${description} (Qty: ${item.Quantity})`;
+                }
+                
+                await storage.createRevenue({
+                  organizationId,
+                  studentId: student.id,
+                  amount: item.AmountPaid.toString(),
+                  type: item.Type || 'Unknown',
+                  description,
+                  transactionDate: new Date(sale.SaleDateTime),
+                });
+                imported++;
+              } catch (error) {
+                console.error(`Failed to import purchased item from sale ${sale.Id}:`, error);
+              }
+            }
           } catch (error) {
-            console.error(`Failed to import transaction ${transaction.TransactionId}:`, error);
+            console.error(`Failed to process sale ${sale.Id}:`, error);
           }
         }
       } catch (error) {
-        console.error(`Failed to fetch transactions for client ${student.mindbodyClientId}:`, error);
+        console.error(`Failed to fetch sales for client ${student.mindbodyClientId}:`, error);
       }
       
       // Update progress after each student to show real-time API count
