@@ -2,18 +2,18 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { useQuery } from "@tanstack/react-query";
-import { DateRange } from "react-day-picker";
-import { DatePickerWithRange } from "./DateRangePicker";
+import { DatePicker } from "./DatePicker";
 
 export function AttendanceChart() {
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
   const queryParams = new URLSearchParams();
-  if (dateRange?.from) {
-    queryParams.append("startDate", dateRange.from.toISOString());
+  if (startDate) {
+    queryParams.append("startDate", startDate.toISOString());
   }
-  if (dateRange?.to) {
-    queryParams.append("endDate", dateRange.to.toISOString());
+  if (endDate) {
+    queryParams.append("endDate", endDate.toISOString());
   }
 
   const queryString = queryParams.toString();
@@ -46,12 +46,21 @@ export function AttendanceChart() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-start justify-between gap-4">
           <div>
             <CardTitle>Class Attendance by Time</CardTitle>
             <CardDescription>Average attendance distribution across different time slots</CardDescription>
           </div>
-          <DatePickerWithRange value={dateRange} onChange={setDateRange} />
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground whitespace-nowrap">Start:</span>
+              <DatePicker value={startDate} onChange={setStartDate} placeholder="Start date" />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground whitespace-nowrap">End:</span>
+              <DatePicker value={endDate} onChange={setEndDate} placeholder="End date" />
+            </div>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
