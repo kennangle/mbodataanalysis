@@ -29,6 +29,7 @@ This application supports enhanced AI interaction through slash commands for aut
 | `/mobile audit`         | Full mobile review         | Comprehensive mobile optimization audit         |
 | `/mobile quick`         | Quick mobile check         | Fast scan of common mobile problems             |
 | `/es`                   | Code quality check         | Run ESLint across entire codebase               |
+| `/codecheck`            | Full quality audit         | Run Prettier, ESLint, and TypeScript checks      |
 | `/gr`                   | Guardrails review          | Check policy compliance and violations          |
 | `/bug`                  | Bug reporting              | Capture and document issues systematically      |
 | `/unanswered`           | Find pending questions     | Identify unresolved questions in conversation   |
@@ -166,6 +167,18 @@ This application supports enhanced AI interaction through slash commands for aut
 - **Behavior**: Executes ESLint, shows violation counts, identifies policy violations (time handling, date constructors)
 - **Example**: `/es`
 
+### `/codecheck` - Full Code Quality Audit
+
+- **Purpose**: Run comprehensive code quality checks including formatting, linting, and type checking
+- **Behavior**: Executes three-step quality audit:
+  1. **Prettier** - Checks code formatting consistency (line width, indentation, quotes, semicolons)
+  2. **ESLint** - Analyzes code quality and best practices (TypeScript, React rules)
+  3. **TypeScript** - Verifies type safety and catches type errors
+- **Auto-fix Available**: Run `./codecheck.sh --fix` or use the auto-fix commands in output
+- **Configuration**: `.prettierrc`, `eslint.config.js`, `tsconfig.json`
+- **Example**: `/codecheck`
+- **Documentation**: See `/codecheck.md` for detailed usage and troubleshooting
+
 ### `/gr` - Guardrails Compliance Review
 
 - **Purpose**: Comprehensive review for policy compliance and violations
@@ -189,8 +202,9 @@ This application supports enhanced AI interaction through slash commands for aut
 1. **Use the right command**: Choose the command that best matches your specific need
 2. **Be specific**: Provide clear context when using commands
 3. **Combine commands**: Some commands work well together (e.g., `/deep` followed by `/suggest`)
-4. **Regular checks**: Use `/es` and `/gr` regularly to maintain code quality
+4. **Regular checks**: Use `/codecheck`, `/es`, and `/gr` regularly to maintain code quality
 5. **Document issues**: Use `/bug` to formally track problems for resolution
+6. **Before commits**: Run `/codecheck` to ensure clean, consistent code
 
 ## Command Integration with Time Tracking System
 
@@ -209,6 +223,7 @@ These commands are particularly valuable for maintaining the time tracking appli
 - **Orientation Handling**: `/mobile landscape` optimizes layouts for both portrait and landscape
 - **Touch Interactions**: `/mobile gestures` optimizes swipe, scroll, and gesture handling
 - **Mobile Accessibility**: `/mobile accessibility` ensures screen reader and assistive technology support
-- **Code Quality**: `/es` enforces ESLint rules specific to time-safe utilities
+- **Code Quality**: `/codecheck` runs full quality audit (Prettier + ESLint + TypeScript)
+- **Linting**: `/es` enforces ESLint rules specific to time-safe utilities
 - **Bug Tracking**: `/bug` documents issues with break management, clock in/out functionality
 - **Performance Analysis**: `/anal performance` monitors database query performance for time entries
