@@ -38,5 +38,14 @@ task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
 
+[[workflows.workflow]]
+name = "Code Quality Check"
+mode = "sequential"
+author = 44719914
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npx prettier --check . && npx eslint . --ext .js,.jsx,.ts,.tsx && npm run check"
+
 [agent]
 integrations = ["javascript_openai:1.0.0", "javascript_database:1.0.0", "javascript_object_storage:1.0.0"]
