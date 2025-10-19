@@ -384,18 +384,58 @@ export class DbStorage implements IStorage {
   }
 
   async upsertRevenue(revenueData: InsertRevenue): Promise<Revenue> {
+    // When mindbodyItemId is NULL, we need to check for duplicates manually
+    // because PostgreSQL unique constraints don't treat NULL values as equal
+    if (!revenueData.mindbodyItemId && revenueData.mindbodySaleId) {
+      // Check if record already exists
+      const existing = await db.select()
+        .from(revenue)
+        .where(
+          and(
+            eq(revenue.organizationId, revenueData.organizationId),
+            eq(revenue.mindbodySaleId, revenueData.mindbodySaleId),
+            sql`${revenue.mindbodyItemId} IS NULL`
+          )
+        )
+        .limit(1);
+      
+      if (existing.length > 0) {
+        // Update existing record
+        const updated = await db.update(revenue)
+          .set({
+            studentId: revenueData.studentId,
+            amount: revenueData.amount,
+            type: revenueData.type,
+            description: revenueData.description,
+            transactionDate: revenueData.transactionDate,
+          })
+          .where(eq(revenue.id, existing[0].id))
+          .returning();
+        return updated[0];
+      }
+    }
+    
+    // For non-NULL mindbodyItemId, or if no existing record found, use regular upsert
+    if (revenueData.mindbodyItemId) {
+      const result = await db.insert(revenue)
+        .values(revenueData)
+        .onConflictDoUpdate({
+          target: [revenue.organizationId, revenue.mindbodySaleId, revenue.mindbodyItemId],
+          set: {
+            studentId: revenueData.studentId,
+            amount: revenueData.amount,
+            type: revenueData.type,
+            description: revenueData.description,
+            transactionDate: revenueData.transactionDate,
+          }
+        })
+        .returning();
+      return result[0];
+    }
+    
+    // Insert new record (no conflict possible)
     const result = await db.insert(revenue)
       .values(revenueData)
-      .onConflictDoUpdate({
-        target: [revenue.organizationId, revenue.mindbodySaleId, revenue.mindbodyItemId],
-        set: {
-          studentId: revenueData.studentId,
-          amount: revenueData.amount,
-          type: revenueData.type,
-          description: revenueData.description,
-          transactionDate: revenueData.transactionDate,
-        }
-      })
       .returning();
     return result[0];
   }
