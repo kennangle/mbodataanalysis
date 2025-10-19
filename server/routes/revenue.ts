@@ -67,7 +67,7 @@ export function registerRevenueRoutes(app: Express) {
   // CSV upload configuration
   const upload = multer({ 
     storage: multer.memoryStorage(),
-    limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+    limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit for large CSV files
   });
 
   // Import revenue from CSV
@@ -132,7 +132,15 @@ export function registerRevenueRoutes(app: Express) {
       const errors: string[] = [];
       const rows = parseResult.data as any[];
 
+      console.log(`[CSV Import] Starting import of ${rows.length} rows...`);
+      const startTime = Date.now();
+
       for (let index = 0; index < rows.length; index++) {
+        // Log progress every 1000 rows
+        if (index > 0 && index % 1000 === 0) {
+          const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+          console.log(`[CSV Import] Progress: ${index}/${rows.length} rows processed (${elapsed}s, ${imported} imported, ${skipped} skipped)`);
+        }
         const row = rows[index];
         try {
           // Map CSV columns to revenue fields (flexible column matching)
@@ -222,9 +230,13 @@ export function registerRevenueRoutes(app: Express) {
         }
       }
 
+      // Log final summary
+      const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
+      console.log(`[CSV Import] Completed: ${imported} imported, ${skipped} skipped, ${rows.length} total in ${totalTime}s`);
+      
       // Log errors for debugging
       if (errors.length > 0) {
-        console.error(`CSV import errors (showing first 10 of ${errors.length}):`, errors.slice(0, 10));
+        console.error(`[CSV Import] Errors (showing first 10 of ${errors.length}):`, errors.slice(0, 10));
       }
 
       res.json({
