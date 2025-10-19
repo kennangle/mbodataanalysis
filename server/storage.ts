@@ -527,7 +527,6 @@ export class DbStorage implements IStorage {
     const monthsData = [];
     const startMonth = new Date(effectiveStartDate.getFullYear(), effectiveStartDate.getMonth(), 1);
     const endMonth = new Date(effectiveEndDate.getFullYear(), effectiveEndDate.getMonth(), 1);
-    const currentYear = now.getFullYear();
     
     // If no custom range, show last 12 months
     if (!startDate && !endDate) {
@@ -538,7 +537,7 @@ export class DbStorage implements IStorage {
         const key = `${year}-${month}`;
         
         const monthName = monthDate.toLocaleString('en-US', { month: 'short' });
-        const displayMonth = year !== currentYear ? `${monthName} ${year}` : monthName;
+        const displayMonth = `${monthName} ${year}`;
         
         monthsData.push({
           month: displayMonth,
@@ -555,7 +554,7 @@ export class DbStorage implements IStorage {
         const key = `${year}-${month}`;
         
         const monthName = currentMonth.toLocaleString('en-US', { month: 'short' });
-        const displayMonth = year !== currentYear ? `${monthName} ${year}` : monthName;
+        const displayMonth = `${monthName} ${year}`;
         
         monthsData.push({
           month: displayMonth,

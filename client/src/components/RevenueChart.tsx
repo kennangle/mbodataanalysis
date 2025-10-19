@@ -47,13 +47,25 @@ export function RevenueChart({ startDate, endDate, onStartDateChange, onEndDateC
 
   const hasData = data && data.length > 0 && data.some(d => d.revenue > 0);
 
+  // Generate description based on date range
+  const getDescription = () => {
+    if (startDate && endDate) {
+      return `Monthly revenue from ${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} to ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    } else if (startDate) {
+      return `Monthly revenue from ${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} to present`;
+    } else if (endDate) {
+      return `Monthly revenue through ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    }
+    return "Monthly revenue and student enrollment over the past year";
+  };
+
   return (
     <Card>
       <CardHeader>
         <div className="flex items-start justify-between gap-4">
           <div>
             <CardTitle>Revenue & Growth Trend</CardTitle>
-            <CardDescription>Monthly revenue and student enrollment over the past year</CardDescription>
+            <CardDescription>{getDescription()}</CardDescription>
           </div>
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
