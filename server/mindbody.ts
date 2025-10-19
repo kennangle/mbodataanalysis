@@ -609,11 +609,19 @@ export class MindbodyService {
     onProgress: (current: number, total: number) => Promise<void>,
     startStudentIndex: number = 0
   ): Promise<{ imported: number; nextStudentIndex: number; completed: boolean }> {
+    console.log(`[MindbodyService] importSalesResumable called`);
+    console.log(`[MindbodyService] organizationId: ${organizationId}`);
+    console.log(`[MindbodyService] startDate: ${startDate.toISOString()}`);
+    console.log(`[MindbodyService] endDate: ${endDate.toISOString()}`);
+    console.log(`[MindbodyService] startStudentIndex: ${startStudentIndex}`);
+    
     const BATCH_SIZE = 100; // Process 100 students per batch
     const BATCH_DELAY = 250; // 250ms delay between batches
     
     // Load all students once
+    console.log(`[MindbodyService] About to call storage.getStudents(${organizationId}, 100000)...`);
     const allStudents = await storage.getStudents(organizationId, 100000);
+    console.log(`[MindbodyService] Loaded ${allStudents.length} students`);
     const totalStudents = allStudents.length;
     
     if (startStudentIndex >= totalStudents) {
