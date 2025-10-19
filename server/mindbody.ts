@@ -632,18 +632,29 @@ export class MindbodyService {
       const testData = await this.makeAuthenticatedRequest(organizationId, testEndpoint);
       console.log(`[Sales Import] PaginationResponse:`, JSON.stringify(testData.PaginationResponse));
       
-      // Log actual date range returned to diagnose date filtering issue
+      // Check if API returned correct date range (detect if date params are ignored)
+      let dateRangeRespected = true;
       if (testData.Sales && testData.Sales.length > 0) {
-        const firstSaleDate = testData.Sales[0].SaleDateTime || testData.Sales[0].SaleDate;
-        const lastSaleDate = testData.Sales[testData.Sales.length - 1].SaleDateTime || testData.Sales[testData.Sales.length - 1].SaleDate;
-        console.log(`[Sales Import] WARNING: API returned sales from ${firstSaleDate} to ${lastSaleDate} - date parameters may be ignored!`);
+        const firstSaleDate = new Date(testData.Sales[0].SaleDateTime || testData.Sales[0].SaleDate);
+        const requestedStartDate = new Date(dateFormat);
+        
+        // If the API returned sales more than 7 days after our requested start date,
+        // it's ignoring the date parameters
+        const daysDifference = (firstSaleDate.getTime() - requestedStartDate.getTime()) / (1000 * 60 * 60 * 24);
+        if (Math.abs(daysDifference) > 7) {
+          console.log(`[Sales Import] WARNING: /sale/sales ignoring date parameters! Requested ${dateFormat}, got ${firstSaleDate.toISOString()}`);
+          console.log(`[Sales Import] Falling back to /sale/transactions for historical data`);
+          dateRangeRespected = false;
+        }
       }
       
       const totalResults = testData.PaginationResponse?.TotalResults || 0;
       
-      // If /sale/sales returns no results, fall back to /sale/transactions
-      if (totalResults === 0) {
-        console.log(`[Sales Import] /sale/sales returned 0 results, falling back to /sale/transactions`);
+      // If /sale/sales returns no results OR ignores date parameters, fall back to /sale/transactions
+      if (totalResults === 0 || !dateRangeRespected) {
+        if (totalResults === 0) {
+          console.log(`[Sales Import] /sale/sales returned 0 results, falling back to /sale/transactions`);
+        }
         
         // Use ISO datetime format with timezone for transactions endpoint
         const startDateTime = startDate.toISOString(); // e.g., 2024-01-01T00:00:00.000Z
