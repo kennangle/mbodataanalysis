@@ -1,12 +1,16 @@
-import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { useQuery } from "@tanstack/react-query";
 import { DatePicker } from "./DatePicker";
 
-export function RevenueChart() {
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+interface RevenueChartProps {
+  startDate?: Date;
+  endDate?: Date;
+  onStartDateChange: (date: Date | undefined) => void;
+  onEndDateChange: (date: Date | undefined) => void;
+}
+
+export function RevenueChart({ startDate, endDate, onStartDateChange, onEndDateChange }: RevenueChartProps) {
 
   const queryParams = new URLSearchParams();
   if (startDate) {
@@ -54,11 +58,11 @@ export function RevenueChart() {
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground whitespace-nowrap">Start:</span>
-              <DatePicker value={startDate} onChange={setStartDate} placeholder="Start date" />
+              <DatePicker value={startDate} onChange={onStartDateChange} placeholder="All time" />
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground whitespace-nowrap">End:</span>
-              <DatePicker value={endDate} onChange={setEndDate} placeholder="End date" />
+              <DatePicker value={endDate} onChange={onEndDateChange} placeholder="All time" />
             </div>
           </div>
         </div>

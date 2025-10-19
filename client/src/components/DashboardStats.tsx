@@ -15,9 +15,27 @@ interface DashboardStatsData {
   classChange: string;
 }
 
-export function DashboardStats() {
+interface DashboardStatsProps {
+  startDate?: Date;
+  endDate?: Date;
+}
+
+export function DashboardStats({ startDate, endDate }: DashboardStatsProps) {
+  const queryParams = new URLSearchParams();
+  if (startDate) {
+    queryParams.append("startDate", startDate.toISOString());
+  }
+  if (endDate) {
+    queryParams.append("endDate", endDate.toISOString());
+  }
+
+  const queryString = queryParams.toString();
+  const queryKey = queryString 
+    ? `/api/dashboard/stats?${queryString}`
+    : "/api/dashboard/stats";
+
   const { data, isLoading } = useQuery<DashboardStatsData>({
-    queryKey: ["/api/dashboard/stats"],
+    queryKey: [queryKey],
   });
 
   if (isLoading) {
@@ -42,7 +60,7 @@ export function DashboardStats() {
   const stats = [
     {
       title: "Total Revenue",
-      value: `$${data?.totalRevenue.toLocaleString() || "0"}`,
+      value: `$${data?.totalRevenue.toLocaleString(undefined, {maximumFractionDigits: 0}) || "0"}`,
       change: `${data?.revenueChange || "0"}%`,
       trend: parseFloat(data?.revenueChange || "0") >= 0 ? "up" : "down",
       icon: DollarSign,
@@ -98,7 +116,7 @@ export function DashboardStats() {
               <Icon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold" data-testid={`text-stat-value-${index}`}>
+              <div className="text-2xl font-bold break-all" data-testid={`text-stat-value-${index}`}>
                 {stat.value}
               </div>
               <div className={`flex items-center gap-1 text-xs ${trendColor} mt-1`}>

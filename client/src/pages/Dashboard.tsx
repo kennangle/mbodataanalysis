@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -17,6 +17,10 @@ import { LogOut } from "lucide-react";
 export default function Dashboard() {
   const { user, isLoading, logout } = useAuth();
   const [, setLocation] = useLocation();
+  
+  // Shared date range state - default to all-time (no dates selected)
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -68,10 +72,15 @@ export default function Dashboard() {
           </header>
           <main className="flex-1 overflow-y-auto p-6">
             <div className="max-w-screen-2xl mx-auto space-y-6">
-              <DashboardStats />
+              <DashboardStats startDate={startDate} endDate={endDate} />
               
               <div className="grid gap-6 lg:grid-cols-2">
-                <RevenueChart />
+                <RevenueChart 
+                  startDate={startDate} 
+                  endDate={endDate}
+                  onStartDateChange={setStartDate}
+                  onEndDateChange={setEndDate}
+                />
                 <AttendanceChart />
               </div>
 

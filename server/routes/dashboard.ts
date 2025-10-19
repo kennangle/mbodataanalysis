@@ -13,14 +13,29 @@ export function registerDashboardRoutes(app: Express) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
+      // Parse optional date range from query params
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+
       const now = new Date();
       const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
+      // Determine which revenue stats to use based on date range
+      let revenueStats;
+      if (startDate || endDate) {
+        // Use provided dates, defaulting to earliest/latest available
+        const effectiveStartDate = startDate || new Date(0); // Beginning of time
+        const effectiveEndDate = endDate || now; // Now
+        revenueStats = await storage.getRevenueStats(organizationId, effectiveStartDate, effectiveEndDate);
+      } else {
+        // No date range - use all-time
+        revenueStats = await storage.getAllTimeRevenueStats(organizationId);
+      }
+
       const [
         totalStudentCount,
         activeStudentCount,
-        allTimeRevenueStats,
         thisMonthRevenueStats,
         lastMonthRevenueStats,
         attendanceRecords,
@@ -29,7 +44,6 @@ export function registerDashboardRoutes(app: Express) {
       ] = await Promise.all([
         storage.getStudentCount(organizationId),
         storage.getActiveStudentCount(organizationId),
-        storage.getAllTimeRevenueStats(organizationId),
         storage.getRevenueStats(organizationId, thisMonth, now),
         storage.getRevenueStats(organizationId, lastMonth, thisMonth),
         storage.getAttendance(organizationId), // Get ALL attendance records
@@ -61,7 +75,7 @@ export function registerDashboardRoutes(app: Express) {
       console.log(`[Dashboard Stats] Attendance records count: ${attendanceRecords.length}`);
       
       res.json({
-        totalRevenue: allTimeRevenueStats.total,
+        totalRevenue: revenueStats.total,
         revenueChange: revenueChange.toFixed(1),
         activeStudents: activeStudentCount,
         totalStudents: totalStudentCount,
