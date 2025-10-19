@@ -23,34 +23,44 @@ export class ImportWorker {
   private currentJobId: string | null = null;
 
   async processJob(jobId: string): Promise<void> {
+    console.log(`[ImportWorker] processJob called for job ${jobId}`);
     // Add job to queue
     if (!this.jobQueue.includes(jobId)) {
       this.jobQueue.push(jobId);
+      console.log(`[ImportWorker] Added job ${jobId} to queue. Queue length: ${this.jobQueue.length}`);
     }
 
     // Start processing if not already processing
     if (!this.isProcessing) {
+      console.log(`[ImportWorker] Starting processQueue (not currently processing)`);
       this.processQueue();
+    } else {
+      console.log(`[ImportWorker] Already processing job ${this.currentJobId}, job ${jobId} queued`);
     }
   }
 
   private async processQueue(): Promise<void> {
+    console.log(`[ImportWorker] processQueue started. Queue length: ${this.jobQueue.length}`);
     while (this.jobQueue.length > 0) {
       const jobId = this.jobQueue.shift()!;
+      console.log(`[ImportWorker] Processing job ${jobId} from queue`);
       await this.processJobInternal(jobId);
     }
+    console.log(`[ImportWorker] processQueue completed. Queue is now empty.`);
   }
 
   private async processJobInternal(jobId: string): Promise<void> {
+    console.log(`[ImportWorker] processJobInternal called for job ${jobId}`);
     this.isProcessing = true;
     this.currentJobId = jobId;
 
     try {
       const job = await storage.getImportJob(jobId);
       if (!job) {
-        console.error(`Job ${jobId} not found`);
+        console.error(`[ImportWorker] Job ${jobId} not found`);
         return;
       }
+      console.log(`[ImportWorker] Job ${jobId} found. Status: ${job.status}, DataTypes: ${job.dataTypes}`);
 
       // Check if job was cancelled before it started processing
       if (job.status === 'paused' || job.status === 'cancelled') {
