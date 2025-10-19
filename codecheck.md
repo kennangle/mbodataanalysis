@@ -6,16 +6,33 @@ Run comprehensive code quality checks including ESLint, TypeScript type checking
 
 ```bash
 # Run all checks
-npm run lint && npm run check
+npx prettier --check . && npx eslint . --ext .js,.jsx,.ts,.tsx && npm run check
 
 # Or run individually:
-npm run lint    # ESLint checks
-npm run check   # TypeScript type checking
+npx prettier --check .                        # Prettier formatting check
+npx eslint . --ext .js,.jsx,.ts,.tsx          # ESLint checks
+npm run check                                  # TypeScript type checking
+```
+
+## Auto-Fix All Issues
+
+```bash
+# Format with Prettier + Fix ESLint issues
+npx prettier --write . && npx eslint . --ext .js,.jsx,.ts,.tsx --fix
 ```
 
 ## What Gets Checked
 
-### 1. ESLint (Code Quality & Best Practices)
+### 1. Prettier (Code Formatting)
+- Consistent code formatting
+- Automatic semicolons, quotes, indentation
+- Line width enforcement (100 chars)
+- Trailing commas
+- Arrow function parentheses
+
+**Configuration:** `.prettierrc`
+
+### 2. ESLint (Code Quality & Best Practices)
 - TypeScript code quality
 - React best practices
 - React Hooks rules
@@ -33,7 +50,7 @@ npm run check   # TypeScript type checking
 - `build/`
 - Config files
 
-### 2. TypeScript Type Checking
+### 3. TypeScript Type Checking
 - Type errors
 - Missing type definitions
 - Type compatibility issues
@@ -41,15 +58,31 @@ npm run check   # TypeScript type checking
 
 ## Running the Checks
 
-### Check Everything
+### Check Everything (Recommended)
 ```bash
-# Run both ESLint and TypeScript checks
-npm run lint && npm run check
+# Run Prettier, ESLint, and TypeScript checks
+npx prettier --check . && npx eslint . --ext .js,.jsx,.ts,.tsx && npm run check
+```
+
+### Prettier Only
+```bash
+# Check formatting
+npx prettier --check .
+
+# Auto-format all files
+npx prettier --write .
+
+# Format specific files
+npx prettier --write "client/src/**/*.{ts,tsx}"
 ```
 
 ### ESLint Only
 ```bash
+# Check for issues
 npx eslint . --ext .js,.jsx,.ts,.tsx
+
+# Auto-fix issues
+npx eslint . --ext .js,.jsx,.ts,.tsx --fix
 ```
 
 ### TypeScript Only
@@ -59,9 +92,10 @@ npm run check
 npx tsc --noEmit
 ```
 
-### Auto-fix ESLint Issues
+### Fix Everything (Auto-fix)
 ```bash
-npx eslint . --ext .js,.jsx,.ts,.tsx --fix
+# Format with Prettier, then fix ESLint issues
+npx prettier --write . && npx eslint . --ext .js,.jsx,.ts,.tsx --fix
 ```
 
 ## Common Issues & Fixes
@@ -83,22 +117,29 @@ npm install
 
 ## Configuration Files
 
-- **ESLint:** `eslint.config.js`
-- **TypeScript:** `tsconfig.json`
+- **Prettier:** `.prettierrc` - Code formatting rules
+- **ESLint:** `eslint.config.js` - Code quality rules (integrated with Prettier)
+- **TypeScript:** `tsconfig.json` - Type checking configuration
+- **Ignore Files:** `.prettierignore` - Files to skip formatting
 
-## Adding to package.json Scripts
+## Recommended Workflow
 
-If not already present, add these to `package.json`:
+### Before Committing Code
+```bash
+# 1. Format all files
+npx prettier --write .
 
-```json
-{
-  "scripts": {
-    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
-    "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
-    "check": "tsc --noEmit",
-    "quality": "npm run lint && npm run check"
-  }
-}
+# 2. Fix linting issues
+npx eslint . --ext .js,.jsx,.ts,.tsx --fix
+
+# 3. Check types
+npm run check
+```
+
+### Quick Quality Check
+```bash
+# Check everything without fixing
+npx prettier --check . && npx eslint . --ext .js,.jsx,.ts,.tsx && npm run check
 ```
 
 ## Pre-commit Checks (Recommended)
