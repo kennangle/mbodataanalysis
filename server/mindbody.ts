@@ -629,13 +629,7 @@ export class MindbodyService {
       console.log(`[Sales Import] Test endpoint: ${testEndpoint}`);
       
       const testData = await this.makeAuthenticatedRequest(organizationId, testEndpoint);
-      console.log(`[Sales Import] API Response (first 2000 chars):`, JSON.stringify(testData).substring(0, 2000));
       console.log(`[Sales Import] PaginationResponse:`, JSON.stringify(testData.PaginationResponse));
-      
-      // DEBUG: Log first sale's PurchasedItems completely
-      if (testData.Sales && testData.Sales.length > 0 && testData.Sales[0].PurchasedItems) {
-        console.log(`[DEBUG] First sale PurchasedItems:`, JSON.stringify(testData.Sales[0].PurchasedItems, null, 2));
-      }
       
       const totalResults = testData.PaginationResponse?.TotalResults || 0;
       
@@ -701,11 +695,6 @@ export class MindbodyService {
       
       console.log(`[Sales Import] Fetched ${sales.length} total sales`);
       
-      // DEBUG: Log first sale completely to see structure
-      if (sales.length > 0) {
-        console.log(`[DEBUG] Complete first sale structure:`, JSON.stringify(sales[0], null, 2));
-      }
-      
       let imported = 0;
       let matchedClients = 0;
       let unmatchedClients = 0;
@@ -740,24 +729,14 @@ export class MindbodyService {
           }
           
           // Create a revenue record for each purchased item (line-item tracking)
-          let itemIndex = 0;
           for (const item of purchasedItems) {
             try {
-              // DEBUG: Log first few items to see structure
-              if (itemIndex < 3) {
-                console.log(`[DEBUG] PurchasedItem #${itemIndex}:`, JSON.stringify(item, null, 2));
-                itemIndex++;
-              }
+              // Get amount from correct field: Amount, or calculate from UnitPrice * Quantity
+              const amount = item.Amount ?? (item.UnitPrice && item.Quantity ? item.UnitPrice * item.Quantity : null);
               
               // Skip items with no amount or zero amount
-              if (!item.AmountPaid && item.AmountPaid !== 0) {
-                console.log(`[DEBUG] Skipping item - no AmountPaid field. Available fields:`, Object.keys(item));
-                continue;
-              }
-              if (item.AmountPaid === 0) {
-                console.log(`[DEBUG] Skipping item - AmountPaid is 0`);
-                continue;
-              }
+              if (!amount && amount !== 0) continue;
+              if (amount === 0) continue;
               
               // Build description: Item name + quantity (if > 1)
               let description = item.Name || item.Description || 'Unknown item';
@@ -769,9 +748,9 @@ export class MindbodyService {
                 organizationId,
                 studentId,
                 mindbodySaleId: sale.Id?.toString() || null,
-                mindbodyItemId: item.Id?.toString() || null,
-                amount: item.AmountPaid.toString(),
-                type: item.Type || 'Unknown',
+                mindbodyItemId: item.Id?.toString() || item.SaleDetailId?.toString() || null,
+                amount: amount.toString(),
+                type: item.IsService ? 'Service' : (item.Type || 'Product'),
                 description,
                 transactionDate: new Date(sale.SaleDateTime),
               });
