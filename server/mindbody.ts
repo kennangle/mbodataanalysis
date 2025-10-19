@@ -732,6 +732,11 @@ export class MindbodyService {
           // Create a revenue record for each purchased item (line-item tracking)
           for (const item of purchasedItems) {
             try {
+              // DEBUG: Log first item to see structure
+              if (imported === 0) {
+                console.log(`[DEBUG] First PurchasedItem structure:`, JSON.stringify(item, null, 2));
+              }
+              
               // Skip items with no amount or zero amount
               if (!item.AmountPaid && item.AmountPaid !== 0) continue;
               if (item.AmountPaid === 0) continue;
