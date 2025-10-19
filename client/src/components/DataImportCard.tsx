@@ -430,6 +430,20 @@ export function DataImportCard() {
   });
 
   const handleStartImport = () => {
+    // Validate date range
+    const startDate = new Date(importConfig.startDate);
+    const endDate = new Date(importConfig.endDate);
+    
+    if (endDate < startDate) {
+      toast({
+        variant: "destructive",
+        title: "Invalid date range",
+        description: "End date must be after start date. Please check your date selection.",
+        duration: 5000,
+      });
+      return;
+    }
+    
     startImportMutation.mutate(importConfig);
   };
 
