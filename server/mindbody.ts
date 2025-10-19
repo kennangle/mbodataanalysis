@@ -697,6 +697,8 @@ export class MindbodyService {
       console.log(`[Sales Import] Fetched ${sales.length} total sales`);
       
       let imported = 0;
+      let matchedClients = 0;
+      let unmatchedClients = 0;
       
       for (const sale of sales) {
         try {
@@ -706,11 +708,12 @@ export class MindbodyService {
             continue;
           }
           
-          // Get student ID from MindbodyClientId
-          const studentId = studentMap.get(sale.ClientId?.toString());
-          if (!studentId) {
-            console.log(`Sale ${sale.Id} for unknown client ${sale.ClientId}, skipping`);
-            continue;
+          // Get student ID from MindbodyClientId (optional - client may not be in our students table)
+          const studentId = studentMap.get(sale.ClientId?.toString()) || null;
+          if (studentId) {
+            matchedClients++;
+          } else {
+            unmatchedClients++;
           }
           
           // Handle both array and single object for PurchasedItems
@@ -763,6 +766,7 @@ export class MindbodyService {
       await onProgress(sales.length, sales.length);
       
       console.log(`[Sales Import] Completed - imported ${imported} revenue records from ${sales.length} sales`);
+      console.log(`[Sales Import] Client matching: ${matchedClients} matched, ${unmatchedClients} unmatched (linked to null studentId)`);
       
       return { imported, nextStudentIndex: sales.length, completed: true };
     } catch (error) {
