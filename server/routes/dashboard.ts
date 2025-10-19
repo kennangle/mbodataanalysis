@@ -64,6 +64,7 @@ export function registerDashboardRoutes(app: Express) {
         studentChange: "+12.5",
         attendanceRate: attendanceRate.toFixed(1),
         attendanceChange: attendanceChange.toFixed(1),
+        totalAttendanceRecords: attendanceRecords.length,
         classesThisMonth: classes.length,
         classChange: "+8.2"
       });

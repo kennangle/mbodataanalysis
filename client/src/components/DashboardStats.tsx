@@ -10,6 +10,7 @@ interface DashboardStatsData {
   studentChange: string;
   attendanceRate: string;
   attendanceChange: string;
+  totalAttendanceRecords: number;
   classesThisMonth: number;
   classChange: string;
 }
@@ -63,8 +64,8 @@ export function DashboardStats() {
     {
       title: "Class Attendance",
       value: `${data?.attendanceRate || "0"}%`,
-      change: `${data?.attendanceChange || "0"}%`,
-      trend: parseFloat(data?.attendanceChange || "0") >= 0 ? "up" : "down",
+      change: `${data?.totalAttendanceRecords?.toLocaleString() || "0"} records`,
+      trend: "neutral",
       icon: Activity,
     },
     {
