@@ -627,9 +627,17 @@ export class MindbodyService {
       // Make a test call to see what we get
       const testEndpoint = `/sale/sales?StartDate=${dateFormat}&EndDate=${endDateFormat}&Limit=10&Offset=0`;
       console.log(`[Sales Import] Test endpoint: ${testEndpoint}`);
+      console.log(`[Sales Import] Requested date range: ${dateFormat} to ${endDateFormat}`);
       
       const testData = await this.makeAuthenticatedRequest(organizationId, testEndpoint);
       console.log(`[Sales Import] PaginationResponse:`, JSON.stringify(testData.PaginationResponse));
+      
+      // Log actual date range returned to diagnose date filtering issue
+      if (testData.Sales && testData.Sales.length > 0) {
+        const firstSaleDate = testData.Sales[0].SaleDateTime || testData.Sales[0].SaleDate;
+        const lastSaleDate = testData.Sales[testData.Sales.length - 1].SaleDateTime || testData.Sales[testData.Sales.length - 1].SaleDate;
+        console.log(`[Sales Import] WARNING: API returned sales from ${firstSaleDate} to ${lastSaleDate} - date parameters may be ignored!`);
+      }
       
       const totalResults = testData.PaginationResponse?.TotalResults || 0;
       
