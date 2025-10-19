@@ -359,11 +359,12 @@ export class ImportWorker {
       }
 
       console.log(`[ImportWorker] Calling importSalesResumable...`);
-      batchResult = await mindbodyService.importSalesResumable(
-        job.organizationId,
-        startDate,
-        endDate,
-        async (current, total) => {
+      try {
+        batchResult = await mindbodyService.importSalesResumable(
+          job.organizationId,
+          startDate,
+          endDate,
+          async (current, total) => {
           progress.sales.current = current;
           progress.sales.total = total;
           // Update API call count in progress callback
@@ -377,16 +378,20 @@ export class ImportWorker {
         progress.sales.current || 0
       );
 
-      progress.sales.imported += batchResult.imported;
-      progress.sales.current = batchResult.nextStudentIndex;
-      progress.sales.completed = batchResult.completed;
+        progress.sales.imported += batchResult.imported;
+        progress.sales.current = batchResult.nextStudentIndex;
+        progress.sales.completed = batchResult.completed;
 
-      // Update API call count after batch
-      progress.apiCallCount = baselineApiCallCount + mindbodyService.getApiCallCount();
+        // Update API call count after batch
+        progress.apiCallCount = baselineApiCallCount + mindbodyService.getApiCallCount();
 
-      await storage.updateImportJob(job.id, {
-        progress: JSON.stringify(progress),
-      });
+        await storage.updateImportJob(job.id, {
+          progress: JSON.stringify(progress),
+        });
+      } catch (error) {
+        console.error(`[ImportWorker] ERROR in importSalesResumable:`, error);
+        throw error; // Re-throw to be caught by outer handler
+      }
     } while (!batchResult.completed);
   }
 
