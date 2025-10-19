@@ -338,12 +338,19 @@ export class ImportWorker {
     progress: any,
     baselineApiCallCount: number = 0
   ): Promise<void> {
+    console.log(`[ImportWorker] processSales called for job ${job.id}`);
+    console.log(`[ImportWorker] processSales - startDate:`, startDate);
+    console.log(`[ImportWorker] processSales - endDate:`, endDate);
+    
     if (!progress.sales) {
+      console.log(`[ImportWorker] Initializing progress.sales`);
       progress.sales = { current: 0, total: 0, imported: 0, completed: false };
     }
+    console.log(`[ImportWorker] progress.sales initialized:`, progress.sales);
 
     let batchResult;
     do {
+      console.log(`[ImportWorker] Starting sales batch import loop...`);
       // Check if job has been cancelled before processing next batch
       const currentJob = await storage.getImportJob(job.id);
       if (currentJob?.status === 'paused' || currentJob?.status === 'cancelled') {
@@ -351,6 +358,7 @@ export class ImportWorker {
         return;
       }
 
+      console.log(`[ImportWorker] Calling importSalesResumable...`);
       batchResult = await mindbodyService.importSalesResumable(
         job.organizationId,
         startDate,
