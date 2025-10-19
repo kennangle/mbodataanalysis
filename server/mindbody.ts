@@ -632,7 +632,61 @@ export class MindbodyService {
       console.log(`[Sales Import] API Response:`, JSON.stringify(testData).substring(0, 500));
       console.log(`[Sales Import] PaginationResponse:`, JSON.stringify(testData.PaginationResponse));
       
-      // Fetch all sales using the pagination helper
+      const totalResults = testData.PaginationResponse?.TotalResults || 0;
+      
+      // If /sale/sales returns no results, fall back to /sale/transactions
+      if (totalResults === 0) {
+        console.log(`[Sales Import] /sale/sales returned 0 results, falling back to /sale/transactions`);
+        
+        // Use ISO datetime format with timezone for transactions endpoint
+        const startDateTime = startDate.toISOString(); // e.g., 2024-01-01T00:00:00.000Z
+        const endDateTime = endDate.toISOString();
+        
+        const { results: transactions } = await this.fetchAllPages<any>(
+          organizationId,
+          `/sale/transactions?StartSaleDateTime=${startDateTime}&EndSaleDateTime=${endDateTime}`,
+          'Transactions',
+          SALES_BATCH_SIZE
+        );
+        
+        console.log(`[Sales Import] Fetched ${transactions.length} transactions from /sale/transactions`);
+        
+        let imported = 0;
+        
+        for (const transaction of transactions) {
+          try {
+            // Get student ID from ClientId
+            const studentId = studentMap.get(transaction.ClientId?.toString());
+            
+            // Build description from payment info
+            const paymentMethod = transaction.Method || 'Unknown';
+            const lastFour = transaction.LastFour || 'N/A';
+            const status = transaction.Status || 'Unknown';
+            const description = `${paymentMethod} payment ending in ${lastFour} (${status})`;
+            
+            await storage.upsertRevenue({
+              organizationId,
+              studentId: studentId || null,
+              mindbodySaleId: transaction.Id?.toString() || null,
+              mindbodyItemId: null, // Transactions don't have item-level detail
+              amount: transaction.Amount?.toString() || '0',
+              type: paymentMethod,
+              description,
+              transactionDate: new Date(transaction.SaleDateTime || transaction.CreatedDateTime),
+            });
+            imported++;
+          } catch (error) {
+            console.error(`Failed to import transaction ${transaction.Id}:`, error);
+          }
+        }
+        
+        await onProgress(transactions.length, transactions.length);
+        console.log(`[Sales Import] Completed - imported ${imported} revenue records from ${transactions.length} transactions`);
+        
+        return { imported, nextStudentIndex: transactions.length, completed: true };
+      }
+      
+      // If /sale/sales has results, use it for detailed line-item data
       const { results: sales } = await this.fetchAllPages<any>(
         organizationId,
         `/sale/sales?StartDate=${dateFormat}&EndDate=${endDateFormat}`,
@@ -685,9 +739,11 @@ export class MindbodyService {
                 description = `${description} (Qty: ${item.Quantity})`;
               }
               
-              await storage.createRevenue({
+              await storage.upsertRevenue({
                 organizationId,
                 studentId,
+                mindbodySaleId: sale.Id?.toString() || null,
+                mindbodyItemId: item.Id?.toString() || null,
                 amount: item.AmountPaid.toString(),
                 type: item.Type || 'Unknown',
                 description,
