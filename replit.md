@@ -67,6 +67,7 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
 - **User Management**: An admin-only interface for managing users within an organization, including CRUD operations, role-based access (admin/user), and multi-tenancy support.
 - **Dashboard & Analytics**: Displays real-time data using live database queries for charts such as Revenue & Growth Trend and Class Attendance by Time, with optimized SQL for performance.
 - **Configurable Imports**: Allows users to specify date ranges and data types (Clients, Classes, Visits, Sales) for selective data fetching.
+- **Revenue Import with Line-Item Detail**: Sales import uses `/sale/sales` endpoint to capture detailed line-item breakdowns, distinguishing between memberships, services, products, and contracts. Each purchased item creates a separate revenue record with type (e.g., "Membership"), description (e.g., "Monthly Unlimited Membership"), amount, and quantity. This enables revenue attribution by category for superior business intelligence compared to payment-only transaction data.
 - **Students Data Management**: Comprehensive student roster management with advanced filtering (status, date range) and Excel export functionality using xlsx library. Filters respect search queries and export includes all filtered results with columns: First Name, Last Name, Email, Status, Membership.
 - **Authentication**: Multi-provider authentication system supporting:
   - **Email/Password**: Session-based authentication using Passport.js with scrypt for password hashing

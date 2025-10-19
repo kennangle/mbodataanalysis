@@ -3,43 +3,10 @@
 ## Overview
 This document explains the different Mindbody API v6 endpoints for revenue tracking and their appropriate use cases.
 
-## Current Implementation
+## Current Implementation (Updated Oct 19, 2024)
 
-### `/sale/transactions` (Currently Used)
-**What it returns**: Payment transaction records (credit card processing data)
-
-**Structure**:
-```json
-{
-  "TransactionId": 131288,
-  "SaleId": 2148020191,
-  "ClientId": 5467,
-  "Amount": 129.69,
-  "Settled": true,
-  "Status": "Approved",
-  "TransactionTime": "2025-10-19T01:55:19.823",
-  "CardType": "Visa",
-  "CCLastFour": "1980"
-}
-```
-
-**Pros**:
-- ✅ Captures actual payment amounts
-- ✅ Shows payment method (Visa, Mastercard, etc.)
-- ✅ Includes transaction status (Approved, Declined, etc.)
-- ✅ Simple structure, easy to import
-
-**Cons**:
-- ❌ No line-item details (what was purchased)
-- ❌ Doesn't distinguish between memberships, class packs, services
-- ❌ Missing product/service descriptions
-
----
-
-## Recommended Endpoint for Future Enhancement
-
-### `/sale/sales` (Better for Detailed Revenue)
-**What it returns**: Actual sales records with purchased items breakdown
+### `/sale/sales` ✅ (Currently Used)
+**What it returns**: Actual sales records with detailed line-item breakdown
 
 **Structure** (based on API documentation):
 ```json
@@ -73,14 +40,36 @@ This document explains the different Mindbody API v6 endpoints for revenue track
 - ✅ Product/service names and descriptions
 - ✅ Quantity and individual pricing
 - ✅ Better for business intelligence and reporting
+- ✅ Enables revenue attribution by category
+- ✅ Each purchased item creates separate revenue record
 
-**Cons**:
-- ⚠️ More complex to parse
-- ⚠️ May need additional API calls to get full details
+**Implementation Details**:
+- **Endpoint**: `/sale/sales?ClientId={id}&StartDate={YYYY-MM-DD}&EndDate={YYYY-MM-DD}`
+- **Response Field**: `Sales` array containing sales records
+- **Line Items**: Each sale has `PurchasedItems` array
+- **Revenue Mapping**:
+  - `item.Type` → `revenue.type` (Membership, Service, Product, Contract)
+  - `item.Name` or `item.Description` → `revenue.description`
+  - `item.AmountPaid` → `revenue.amount`
+  - `item.Quantity` → Appended to description if > 1
+  - `sale.SaleDateTime` → `revenue.transactionDate`
 
 ---
 
-## Complementary Endpoints
+## Previous Implementation (Deprecated Oct 19, 2024)
+
+### `/sale/transactions` ❌ (No Longer Used)
+**What it returned**: Payment transaction records (credit card processing data)
+
+**Why we migrated away**:
+- ❌ No line-item details (couldn't see what was purchased)
+- ❌ Didn't distinguish between memberships, class packs, services
+- ❌ Missing product/service descriptions
+- ❌ Only showed payment processing data, not sales content
+
+---
+
+## Complementary Endpoints (Future Use)
 
 ### `/client/activeclientmemberships`
 Returns active membership details for revenue attribution:
@@ -107,18 +96,18 @@ Returns available services for sale:
 
 ## Migration Path
 
-### Phase 1 (Current - Completed)
-✅ Use `/sale/transactions` with `Amount` field for quick revenue totals
+### Phase 1 (Completed)
+✅ Used `/sale/transactions` with `Amount` field for quick revenue totals
 
-### Phase 2 (Future Enhancement)
-Migrate to `/sale/sales` endpoint for detailed revenue tracking:
-1. Update `importSalesResumable()` to use `/sale/sales`
-2. Parse `PurchasedItems` array for line-item details
-3. Store item type (Membership, Service, Product, Contract)
-4. Add product/service names to revenue records
-5. Track quantities and unit prices
+### Phase 2 (Completed - Oct 19, 2024)
+✅ Migrated to `/sale/sales` endpoint for detailed revenue tracking:
+1. ✅ Updated `importSalesResumable()` to use `/sale/sales`
+2. ✅ Parse `PurchasedItems` array for line-item details
+3. ✅ Store item type (Membership, Service, Product, Contract)
+4. ✅ Add product/service names to revenue records
+5. ✅ Track quantities and unit prices
 
-### Phase 3 (Advanced)
+### Phase 3 (Future Enhancement)
 Enhance with complementary endpoints:
 1. Cross-reference with `/client/activeclientmemberships` for membership revenue
 2. Track class pack usage via `/client/contracts`
