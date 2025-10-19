@@ -23,6 +23,8 @@ export function DatePicker({
   onChange,
   placeholder = "Pick a date",
 }: DatePickerProps) {
+  const currentYear = new Date().getFullYear();
+  
   return (
     <div className={cn("grid gap-2", className)}>
       <Popover>
@@ -50,6 +52,9 @@ export function DatePicker({
             selected={value}
             onSelect={onChange}
             initialFocus
+            captionLayout="dropdown-buttons"
+            fromYear={2020}
+            toYear={currentYear + 1}
             data-testid="calendar-date-picker"
           />
         </PopoverContent>
