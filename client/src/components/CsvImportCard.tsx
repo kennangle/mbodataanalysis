@@ -26,19 +26,34 @@ export function CsvImportCard() {
       const formData = new FormData();
       formData.append('file', file);
       
-      // Use fetch directly for multipart/form-data instead of apiRequest
-      const response = await fetch('/api/revenue/import-csv', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include', // Include session cookie
-      });
+      // Create abort controller with 5 minute timeout for large files
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000); // 5 minutes
       
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.details || error.error || 'Import failed');
+      try {
+        // Use fetch directly for multipart/form-data instead of apiRequest
+        const response = await fetch('/api/revenue/import-csv', {
+          method: 'POST',
+          body: formData,
+          credentials: 'include', // Include session cookie
+          signal: controller.signal,
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.details || error.error || 'Import failed');
+        }
+        
+        return await response.json() as CsvImportResult;
+      } catch (error: any) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+          throw new Error('Import timed out - file may be too large. Try splitting into smaller files.');
+        }
+        throw error;
       }
-      
-      return await response.json() as CsvImportResult;
     },
     onSuccess: (data) => {
       setImportResult(data);
@@ -157,25 +172,35 @@ export function CsvImportCard() {
               </Button>
 
               {selectedFile && (
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleImport}
-                    disabled={importMutation.isPending}
-                    className="flex-1"
-                    data-testid="button-import-csv"
-                  >
-                    {importMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {importMutation.isPending ? 'Importing...' : 'Import CSV'}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleReset}
-                    disabled={importMutation.isPending}
-                    data-testid="button-cancel"
-                  >
-                    Cancel
-                  </Button>
-                </div>
+                <>
+                  {importMutation.isPending && (
+                    <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-md p-3">
+                      <p className="text-sm text-blue-900 dark:text-blue-100">
+                        <Loader2 className="inline h-4 w-4 animate-spin mr-2" />
+                        Processing large file... This may take several minutes for files with thousands of records.
+                      </p>
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleImport}
+                      disabled={importMutation.isPending}
+                      className="flex-1"
+                      data-testid="button-import-csv"
+                    >
+                      {importMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      {importMutation.isPending ? 'Importing...' : 'Import CSV'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleReset}
+                      disabled={importMutation.isPending}
+                      data-testid="button-cancel"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </>
               )}
             </div>
           </>
