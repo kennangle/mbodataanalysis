@@ -607,21 +607,14 @@ export class MindbodyService {
     startDate: Date,
     endDate: Date,
     onProgress: (current: number, total: number) => Promise<void>,
-    startStudentIndex: number = 0
+    startStudentIndex: number = 0,
+    cachedStudents?: any[] // OPTIMIZATION: Accept pre-loaded students to avoid repeated DB queries
   ): Promise<{ imported: number; nextStudentIndex: number; completed: boolean }> {
-    console.log(`[MindbodyService] importSalesResumable called`);
-    console.log(`[MindbodyService] organizationId: ${organizationId}`);
-    console.log(`[MindbodyService] startDate: ${startDate.toISOString()}`);
-    console.log(`[MindbodyService] endDate: ${endDate.toISOString()}`);
-    console.log(`[MindbodyService] startStudentIndex: ${startStudentIndex}`);
-    
     const BATCH_SIZE = 100; // Process 100 students per batch
     const BATCH_DELAY = 250; // 250ms delay between batches
     
-    // Load all students once
-    console.log(`[MindbodyService] About to call storage.getStudents(${organizationId}, 100000)...`);
-    const allStudents = await storage.getStudents(organizationId, 100000);
-    console.log(`[MindbodyService] Loaded ${allStudents.length} students`);
+    // Use cached students if provided, otherwise load from database
+    const allStudents = cachedStudents || await storage.getStudents(organizationId, 100000);
     const totalStudents = allStudents.length;
     
     if (startStudentIndex >= totalStudents) {
@@ -631,27 +624,32 @@ export class MindbodyService {
     // Get batch of students to process
     const endIndex = Math.min(startStudentIndex + BATCH_SIZE, totalStudents);
     const studentBatch = allStudents.slice(startStudentIndex, endIndex);
-    console.log(`[MindbodyService] Processing batch from index ${startStudentIndex} to ${endIndex} (${studentBatch.length} students)`);
     
     let imported = 0;
     let processedStudents = 0;
     
     // Process students sequentially in this batch
-    console.log(`[MindbodyService] Starting student loop...`);
     for (const student of studentBatch) {
-      console.log(`[MindbodyService] Processing student ${student.mindbodyClientId} (${processedStudents + 1}/${studentBatch.length})`);
       try {
-        console.log(`[MindbodyService] Calling fetchAllPages for transactions...`);
         const { results: sales } = await this.fetchAllPages<MindbodySale>(
           organizationId,
           `/sale/transactions?ClientId=${student.mindbodyClientId}&StartSaleDateTime=${startDate.toISOString()}`,
           'Transactions',
           200
         );
-        console.log(`[MindbodyService] Found ${sales.length} transactions for student ${student.mindbodyClientId}`);
         
         for (const sale of sales) {
-          for (const item of sale.PurchasedItems) {
+          // Handle both array and single object for PurchasedItems
+          const purchasedItems = Array.isArray(sale.PurchasedItems) 
+            ? sale.PurchasedItems 
+            : (sale.PurchasedItems ? [sale.PurchasedItems] : []);
+          
+          if (purchasedItems.length === 0) {
+            console.log(`Skipping sale with no PurchasedItems for client ${student.mindbodyClientId}`);
+            continue;
+          }
+          
+          for (const item of purchasedItems) {
             try {
               if (!item.AmountPaid && item.AmountPaid !== 0) continue;
               

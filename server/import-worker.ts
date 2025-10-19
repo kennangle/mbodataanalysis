@@ -23,62 +23,46 @@ export class ImportWorker {
   private currentJobId: string | null = null;
 
   async processJob(jobId: string): Promise<void> {
-    console.log(`[ImportWorker] processJob called for job ${jobId}`);
     // Add job to queue
     if (!this.jobQueue.includes(jobId)) {
       this.jobQueue.push(jobId);
-      console.log(`[ImportWorker] Added job ${jobId} to queue. Queue length: ${this.jobQueue.length}`);
     }
 
     // Start processing if not already processing
     if (!this.isProcessing) {
-      console.log(`[ImportWorker] Starting processQueue (not currently processing)`);
       this.processQueue();
-    } else {
-      console.log(`[ImportWorker] Already processing job ${this.currentJobId}, job ${jobId} queued`);
     }
   }
 
   private async processQueue(): Promise<void> {
-    console.log(`[ImportWorker] processQueue started. Queue length: ${this.jobQueue.length}`);
     while (this.jobQueue.length > 0) {
       const jobId = this.jobQueue.shift()!;
-      console.log(`[ImportWorker] Processing job ${jobId} from queue`);
       await this.processJobInternal(jobId);
     }
-    console.log(`[ImportWorker] processQueue completed. Queue is now empty.`);
   }
 
   private async processJobInternal(jobId: string): Promise<void> {
-    console.log(`[ImportWorker] processJobInternal called for job ${jobId}`);
     this.isProcessing = true;
     this.currentJobId = jobId;
 
     try {
       const job = await storage.getImportJob(jobId);
       if (!job) {
-        console.error(`[ImportWorker] Job ${jobId} not found`);
+        console.error(`Job ${jobId} not found`);
         return;
       }
-      console.log(`[ImportWorker] Job ${jobId} found. Status: ${job.status}, DataTypes: ${job.dataTypes}`);
 
       // Check if job was cancelled before it started processing
       if (job.status === 'paused' || job.status === 'cancelled') {
-        console.log(`[ImportWorker] Job ${jobId} is ${job.status}, exiting early`);
         return;
       }
 
       // Set job to running and initialize/resume progress tracking
-      console.log(`[ImportWorker] Initializing job ${jobId}...`);
-      
       const startDate = new Date(job.startDate);
       const endDate = new Date(job.endDate);
       const dataTypes = job.dataTypes;
-      console.log(`[ImportWorker] Dates: ${startDate.toISOString()} to ${endDate.toISOString()}`);
-      console.log(`[ImportWorker] DataTypes: ${JSON.stringify(dataTypes)}`);
       
       const progress: any = safeJsonParse(job.progress, {});
-      console.log(`[ImportWorker] Parsed progress:`, progress);
       
       // Initialize API tracking if not present
       if (!progress.apiCallCount) {
@@ -90,17 +74,14 @@ export class ImportWorker {
       
       // Store baseline API count from previous session (if resuming)
       const baselineApiCallCount = progress.apiCallCount || 0;
-      console.log(`[ImportWorker] Baseline API call count: ${baselineApiCallCount}`);
       
       // Reset the API counter to track only this session's calls
       mindbodyService.resetApiCallCount();
       
-      console.log(`[ImportWorker] Updating job ${jobId} status to 'running'...`);
       await storage.updateImportJob(jobId, { 
         status: 'running',
         progress: JSON.stringify(progress),
       });
-      console.log(`[ImportWorker] Job ${jobId} status updated to 'running'`);
 
       // Process clients
       if (dataTypes.includes('clients') && !progress.clients?.completed) {
@@ -142,14 +123,8 @@ export class ImportWorker {
       }
 
       // Process sales
-      console.log(`[ImportWorker] Checking if should process sales...`);
-      console.log(`[ImportWorker] dataTypes.includes('sales'):`, dataTypes.includes('sales'));
-      console.log(`[ImportWorker] progress.sales?.completed:`, progress.sales?.completed);
-      
       if (dataTypes.includes('sales') && !progress.sales?.completed) {
-        console.log(`[ImportWorker] Starting sales processing for job ${jobId}...`);
         await this.processSales(job, startDate, endDate, progress, baselineApiCallCount);
-        console.log(`[ImportWorker] Sales processing completed for job ${jobId}`);
         
         // API call count is already updated within processSales
         
@@ -338,19 +313,15 @@ export class ImportWorker {
     progress: any,
     baselineApiCallCount: number = 0
   ): Promise<void> {
-    console.log(`[ImportWorker] processSales called for job ${job.id}`);
-    console.log(`[ImportWorker] processSales - startDate:`, startDate);
-    console.log(`[ImportWorker] processSales - endDate:`, endDate);
-    
     if (!progress.sales) {
-      console.log(`[ImportWorker] Initializing progress.sales`);
       progress.sales = { current: 0, total: 0, imported: 0, completed: false };
     }
-    console.log(`[ImportWorker] progress.sales initialized:`, progress.sales);
+
+    // OPTIMIZATION: Load all students once instead of per-batch
+    const allStudents = await storage.getStudents(job.organizationId, 100000);
 
     let batchResult;
     do {
-      console.log(`[ImportWorker] Starting sales batch import loop...`);
       // Check if job has been cancelled before processing next batch
       const currentJob = await storage.getImportJob(job.id);
       if (currentJob?.status === 'paused' || currentJob?.status === 'cancelled') {
@@ -358,13 +329,11 @@ export class ImportWorker {
         return;
       }
 
-      console.log(`[ImportWorker] Calling importSalesResumable...`);
-      try {
-        batchResult = await mindbodyService.importSalesResumable(
-          job.organizationId,
-          startDate,
-          endDate,
-          async (current, total) => {
+      batchResult = await mindbodyService.importSalesResumable(
+        job.organizationId,
+        startDate,
+        endDate,
+        async (current, total) => {
           progress.sales.current = current;
           progress.sales.total = total;
           // Update API call count in progress callback
@@ -375,23 +344,20 @@ export class ImportWorker {
             currentOffset: current,
           });
         },
-        progress.sales.current || 0
+        progress.sales.current || 0,
+        allStudents // Pass cached students to avoid reloading
       );
 
-        progress.sales.imported += batchResult.imported;
-        progress.sales.current = batchResult.nextStudentIndex;
-        progress.sales.completed = batchResult.completed;
+      progress.sales.imported += batchResult.imported;
+      progress.sales.current = batchResult.nextStudentIndex;
+      progress.sales.completed = batchResult.completed;
 
-        // Update API call count after batch
-        progress.apiCallCount = baselineApiCallCount + mindbodyService.getApiCallCount();
+      // Update API call count after batch
+      progress.apiCallCount = baselineApiCallCount + mindbodyService.getApiCallCount();
 
-        await storage.updateImportJob(job.id, {
-          progress: JSON.stringify(progress),
-        });
-      } catch (error) {
-        console.error(`[ImportWorker] ERROR in importSalesResumable:`, error);
-        throw error; // Re-throw to be caught by outer handler
-      }
+      await storage.updateImportJob(job.id, {
+        progress: JSON.stringify(progress),
+      });
     } while (!batchResult.completed);
   }
 
