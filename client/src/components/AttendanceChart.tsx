@@ -1,12 +1,13 @@
-import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { useQuery } from "@tanstack/react-query";
-import { DatePicker } from "./DatePicker";
 
-export function AttendanceChart() {
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+interface AttendanceChartProps {
+  startDate?: Date;
+  endDate?: Date;
+}
+
+export function AttendanceChart({ startDate, endDate }: AttendanceChartProps) {
 
   const queryParams = new URLSearchParams();
   if (startDate) {
@@ -43,25 +44,23 @@ export function AttendanceChart() {
 
   const hasData = data && data.length > 0 && data.some(d => d.morning > 0 || d.afternoon > 0 || d.evening > 0);
 
+  // Generate description based on date range
+  const getDescription = () => {
+    if (startDate && endDate) {
+      return `Attendance distribution from ${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} to ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    } else if (startDate) {
+      return `Attendance distribution from ${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} to present`;
+    } else if (endDate) {
+      return `Attendance distribution through ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    }
+    return "Average attendance distribution across different time slots";
+  };
+
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <CardTitle>Class Attendance by Time</CardTitle>
-            <CardDescription>Average attendance distribution across different time slots</CardDescription>
-          </div>
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground whitespace-nowrap">Start:</span>
-              <DatePicker value={startDate} onChange={setStartDate} placeholder="Start date" />
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground whitespace-nowrap">End:</span>
-              <DatePicker value={endDate} onChange={setEndDate} placeholder="End date" />
-            </div>
-          </div>
-        </div>
+        <CardTitle>Class Attendance by Time</CardTitle>
+        <CardDescription>{getDescription()}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="h-[350px]">

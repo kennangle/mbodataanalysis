@@ -11,8 +11,10 @@ import { DataImportCard } from "@/components/DataImportCard";
 import { AIQueryInterface } from "@/components/AIQueryInterface";
 import { StudentsTable } from "@/components/StudentsTable";
 import { WebhookManagement } from "@/components/WebhookManagement";
+import { DatePicker } from "@/components/DatePicker";
 import { Button } from "@/components/ui/button";
-import { LogOut } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LogOut, Calendar } from "lucide-react";
 
 export default function Dashboard() {
   const { user, isLoading, logout } = useAuth();
@@ -74,14 +76,71 @@ export default function Dashboard() {
             <div className="max-w-screen-2xl mx-auto space-y-6">
               <DashboardStats startDate={startDate} endDate={endDate} />
               
+              {/* Centralized Date Range Picker */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <CardTitle className="text-base">Date Range Filter</CardTitle>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setStartDate(undefined);
+                        setEndDate(undefined);
+                      }}
+                      disabled={!startDate && !endDate}
+                      data-testid="button-clear-dates"
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground whitespace-nowrap">Start:</span>
+                      <DatePicker 
+                        value={startDate} 
+                        onChange={setStartDate} 
+                        placeholder="All time" 
+                        data-testid="datepicker-start"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground whitespace-nowrap">End:</span>
+                      <DatePicker 
+                        value={endDate} 
+                        onChange={setEndDate} 
+                        placeholder="All time"
+                        data-testid="datepicker-end"
+                      />
+                    </div>
+                    {(startDate || endDate) && (
+                      <div className="text-sm text-muted-foreground">
+                        {startDate && endDate
+                          ? `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+                          : startDate
+                            ? `From ${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+                            : `Through ${endDate?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+                        }
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
               <div className="grid gap-6 lg:grid-cols-2">
                 <RevenueChart 
                   startDate={startDate} 
                   endDate={endDate}
-                  onStartDateChange={setStartDate}
-                  onEndDateChange={setEndDate}
                 />
-                <AttendanceChart />
+                <AttendanceChart 
+                  startDate={startDate}
+                  endDate={endDate}
+                />
               </div>
 
               <div className="grid gap-6 lg:grid-cols-2">
