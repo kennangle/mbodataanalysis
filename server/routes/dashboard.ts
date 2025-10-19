@@ -20,7 +20,8 @@ export function registerDashboardRoutes(app: Express) {
       const [
         totalStudentCount,
         activeStudentCount,
-        revenueStats,
+        allTimeRevenueStats,
+        thisMonthRevenueStats,
         lastMonthRevenueStats,
         attendanceRecords,
         lastMonthAttendanceRecords,
@@ -28,6 +29,7 @@ export function registerDashboardRoutes(app: Express) {
       ] = await Promise.all([
         storage.getStudentCount(organizationId),
         storage.getActiveStudentCount(organizationId),
+        storage.getAllTimeRevenueStats(organizationId),
         storage.getRevenueStats(organizationId, thisMonth, now),
         storage.getRevenueStats(organizationId, lastMonth, thisMonth),
         storage.getAttendance(organizationId), // Get ALL attendance records
@@ -44,7 +46,7 @@ export function registerDashboardRoutes(app: Express) {
         : 0;
 
       const revenueChange = lastMonthRevenueStats.total > 0
-        ? ((revenueStats.total - lastMonthRevenueStats.total) / lastMonthRevenueStats.total) * 100
+        ? ((thisMonthRevenueStats.total - lastMonthRevenueStats.total) / lastMonthRevenueStats.total) * 100
         : 0;
 
       const attendanceChange = lastMonthAttendanceRate > 0
@@ -59,7 +61,7 @@ export function registerDashboardRoutes(app: Express) {
       console.log(`[Dashboard Stats] Attendance records count: ${attendanceRecords.length}`);
       
       res.json({
-        totalRevenue: revenueStats.total,
+        totalRevenue: allTimeRevenueStats.total,
         revenueChange: revenueChange.toFixed(1),
         activeStudents: activeStudentCount,
         totalStudents: totalStudentCount,

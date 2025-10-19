@@ -85,6 +85,7 @@ export interface IStorage {
   upsertRevenue(revenue: InsertRevenue): Promise<Revenue>;
   getSalesCount(organizationId: string): Promise<number>;
   getRevenueStats(organizationId: string, startDate: Date, endDate: Date): Promise<{ total: number; count: number }>;
+  getAllTimeRevenueStats(organizationId: string): Promise<{ total: number; count: number }>;
   getMonthlyRevenueTrend(organizationId: string, startDate?: Date, endDate?: Date): Promise<Array<{ month: string; revenue: number; students: number }>>;
   getAttendanceByTimeSlot(organizationId: string, startDate?: Date, endDate?: Date): Promise<Array<{ day: string; morning: number; afternoon: number; evening: number }>>;
   
@@ -463,6 +464,20 @@ export class DbStorage implements IStorage {
         lt(revenue.transactionDate, nextDay)
       )
     );
+    
+    return {
+      total: Number(result[0].total || 0),
+      count: Number(result[0].count || 0)
+    };
+  }
+
+  async getAllTimeRevenueStats(organizationId: string): Promise<{ total: number; count: number }> {
+    const result = await db.select({
+      total: sql<number>`sum(CAST(${revenue.amount} AS NUMERIC))`,
+      count: sql<number>`count(*)`
+    })
+    .from(revenue)
+    .where(eq(revenue.organizationId, organizationId));
     
     return {
       total: Number(result[0].total || 0),
