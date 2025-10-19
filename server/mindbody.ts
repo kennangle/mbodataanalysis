@@ -618,19 +618,29 @@ export class MindbodyService {
     const allStudents = cachedStudents || await storage.getStudents(organizationId, 100000);
     const studentMap = new Map(allStudents.map(s => [s.mindbodyClientId, s.id]));
     
-    console.log(`[Sales Import] Fetching site-level sales from offset ${startOffset}, date range: ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`);
+    const dateFormat = startDate.toISOString().split('T')[0]; // YYYY-MM-DD
+    const endDateFormat = endDate.toISOString().split('T')[0];
+    
+    console.log(`[Sales Import] Fetching site-level sales, date range: ${dateFormat} to ${endDateFormat}`);
     
     try {
-      // Fetch sales at site level with pagination
-      const { results: sales, pagination } = await this.fetchAllPages<any>(
+      // Make a test call to see what we get
+      const testEndpoint = `/sale/sales?StartDate=${dateFormat}&EndDate=${endDateFormat}&Limit=10&Offset=0`;
+      console.log(`[Sales Import] Test endpoint: ${testEndpoint}`);
+      
+      const testData = await this.makeAuthenticatedRequest(organizationId, testEndpoint);
+      console.log(`[Sales Import] API Response:`, JSON.stringify(testData).substring(0, 500));
+      console.log(`[Sales Import] PaginationResponse:`, JSON.stringify(testData.PaginationResponse));
+      
+      // Fetch all sales using the pagination helper
+      const { results: sales } = await this.fetchAllPages<any>(
         organizationId,
-        `/sale/sales?StartDate=${startDate.toISOString().split('T')[0]}&EndDate=${endDate.toISOString().split('T')[0]}`,
+        `/sale/sales?StartDate=${dateFormat}&EndDate=${endDateFormat}`,
         'Sales',
-        SALES_BATCH_SIZE,
-        startOffset
+        SALES_BATCH_SIZE
       );
       
-      console.log(`[Sales Import] Found ${sales.length} sales, pagination total: ${pagination?.TotalResults || 'unknown'}`);
+      console.log(`[Sales Import] Fetched ${sales.length} total sales`);
       
       let imported = 0;
       
@@ -693,21 +703,12 @@ export class MindbodyService {
         }
       }
       
-      // Report progress
-      const totalSales = pagination?.TotalResults || sales.length;
-      await onProgress(startOffset + sales.length, totalSales);
+      // Since fetchAllPages gets everything, we're done in one call
+      await onProgress(sales.length, sales.length);
       
-      // Determine if there are more sales to fetch
-      const completed = sales.length < SALES_BATCH_SIZE || (pagination && startOffset + sales.length >= pagination.TotalResults);
-      const nextOffset = startOffset + sales.length;
+      console.log(`[Sales Import] Completed - imported ${imported} revenue records from ${sales.length} sales`);
       
-      console.log(`[Sales Import] Imported ${imported} revenue records, nextOffset: ${nextOffset}, completed: ${completed}`);
-      
-      if (!completed) {
-        await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
-      }
-      
-      return { imported, nextStudentIndex: nextOffset, completed };
+      return { imported, nextStudentIndex: sales.length, completed: true };
     } catch (error) {
       console.error(`Failed to fetch site-level sales:`, error);
       throw error;
