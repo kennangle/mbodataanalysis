@@ -64,15 +64,21 @@ export class ImportWorker {
 
       // Check if job was cancelled before it started processing
       if (job.status === 'paused' || job.status === 'cancelled') {
+        console.log(`[ImportWorker] Job ${jobId} is ${job.status}, exiting early`);
         return;
       }
 
       // Set job to running and initialize/resume progress tracking
+      console.log(`[ImportWorker] Initializing job ${jobId}...`);
       
       const startDate = new Date(job.startDate);
       const endDate = new Date(job.endDate);
       const dataTypes = job.dataTypes;
+      console.log(`[ImportWorker] Dates: ${startDate.toISOString()} to ${endDate.toISOString()}`);
+      console.log(`[ImportWorker] DataTypes: ${JSON.stringify(dataTypes)}`);
+      
       const progress: any = safeJsonParse(job.progress, {});
+      console.log(`[ImportWorker] Parsed progress:`, progress);
       
       // Initialize API tracking if not present
       if (!progress.apiCallCount) {
@@ -84,14 +90,17 @@ export class ImportWorker {
       
       // Store baseline API count from previous session (if resuming)
       const baselineApiCallCount = progress.apiCallCount || 0;
+      console.log(`[ImportWorker] Baseline API call count: ${baselineApiCallCount}`);
       
       // Reset the API counter to track only this session's calls
       mindbodyService.resetApiCallCount();
       
+      console.log(`[ImportWorker] Updating job ${jobId} status to 'running'...`);
       await storage.updateImportJob(jobId, { 
         status: 'running',
         progress: JSON.stringify(progress),
       });
+      console.log(`[ImportWorker] Job ${jobId} status updated to 'running'`);
 
       // Process clients
       if (dataTypes.includes('clients') && !progress.clients?.completed) {
