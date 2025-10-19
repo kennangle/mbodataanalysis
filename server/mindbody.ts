@@ -696,6 +696,11 @@ export class MindbodyService {
       
       console.log(`[Sales Import] Fetched ${sales.length} total sales`);
       
+      // DEBUG: Log first sale completely to see structure
+      if (sales.length > 0) {
+        console.log(`[DEBUG] Complete first sale structure:`, JSON.stringify(sales[0], null, 2));
+      }
+      
       let imported = 0;
       let matchedClients = 0;
       let unmatchedClients = 0;
