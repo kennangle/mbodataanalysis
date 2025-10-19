@@ -50,7 +50,7 @@ export function StudentsTable() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateRange, setDateRange] = useState<DateRange>({ from: undefined, to: undefined });
-  
+
   const queryParams = new URLSearchParams();
   if (statusFilter && statusFilter !== "all") {
     queryParams.append("status", statusFilter);
@@ -61,16 +61,17 @@ export function StudentsTable() {
   if (dateRange.to) {
     queryParams.append("endDate", dateRange.to.toISOString());
   }
-  
+
   const queryString = queryParams.toString();
   const url = queryString ? `/api/students?${queryString}` : "/api/students";
   const { data, isLoading } = useQuery<{ students: Student[]; count: number }>({
     queryKey: [url],
   });
 
-  const filteredStudents = (data?.students || []).filter((student) =>
-    `${student.firstName} ${student.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
-    student.email?.toLowerCase().includes(search.toLowerCase())
+  const filteredStudents = (data?.students || []).filter(
+    (student) =>
+      `${student.firstName} ${student.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
+      student.email?.toLowerCase().includes(search.toLowerCase())
   );
 
   const clearDateRange = () => {
@@ -81,16 +82,16 @@ export function StudentsTable() {
     const exportData = filteredStudents.map((student) => ({
       "First Name": student.firstName,
       "Last Name": student.lastName,
-      "Email": student.email || "",
-      "Status": student.status,
-      "Membership": student.membershipType || "",
+      Email: student.email || "",
+      Status: student.status,
+      Membership: student.membershipType || "",
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Students");
 
-    const fileName = `students_${new Date().toISOString().split('T')[0]}.xlsx`;
+    const fileName = `students_${new Date().toISOString().split("T")[0]}.xlsx`;
     XLSX.writeFile(workbook, fileName);
   };
 
@@ -126,7 +127,7 @@ export function StudentsTable() {
               </Button>
             </div>
           </div>
-          
+
           <div className="flex flex-wrap gap-2">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[160px]" data-testid="select-status-filter">
@@ -138,7 +139,7 @@ export function StudentsTable() {
                 <SelectItem value="inactive">Inactive</SelectItem>
               </SelectContent>
             </Select>
-            
+
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -153,7 +154,8 @@ export function StudentsTable() {
                   {dateRange.from ? (
                     dateRange.to ? (
                       <>
-                        {format(dateRange.from, "MMM d, yyyy")} - {format(dateRange.to, "MMM d, yyyy")}
+                        {format(dateRange.from, "MMM d, yyyy")} -{" "}
+                        {format(dateRange.to, "MMM d, yyyy")}
                       </>
                     ) : (
                       format(dateRange.from, "MMM d, yyyy")
@@ -174,7 +176,7 @@ export function StudentsTable() {
                 />
               </PopoverContent>
             </Popover>
-            
+
             {(statusFilter !== "all" || dateRange.from || dateRange.to) && (
               <Button
                 variant="ghost"
@@ -200,7 +202,9 @@ export function StudentsTable() {
         ) : filteredStudents.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-muted-foreground mb-2">No students found</p>
-            <p className="text-sm text-muted-foreground">Import your Mindbody data to get started</p>
+            <p className="text-sm text-muted-foreground">
+              Import your Mindbody data to get started
+            </p>
           </div>
         ) : (
           <div className="rounded-md border">
@@ -220,9 +224,7 @@ export function StudentsTable() {
                     <TableCell className="font-medium">
                       {student.firstName} {student.lastName}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {student.email || "—"}
-                    </TableCell>
+                    <TableCell className="text-muted-foreground">{student.email || "—"}</TableCell>
                     <TableCell>
                       {student.membershipType ? (
                         <Badge variant="default">{student.membershipType}</Badge>
@@ -238,7 +240,11 @@ export function StudentsTable() {
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" data-testid={`button-actions-${student.id}`}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            data-testid={`button-actions-${student.id}`}
+                          >
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>

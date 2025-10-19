@@ -173,9 +173,7 @@ export default function Notifications() {
               </Card>
 
               <div className="flex justify-end">
-                <Button data-testid="button-save-notifications">
-                  Save Preferences
-                </Button>
+                <Button data-testid="button-save-notifications">Save Preferences</Button>
               </div>
             </div>
           </main>

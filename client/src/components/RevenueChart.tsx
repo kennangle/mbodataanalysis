@@ -1,5 +1,14 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
 import { useQuery } from "@tanstack/react-query";
 
 interface RevenueChartProps {
@@ -8,7 +17,6 @@ interface RevenueChartProps {
 }
 
 export function RevenueChart({ startDate, endDate }: RevenueChartProps) {
-
   const queryParams = new URLSearchParams();
   if (startDate) {
     queryParams.append("startDate", startDate.toISOString());
@@ -18,20 +26,24 @@ export function RevenueChart({ startDate, endDate }: RevenueChartProps) {
   }
 
   const queryString = queryParams.toString();
-  const queryKey = queryString 
+  const queryKey = queryString
     ? `/api/dashboard/revenue-trend?${queryString}`
     : "/api/dashboard/revenue-trend";
 
-  const { data, isLoading } = useQuery<Array<{ month: string; revenue: number; students: number }>>({
-    queryKey: [queryKey],
-  });
+  const { data, isLoading } = useQuery<Array<{ month: string; revenue: number; students: number }>>(
+    {
+      queryKey: [queryKey],
+    }
+  );
 
   if (isLoading) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>Revenue & Growth Trend</CardTitle>
-          <CardDescription>Monthly revenue and student enrollment over the past year</CardDescription>
+          <CardDescription>
+            Monthly revenue and student enrollment over the past year
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="h-[350px] flex items-center justify-center">
@@ -42,16 +54,16 @@ export function RevenueChart({ startDate, endDate }: RevenueChartProps) {
     );
   }
 
-  const hasData = data && data.length > 0 && data.some(d => d.revenue > 0);
+  const hasData = data && data.length > 0 && data.some((d) => d.revenue > 0);
 
   // Generate description based on date range
   const getDescription = () => {
     if (startDate && endDate) {
-      return `Monthly revenue from ${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} to ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+      return `Monthly revenue from ${startDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} to ${endDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
     } else if (startDate) {
-      return `Monthly revenue from ${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} to present`;
+      return `Monthly revenue from ${startDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} to present`;
     } else if (endDate) {
-      return `Monthly revenue through ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+      return `Monthly revenue through ${endDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
     }
     return "Monthly revenue and student enrollment over the past year";
   };
@@ -75,16 +87,13 @@ export function RevenueChart({ startDate, endDate }: RevenueChartProps) {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" opacity={0.3} />
-                <XAxis 
-                  dataKey="month" 
-                  className="text-xs" 
+                <XAxis
+                  dataKey="month"
+                  className="text-xs"
                   tick={{ fill: "hsl(var(--muted-foreground))" }}
                 />
-                <YAxis 
-                  className="text-xs" 
-                  tick={{ fill: "hsl(var(--muted-foreground))" }}
-                />
-                <Tooltip 
+                <YAxis className="text-xs" tick={{ fill: "hsl(var(--muted-foreground))" }} />
+                <Tooltip
                   contentStyle={{
                     backgroundColor: "hsl(var(--popover))",
                     border: "1px solid hsl(var(--border))",
@@ -93,18 +102,18 @@ export function RevenueChart({ startDate, endDate }: RevenueChartProps) {
                   labelStyle={{ color: "hsl(var(--foreground))" }}
                 />
                 <Legend />
-                <Line 
-                  type="monotone" 
-                  dataKey="revenue" 
-                  stroke="hsl(var(--primary))" 
+                <Line
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="hsl(var(--primary))"
                   strokeWidth={2}
                   dot={{ fill: "hsl(var(--primary))", r: 4 }}
                   activeDot={{ r: 6 }}
                 />
-                <Line 
-                  type="monotone" 
-                  dataKey="students" 
-                  stroke="hsl(var(--chart-2))" 
+                <Line
+                  type="monotone"
+                  dataKey="students"
+                  stroke="hsl(var(--chart-2))"
                   strokeWidth={2}
                   dot={{ fill: "hsl(var(--chart-2))", r: 4 }}
                   activeDot={{ r: 6 }}

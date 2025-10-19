@@ -8,9 +8,9 @@ const app = express();
 // Webhook endpoint needs raw body for signature verification
 // Apply conditional JSON parsing: use raw body for webhooks, JSON for everything else
 app.use((req, res, next) => {
-  if (req.path === '/api/webhooks/mindbody' && req.method === 'POST') {
+  if (req.path === "/api/webhooks/mindbody" && req.method === "POST") {
     // For webhooks, capture raw body and parse JSON manually
-    express.raw({ type: 'application/json' })(req, res, () => {
+    express.raw({ type: "application/json" })(req, res, () => {
       try {
         // Store raw body for signature verification
         (req as any).rawBody = (req as any).body;
@@ -68,27 +68,28 @@ app.use((req, res, next) => {
     const { db } = await import("./db");
     const { importJobs } = await import("@shared/schema");
     const { eq } = await import("drizzle-orm");
-    
-    const runningJobs = await db.select().from(importJobs).where(eq(importJobs.status, 'running'));
-    
+
+    const runningJobs = await db.select().from(importJobs).where(eq(importJobs.status, "running"));
+
     if (runningJobs.length > 0) {
       console.log(`Found ${runningJobs.length} orphaned import job(s), marking as failed...`);
       for (const job of runningJobs) {
-        await db.update(importJobs)
-          .set({ 
-            status: 'failed',
-            error: 'Import interrupted by application restart. You can start a new import.',
-            updatedAt: new Date()
+        await db
+          .update(importJobs)
+          .set({
+            status: "failed",
+            error: "Import interrupted by application restart. You can start a new import.",
+            updatedAt: new Date(),
           })
           .where(eq(importJobs.id, job.id));
       }
       console.log(`Successfully cleaned up ${runningJobs.length} orphaned job(s)`);
     }
   } catch (error) {
-    console.error('Failed to clean up orphaned import jobs on startup:', error);
+    console.error("Failed to clean up orphaned import jobs on startup:", error);
     // Don't abort startup if cleanup fails
   }
-  
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -112,12 +113,15 @@ app.use((req, res, next) => {
   // Other ports are firewalled. Default to 5000 if not specified.
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });
+  const port = parseInt(process.env.PORT || "5000", 10);
+  server.listen(
+    {
+      port,
+      host: "0.0.0.0",
+      reusePort: true,
+    },
+    () => {
+      log(`serving on port ${port}`);
+    }
+  );
 })();

@@ -62,9 +62,10 @@ export default function Classes() {
     "--sidebar-width-icon": "3rem",
   };
 
-  const filteredClasses = (data || []).filter((cls) =>
-    cls.name.toLowerCase().includes(search.toLowerCase()) ||
-    cls.description?.toLowerCase().includes(search.toLowerCase())
+  const filteredClasses = (data || []).filter(
+    (cls) =>
+      cls.name.toLowerCase().includes(search.toLowerCase()) ||
+      cls.description?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (

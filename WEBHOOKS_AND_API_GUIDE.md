@@ -1,6 +1,7 @@
 # Mindbody Webhooks & API Management Guide
 
 ## Table of Contents
+
 1. [Webhook Integration](#webhook-integration)
 2. [Multi-Day Import Scheduling](#multi-day-import-scheduling)
 3. [API Tier Upgrade Guide](#api-tier-upgrade-guide)
@@ -10,21 +11,25 @@
 ## 1. Webhook Integration
 
 ### Overview
+
 Webhooks provide real-time synchronization of Mindbody data without consuming API call limits. After completing an initial bulk import, webhooks keep your data current automatically.
 
 ### How It Works
+
 - Mindbody sends instant notifications when visits are created or updated
 - Your platform receives the webhook, validates the signature, and updates the database
 - No API calls needed for ongoing synchronization
 - Eliminates the need for repeated bulk imports
 
 ### Available Webhook Events
+
 - `classVisit.created` - Triggered when a new class visit/booking is created
 - `classVisit.updated` - Triggered when a class visit is modified
 
 ### Setup Instructions
 
 #### Step 1: Create a Webhook Subscription
+
 ```bash
 POST /api/webhooks/subscriptions
 Content-Type: application/json
@@ -35,6 +40,7 @@ Content-Type: application/json
 ```
 
 **Response:**
+
 ```json
 {
   "id": "uuid",
@@ -48,6 +54,7 @@ Content-Type: application/json
 ```
 
 #### Step 2: Monitor Webhook Activity
+
 ```bash
 GET /api/webhooks/subscriptions
 ```
@@ -55,6 +62,7 @@ GET /api/webhooks/subscriptions
 Lists all active webhook subscriptions for your organization.
 
 #### Step 3: Delete a Subscription (Optional)
+
 ```bash
 DELETE /api/webhooks/subscriptions/:id
 ```
@@ -62,11 +70,13 @@ DELETE /api/webhooks/subscriptions/:id
 Removes the subscription from both Mindbody and your database.
 
 ### Security
+
 - **HMAC-SHA256 Signature Verification**: All incoming webhooks are verified using HMAC-SHA256
 - **Deduplication**: Messages are tracked by `messageId` to prevent duplicate processing
 - **Idempotent Processing**: Safe to receive the same event multiple times
 
 ### Webhook Processing Flow
+
 1. Mindbody sends POST request to `/api/webhooks/mindbody`
 2. Platform verifies signature using stored `messageSignatureKey`
 3. Event is stored in database with `processed: false`
@@ -78,6 +88,7 @@ Removes the subscription from both Mindbody and your database.
    - Mark event as processed
 
 ### Best Practices
+
 1. **Initial Import First**: Complete bulk import before enabling webhooks
 2. **Monitor Failed Events**: Check webhook_events table for processing errors
 3. **Handle Retries**: Mindbody retries failed webhooks every 15 minutes for 3 hours
@@ -86,16 +97,19 @@ Removes the subscription from both Mindbody and your database.
 ### Troubleshooting
 
 **Problem: Webhooks not being received**
+
 - Verify your webhook URL is publicly accessible (HTTPS required)
 - Check that subscription is in 'active' status
 - Ensure HEAD endpoint returns 200 OK
 
 **Problem: Signature verification fails**
+
 - Verify `messageSignatureKey` is stored correctly
 - Check that raw request body is used for verification
 - Ensure body parser doesn't modify the request body
 
 **Problem: Events not processing**
+
 - Check that students and classes are imported first
 - Verify `mindbodyClientId` and `mindbodyScheduleId` match
 - Review webhook_events table for error messages
@@ -105,17 +119,21 @@ Removes the subscription from both Mindbody and your database.
 ## 2. Multi-Session Import Scheduling
 
 ### The Challenge
+
 With 18,000+ visit records and a 5,000 API call/month free tier, large imports may exceed the free tier limit.
 
 ### Current Platform Features
 
 #### API Call Tracking
+
 The platform tracks your API usage in real-time:
+
 - **Current Count**: Shows total API calls made this month
 - **Rate Calculation**: Displays calls per hour
 - **Time to Limit**: Estimates when you'll hit the 5,000 free tier limit
 
 #### Pause & Resume Capability
+
 - **Automatic Checkpointing**: Import progress saved after each batch
 - **Resume Support**: Continue exactly where you left off
 - **Session Resilience**: Survives page reloads and disconnections
@@ -125,6 +143,7 @@ The platform tracks your API usage in real-time:
 ### Strategic Import Planning
 
 #### Option 1: Single Session Import (Within Free Tier)
+
 **Best for**: Organizations with up to 5,000 clients
 
 ```
@@ -134,12 +153,14 @@ Resume: Continue immediately if needed
 ```
 
 **Steps:**
+
 1. Start import with all data types selected
 2. Monitor API call counter
 3. When approaching ~4,500 calls, click "Pause Import" (to avoid paid charges)
 4. Resume immediately or continue into paid tier ($0.002/call after 5,000)
 
 #### Option 2: Data Type Segmentation
+
 **Best for**: Selective data needs or budget control
 
 ```
@@ -151,6 +172,7 @@ Session N: Import Sales
 ```
 
 **Steps:**
+
 1. Start import with only "Clients" selected
 2. Wait for completion
 3. Start new import with only "Classes" selected
@@ -158,6 +180,7 @@ Session N: Import Sales
 5. Resume immediately if you pause - no waiting required
 
 #### Option 3: Date Range Splitting
+
 **Best for**: Historical data imports
 
 ```
@@ -168,6 +191,7 @@ Day 4: Oct 1 - Dec 31 (Q4)
 ```
 
 **Steps:**
+
 1. Set start date: Jan 1, end date: Mar 31
 2. Start import
 3. Monitor and pause if needed
@@ -176,6 +200,7 @@ Day 4: Oct 1 - Dec 31 (Q4)
 ### Import Progress Indicators
 
 The platform shows:
+
 - ✅ **Progress Percentage**: Overall completion
 - ✅ **Records Imported**: Count per data type
 - ✅ **API Calls Used**: Real-time counter
@@ -195,12 +220,14 @@ The platform shows:
 **Scenario**: 5,000 clients, each with ~3-4 visit records
 
 **API Call Math**:
+
 - Clients import: ~5-10 calls (pagination)
 - Classes import: ~5-10 calls (pagination)
 - Visits import: ~5,000 calls (one per client)
 - Sales import: ~5,000 calls (one per client)
 
 **Strategic Approach**:
+
 ```
 Session 1: Import Clients + Classes (~20 calls)
 Session 2: Start Visits import, pause at ~4,500 calls to stay in free tier
@@ -211,6 +238,7 @@ Total Cost: ~$11 for complete 10,000+ call import - very affordable!
 ```
 
 ### After Import Completion
+
 1. **Enable Webhooks**: Set up `classVisit.created` subscription
 2. **Disable Scheduled Imports**: Webhooks keep data current
 3. **Periodic Full Sync**: Run quarterly full sync to catch any missed events
@@ -220,9 +248,11 @@ Total Cost: ~$11 for complete 10,000+ call import - very affordable!
 ## 3. API Tier & Pricing Guide
 
 ### Understanding Mindbody API Pricing
+
 The Mindbody API uses a simple, affordable pay-as-you-go model:
 
 #### Free Tier
+
 - **Cost**: $0/month
 - **Monthly Limit**: 5,000 API calls FREE
 - **Rate Limit**: Standard
@@ -230,6 +260,7 @@ The Mindbody API uses a simple, affordable pay-as-you-go model:
 - **Best For**: Small to medium studios, testing, development
 
 #### Pay-As-You-Go (After Free Tier)
+
 - **Cost**: $0.002 per API call after 5,000 calls
 - **Pricing**: $2 per 1,000 calls - very affordable!
 - **No Monthly Fee**: Only pay for what you use
@@ -241,11 +272,13 @@ The Mindbody API uses a simple, affordable pay-as-you-go model:
 ### When is the Paid Tier Worth It?
 
 The free tier (5,000 calls/month) is sufficient for:
+
 - ✅ Studios with up to 5,000 clients
 - ✅ Initial bulk import + webhook-based ongoing sync
 - ✅ Quarterly full re-syncs
 
 The paid tier makes sense when:
+
 - ✅ You have 5,000+ clients (only $2 per 1,000 calls!)
 - ✅ You need complete historical data import
 - ✅ You run frequent bulk reports
@@ -255,6 +288,7 @@ The paid tier makes sense when:
 ### Why Paid Tier is Affordable
 
 Unlike traditional API pricing that charges hundreds per month:
+
 - **No base fee**: $0 if you stay under 5,000 calls
 - **Pay only what you use**: $0.002/call is industry-leading low price
 - **No commitment**: No contracts or minimum spend
@@ -263,12 +297,15 @@ Unlike traditional API pricing that charges hundreds per month:
 ### How to Upgrade
 
 #### Step 1: Contact Mindbody
+
 - **Email**: api@mindbodyonline.com
 - **Portal**: https://developers.mindbodyonline.com/
 - **Sales**: Request quote via developer portal
 
 #### Step 2: Provide Business Case
+
 Include in your request:
+
 - Current API usage (show 1,000/day limit issue)
 - Number of clients/locations
 - Expected growth
@@ -276,13 +313,16 @@ Include in your request:
 - Integration requirements
 
 #### Step 3: Review Pricing
+
 Mindbody will provide:
+
 - Monthly/annual pricing options
 - Call volume limits
 - Service level agreements
 - Contract terms
 
 #### Step 4: Upgrade Process
+
 1. Sign updated API agreement
 2. Receive new API keys (may be same key with higher limits)
 3. Update limits in Mindbody developer portal
@@ -294,12 +334,14 @@ Mindbody will provide:
 #### Example: 2,000 Client Studio
 
 **Without Upgrade** (Free Tier):
+
 - 8-10 days for full import
 - Manual pause/resume management
 - Risk of missing real-time bookings during import
 - Staff time: ~30 min/day monitoring
 
 **With Standard Tier Upgrade** ($X/month):
+
 - Same-day full import
 - Automated scheduled imports
 - Real-time data confidence
@@ -333,6 +375,7 @@ If upgrading isn't feasible:
 ### Upgrade Checklist
 
 Before upgrading:
+
 - [ ] Document current API usage patterns
 - [ ] Calculate required daily call volume
 - [ ] Estimate annual call volume growth
@@ -343,6 +386,7 @@ Before upgrading:
 - [ ] Update documentation with new limits
 
 After upgrading:
+
 - [ ] Test API with higher limits
 - [ ] Update platform monitoring (adjust limit from 1,000 to new limit)
 - [ ] Configure automated imports if needed
@@ -352,17 +396,20 @@ After upgrading:
 ### Support Resources
 
 **Mindbody Developer Portal**: https://developers.mindbodyonline.com/
+
 - API documentation
 - Rate limit information
 - Support tickets
 - Community forum
 
 **Mindbody API Support**: api@mindbodyonline.com
+
 - Technical questions
 - Tier upgrade inquiries
 - Integration assistance
 
 **This Platform Support**:
+
 - Webhook configuration help
 - Import optimization strategies
 - API usage monitoring
@@ -372,6 +419,7 @@ After upgrading:
 ## Quick Reference
 
 ### Webhook Commands
+
 ```bash
 # Create subscription
 POST /api/webhooks/subscriptions
@@ -385,6 +433,7 @@ DELETE /api/webhooks/subscriptions/:id
 ```
 
 ### Import Strategy Decision Tree
+
 ```
 Do you have < 500 clients?
   YES → Use free tier + webhooks
@@ -404,6 +453,7 @@ Is this a one-time import?
 ```
 
 ### API Tier Selection
+
 ```
 < 500 clients → Free tier
 500-2,000 clients → Standard tier
@@ -471,15 +521,18 @@ A: Use Mindbody sandbox environment with test site ID.
 Press **Cmd+K** (or **Ctrl+K**) to access the command palette with AI-powered workflow shortcuts:
 
 ### Import & API Optimization
+
 - **`/diagnose`**: Investigate webhook or import issues systematically
 - **`/anal performance`**: Analyze API usage patterns and optimization opportunities
 - **`/deep`**: Comprehensive diagnosis for complex multi-day import problems
 
 ### Planning & Strategy
+
 - **`/suggest`**: Get detailed solution proposals for import strategies
 - **`/ask`**: Request confirmation before implementing API tier changes
 
 ### Monitoring & Debugging
+
 - **`/bug`**: Document webhook failures or import issues
 - **`/mobile`**: Optimize mobile experience for on-the-go import monitoring
 
@@ -487,4 +540,4 @@ For complete command reference and usage examples, see [slashcommands.md](./slas
 
 ---
 
-*Last Updated: October 2025*
+_Last Updated: October 2025_

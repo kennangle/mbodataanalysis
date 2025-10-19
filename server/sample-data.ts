@@ -2,15 +2,55 @@ import { storage } from "./storage";
 
 export async function createSampleData(organizationId: string) {
   const sampleStudents = [
-    { firstName: "Sarah", lastName: "Johnson", email: "sarah@example.com", phone: "555-0101", status: "active" as const, membershipType: "Unlimited" },
-    { firstName: "Michael", lastName: "Chen", email: "michael@example.com", phone: "555-0102", status: "active" as const, membershipType: "Monthly 10" },
-    { firstName: "Emily", lastName: "Rodriguez", email: "emily@example.com", phone: "555-0103", status: "active" as const, membershipType: "Unlimited" },
-    { firstName: "David", lastName: "Patel", email: "david@example.com", phone: "555-0104", status: "inactive" as const, membershipType: "Drop-in" },
-    { firstName: "Jessica", lastName: "Williams", email: "jessica@example.com", phone: "555-0105", status: "active" as const, membershipType: "Monthly 10" },
+    {
+      firstName: "Sarah",
+      lastName: "Johnson",
+      email: "sarah@example.com",
+      phone: "555-0101",
+      status: "active" as const,
+      membershipType: "Unlimited",
+    },
+    {
+      firstName: "Michael",
+      lastName: "Chen",
+      email: "michael@example.com",
+      phone: "555-0102",
+      status: "active" as const,
+      membershipType: "Monthly 10",
+    },
+    {
+      firstName: "Emily",
+      lastName: "Rodriguez",
+      email: "emily@example.com",
+      phone: "555-0103",
+      status: "active" as const,
+      membershipType: "Unlimited",
+    },
+    {
+      firstName: "David",
+      lastName: "Patel",
+      email: "david@example.com",
+      phone: "555-0104",
+      status: "inactive" as const,
+      membershipType: "Drop-in",
+    },
+    {
+      firstName: "Jessica",
+      lastName: "Williams",
+      email: "jessica@example.com",
+      phone: "555-0105",
+      status: "active" as const,
+      membershipType: "Monthly 10",
+    },
   ];
 
   const sampleClasses = [
-    { name: "Vinyasa Flow", description: "Dynamic flowing yoga practice", duration: 60, capacity: 20 },
+    {
+      name: "Vinyasa Flow",
+      description: "Dynamic flowing yoga practice",
+      duration: 60,
+      capacity: 20,
+    },
     { name: "Yin Yoga", description: "Deep stretch and relaxation", duration: 75, capacity: 15 },
     { name: "Power Yoga", description: "Strength building yoga", duration: 60, capacity: 18 },
     { name: "Meditation", description: "Guided meditation session", duration: 30, capacity: 25 },
@@ -56,14 +96,14 @@ export async function createSampleData(organizationId: string) {
   // Create class schedules and attendance records
   const schedules = [];
   const now = new Date();
-  
+
   for (const cls of classes) {
     for (let i = 0; i < 15; i++) {
       const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
       const startTime = new Date(date);
       startTime.setHours(9 + Math.floor(Math.random() * 8), 0, 0, 0);
       const endTime = new Date(startTime.getTime() + (cls.duration || 60) * 60 * 1000);
-      
+
       try {
         const schedule = await storage.createClassSchedule({
           organizationId,
@@ -102,7 +142,7 @@ export async function createSampleData(organizationId: string) {
   for (let i = 0; i < 20; i++) {
     const date = new Date(now.getTime() - Math.random() * 60 * 24 * 60 * 60 * 1000);
     const student = students[Math.floor(Math.random() * students.length)];
-    
+
     try {
       await storage.createRevenue({
         organizationId,

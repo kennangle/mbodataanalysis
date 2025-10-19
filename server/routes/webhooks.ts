@@ -1,14 +1,21 @@
 import type { Express } from "express";
 import { storage } from "../storage";
 import { requireAuth } from "../auth";
-import { insertStudentSchema, insertClassSchema, insertAttendanceSchema, insertRevenueSchema, insertUserSchema, organizations, webhookSubscriptions } from "@shared/schema";
+import {
+  insertStudentSchema,
+  insertClassSchema,
+  insertAttendanceSchema,
+  insertRevenueSchema,
+  insertUserSchema,
+  organizations,
+  webhookSubscriptions,
+} from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import type { User } from "@shared/schema";
 
 import { MindbodyService } from "../mindbody";
 import { openaiService } from "../openai";
 import { db } from "../db";
-
 
 export function registerWebhookRoutes(app: Express) {
   // Webhook routes
@@ -27,30 +34,28 @@ export function registerWebhookRoutes(app: Express) {
       // Check if organization has Mindbody site ID configured
       const org = await storage.getOrganization(organizationId);
       if (!org?.mindbodySiteId) {
-        return res.status(400).json({ 
-          error: "Mindbody integration not configured. Please complete a data import first to configure your Mindbody site ID." 
+        return res.status(400).json({
+          error:
+            "Mindbody integration not configured. Please complete a data import first to configure your Mindbody site ID.",
         });
       }
 
       // Build webhook URL for this deployment
-      let webhookUrl = 'http://localhost:5000/api/webhooks/mindbody';
+      let webhookUrl = "http://localhost:5000/api/webhooks/mindbody";
       if (process.env.REPLIT_DOMAINS) {
-        const domains = process.env.REPLIT_DOMAINS.split(',');
+        const domains = process.env.REPLIT_DOMAINS.split(",");
         webhookUrl = `https://${domains[0]}/api/webhooks/mindbody`;
       }
 
       const mindbodyService = new MindbodyService();
-      const { subscriptionId, messageSignatureKey } = await mindbodyService.createWebhookSubscription(
-        organizationId,
-        eventType,
-        webhookUrl
-      );
+      const { subscriptionId, messageSignatureKey } =
+        await mindbodyService.createWebhookSubscription(organizationId, eventType, webhookUrl);
 
       const subscription = await storage.createWebhookSubscription({
         organizationId,
         eventType,
         webhookUrl,
-        status: 'active',
+        status: "active",
         mindbodySubscriptionId: subscriptionId,
         messageSignatureKey,
         eventSchemaVersion: 1,
@@ -58,7 +63,8 @@ export function registerWebhookRoutes(app: Express) {
 
       res.json(subscription);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to create webhook subscription";
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to create webhook subscription";
       res.status(500).json({ error: errorMessage });
     }
   });
@@ -96,7 +102,10 @@ export function registerWebhookRoutes(app: Express) {
       // Delete from Mindbody
       if (subscription.mindbodySubscriptionId) {
         const mindbodyService = new MindbodyService();
-        await mindbodyService.deleteWebhookSubscription(organizationId, subscription.mindbodySubscriptionId);
+        await mindbodyService.deleteWebhookSubscription(
+          organizationId,
+          subscription.mindbodySubscriptionId
+        );
       }
 
       // Delete from our database
@@ -104,7 +113,8 @@ export function registerWebhookRoutes(app: Express) {
 
       res.json({ success: true });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to delete webhook subscription";
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to delete webhook subscription";
       res.status(500).json({ error: errorMessage });
     }
   });
@@ -131,8 +141,8 @@ export function registerWebhookRoutes(app: Express) {
 
   app.post("/api/webhooks/mindbody", async (req, res) => {
     try {
-      const signature = req.headers['x-mindbody-signature'] as string;
-      const rawBody = (req as any).rawBody?.toString() || '';
+      const signature = req.headers["x-mindbody-signature"] as string;
+      const rawBody = (req as any).rawBody?.toString() || "";
       const { messageId, eventType, siteId, classVisit } = req.body;
 
       if (!messageId) {
@@ -147,7 +157,7 @@ export function registerWebhookRoutes(app: Express) {
 
       // Find subscription for this event type and site
       const allSubs = await db.select().from(webhookSubscriptions);
-      const subscription = allSubs.find(s => s.eventType === eventType);
+      const subscription = allSubs.find((s) => s.eventType === eventType);
 
       if (!subscription) {
         console.log(`No subscription found for event type: ${eventType}`);
@@ -157,9 +167,13 @@ export function registerWebhookRoutes(app: Express) {
       // Verify signature
       if (signature && subscription.messageSignatureKey) {
         const mindbodyService = new MindbodyService();
-        const isValid = mindbodyService.verifyWebhookSignature(rawBody, signature, subscription.messageSignatureKey);
+        const isValid = mindbodyService.verifyWebhookSignature(
+          rawBody,
+          signature,
+          subscription.messageSignatureKey
+        );
         if (!isValid) {
-          console.error('Invalid webhook signature');
+          console.error("Invalid webhook signature");
           return res.status(401).json({ error: "Invalid signature" });
         }
       }
@@ -179,15 +193,17 @@ export function registerWebhookRoutes(app: Express) {
 
       // Process asynchronously
       try {
-        if (eventType === 'classVisit.created' || eventType === 'classVisit.updated') {
+        if (eventType === "classVisit.created" || eventType === "classVisit.updated") {
           // Find student by Mindbody client ID
           const students = await storage.getStudents(subscription.organizationId);
-          const student = students.find(s => s.mindbodyClientId === classVisit?.clientId);
+          const student = students.find((s) => s.mindbodyClientId === classVisit?.clientId);
 
           if (student && classVisit?.classId && classVisit?.visitDateTime) {
             // Find class schedule by Mindbody class ID
             const schedules = await storage.getClassSchedules(subscription.organizationId);
-            const schedule = schedules.find(s => s.mindbodyScheduleId === classVisit.classId.toString());
+            const schedule = schedules.find(
+              (s) => s.mindbodyScheduleId === classVisit.classId.toString()
+            );
 
             if (schedule) {
               // Create attendance record
@@ -208,15 +224,14 @@ export function registerWebhookRoutes(app: Express) {
           }
         }
       } catch (processingError) {
-        console.error('Error processing webhook:', processingError);
+        console.error("Error processing webhook:", processingError);
         await storage.updateWebhookEvent(event.id, {
           error: processingError instanceof Error ? processingError.message : "Processing failed",
         });
       }
     } catch (error) {
-      console.error('Webhook error:', error);
+      console.error("Webhook error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });
-
 }

@@ -7,7 +7,7 @@ function safeJsonParse<T = any>(value: any, fallback: T = {} as T): T {
   if (value === null || value === undefined) {
     return fallback;
   }
-  if (typeof value === 'object') {
+  if (typeof value === "object") {
     return value as T;
   }
   try {
@@ -53,7 +53,7 @@ export class ImportWorker {
       }
 
       // Check if job was cancelled before it started processing
-      if (job.status === 'paused' || job.status === 'cancelled') {
+      if (job.status === "paused" || job.status === "cancelled") {
         return;
       }
 
@@ -61,9 +61,9 @@ export class ImportWorker {
       const startDate = new Date(job.startDate);
       const endDate = new Date(job.endDate);
       const dataTypes = job.dataTypes;
-      
+
       const progress: any = safeJsonParse(job.progress, {});
-      
+
       // Initialize API tracking if not present
       if (!progress.apiCallCount) {
         progress.apiCallCount = 0;
@@ -71,73 +71,73 @@ export class ImportWorker {
       if (!progress.importStartTime) {
         progress.importStartTime = new Date().toISOString();
       }
-      
+
       // Store baseline API count from previous session (if resuming)
       const baselineApiCallCount = progress.apiCallCount || 0;
-      
+
       // Reset the API counter to track only this session's calls
       mindbodyService.resetApiCallCount();
-      
-      await storage.updateImportJob(jobId, { 
-        status: 'running',
+
+      await storage.updateImportJob(jobId, {
+        status: "running",
         progress: JSON.stringify(progress),
       });
 
       // Process clients
-      if (dataTypes.includes('clients') && !progress.clients?.completed) {
+      if (dataTypes.includes("clients") && !progress.clients?.completed) {
         await this.processClients(job, startDate, endDate, progress, baselineApiCallCount);
-        
+
         // API call count is already updated within processClients
-        
+
         // Check if job was cancelled during processing
         const updatedJob = await storage.getImportJob(jobId);
-        if (updatedJob?.status === 'paused' || updatedJob?.status === 'cancelled') {
+        if (updatedJob?.status === "paused" || updatedJob?.status === "cancelled") {
           return;
         }
       }
 
       // Process classes
-      if (dataTypes.includes('classes') && !progress.classes?.completed) {
+      if (dataTypes.includes("classes") && !progress.classes?.completed) {
         await this.processClasses(job, startDate, endDate, progress, baselineApiCallCount);
-        
+
         // API call count is already updated within processClasses
-        
+
         // Check if job was cancelled during processing
         const updatedJob = await storage.getImportJob(jobId);
-        if (updatedJob?.status === 'paused' || updatedJob?.status === 'cancelled') {
+        if (updatedJob?.status === "paused" || updatedJob?.status === "cancelled") {
           return;
         }
       }
 
       // Process visits
-      if (dataTypes.includes('visits') && !progress.visits?.completed) {
+      if (dataTypes.includes("visits") && !progress.visits?.completed) {
         await this.processVisits(job, startDate, endDate, progress, baselineApiCallCount);
-        
+
         // API call count is already updated within processVisits
-        
+
         // Check if job was cancelled during processing
         const updatedJob = await storage.getImportJob(jobId);
-        if (updatedJob?.status === 'paused' || updatedJob?.status === 'cancelled') {
+        if (updatedJob?.status === "paused" || updatedJob?.status === "cancelled") {
           return;
         }
       }
 
       // Process sales
-      if (dataTypes.includes('sales') && !progress.sales?.completed) {
+      if (dataTypes.includes("sales") && !progress.sales?.completed) {
         await this.processSales(job, startDate, endDate, progress, baselineApiCallCount);
-        
+
         // API call count is already updated within processSales
-        
+
         // Check if job was cancelled during processing
         const updatedJob = await storage.getImportJob(jobId);
-        if (updatedJob?.status === 'paused' || updatedJob?.status === 'cancelled') {
+        if (updatedJob?.status === "paused" || updatedJob?.status === "cancelled") {
           return;
         }
       }
 
       // Mark job as completed
       await storage.updateImportJob(jobId, {
-        status: 'completed',
+        status: "completed",
         progress: JSON.stringify(progress),
       });
 
@@ -145,8 +145,8 @@ export class ImportWorker {
     } catch (error) {
       console.error(`Error processing job ${jobId}:`, error);
       await storage.updateImportJob(jobId, {
-        status: 'failed',
-        error: error instanceof Error ? error.message : 'Unknown error',
+        status: "failed",
+        error: error instanceof Error ? error.message : "Unknown error",
       });
     } finally {
       this.isProcessing = false;
@@ -169,7 +169,7 @@ export class ImportWorker {
     do {
       // Check if job has been cancelled before processing next batch
       const currentJob = await storage.getImportJob(job.id);
-      if (currentJob?.status === 'paused' || currentJob?.status === 'cancelled') {
+      if (currentJob?.status === "paused" || currentJob?.status === "cancelled") {
         return;
       }
 
@@ -184,7 +184,7 @@ export class ImportWorker {
           progress.apiCallCount = baselineApiCallCount + mindbodyService.getApiCallCount();
           await storage.updateImportJob(job.id, {
             progress: JSON.stringify(progress),
-            currentDataType: 'clients',
+            currentDataType: "clients",
             currentOffset: current,
           });
         },
@@ -220,7 +220,7 @@ export class ImportWorker {
     do {
       // Check if job has been cancelled before processing next batch
       const currentJob = await storage.getImportJob(job.id);
-      if (currentJob?.status === 'paused' || currentJob?.status === 'cancelled') {
+      if (currentJob?.status === "paused" || currentJob?.status === "cancelled") {
         return;
       }
 
@@ -235,7 +235,7 @@ export class ImportWorker {
           progress.apiCallCount = baselineApiCallCount + mindbodyService.getApiCallCount();
           await storage.updateImportJob(job.id, {
             progress: JSON.stringify(progress),
-            currentDataType: 'classes',
+            currentDataType: "classes",
             currentOffset: current,
           });
         },
@@ -270,7 +270,7 @@ export class ImportWorker {
     do {
       // Check if job has been cancelled before processing next batch
       const currentJob = await storage.getImportJob(job.id);
-      if (currentJob?.status === 'paused' || currentJob?.status === 'cancelled') {
+      if (currentJob?.status === "paused" || currentJob?.status === "cancelled") {
         console.log(`Job ${job.id} has been cancelled, stopping visits import`);
         return;
       }
@@ -286,7 +286,7 @@ export class ImportWorker {
           progress.apiCallCount = baselineApiCallCount + mindbodyService.getApiCallCount();
           await storage.updateImportJob(job.id, {
             progress: JSON.stringify(progress),
-            currentDataType: 'visits',
+            currentDataType: "visits",
             currentOffset: current,
           });
         },
@@ -324,7 +324,7 @@ export class ImportWorker {
     do {
       // Check if job has been cancelled before processing next batch
       const currentJob = await storage.getImportJob(job.id);
-      if (currentJob?.status === 'paused' || currentJob?.status === 'cancelled') {
+      if (currentJob?.status === "paused" || currentJob?.status === "cancelled") {
         console.log(`Job ${job.id} has been cancelled, stopping sales import`);
         return;
       }
@@ -340,7 +340,7 @@ export class ImportWorker {
           progress.apiCallCount = baselineApiCallCount + mindbodyService.getApiCallCount();
           await storage.updateImportJob(job.id, {
             progress: JSON.stringify(progress),
-            currentDataType: 'sales',
+            currentDataType: "sales",
             currentOffset: current,
           });
         },

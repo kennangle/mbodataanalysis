@@ -14,7 +14,11 @@ export interface SendPasswordResetEmailParams {
   resetLink: string;
 }
 
-export async function sendPasswordResetEmail({ toEmail, toName, resetLink }: SendPasswordResetEmailParams) {
+export async function sendPasswordResetEmail({
+  toEmail,
+  toName,
+  resetLink,
+}: SendPasswordResetEmailParams) {
   if (!process.env.BREVO_API_KEY) {
     console.error("Cannot send password reset email: BREVO_API_KEY not configured");
     throw new Error("Email service not configured");
@@ -24,7 +28,7 @@ export async function sendPasswordResetEmail({ toEmail, toName, resetLink }: Sen
   sendSmtpEmail.subject = "Reset Your Password";
   sendSmtpEmail.sender = {
     name: "Mindbody Analytics",
-    email: process.env.BREVO_SENDER_EMAIL || "noreply@yourdomain.com"
+    email: process.env.BREVO_SENDER_EMAIL || "noreply@yourdomain.com",
   };
   sendSmtpEmail.to = [{ email: toEmail, name: toName }];
   sendSmtpEmail.htmlContent = `

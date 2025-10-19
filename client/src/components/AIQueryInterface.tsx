@@ -15,7 +15,7 @@ export function AIQueryInterface() {
   const mutation = useMutation({
     mutationFn: async (query: string) => {
       const response = await apiRequest("POST", "/api/ai/query", { query });
-      const result = await response.json() as { response: string; tokensUsed: number };
+      const result = (await response.json()) as { response: string; tokensUsed: number };
       return result;
     },
     onSuccess: (data) => {
@@ -44,9 +44,7 @@ export function AIQueryInterface() {
           <Sparkles className="h-5 w-5 text-primary" />
           <CardTitle>AI-Powered Insights</CardTitle>
         </div>
-        <CardDescription>
-          Ask questions about your data in plain English
-        </CardDescription>
+        <CardDescription>Ask questions about your data in plain English</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -59,8 +57,8 @@ export function AIQueryInterface() {
             disabled={mutation.isPending}
             data-testid="input-ai-query"
           />
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             disabled={mutation.isPending || !query.trim()}
             className="w-full gap-2"
             data-testid="button-submit-query"

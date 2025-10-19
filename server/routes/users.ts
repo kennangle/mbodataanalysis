@@ -15,7 +15,7 @@ export function registerUserRoutes(app: Express) {
     try {
       const currentUser = req.user as User;
       const organizationId = currentUser?.organizationId;
-      
+
       if (!organizationId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -36,7 +36,7 @@ export function registerUserRoutes(app: Express) {
     try {
       const currentUser = req.user as User;
       const organizationId = currentUser?.organizationId;
-      
+
       if (!organizationId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -46,7 +46,7 @@ export function registerUserRoutes(app: Express) {
       }
 
       const { password, ...userData } = req.body;
-      
+
       if (!password) {
         return res.status(400).json({ error: "Password is required" });
       }
@@ -55,12 +55,12 @@ export function registerUserRoutes(app: Express) {
       const buf = (await scryptAsync(password, salt, 64)) as Buffer;
       const passwordHash = `${buf.toString("hex")}.${salt}`;
 
-      const validation = insertUserSchema.safeParse({ 
-        ...userData, 
+      const validation = insertUserSchema.safeParse({
+        ...userData,
         passwordHash,
-        organizationId
+        organizationId,
       });
-      
+
       if (!validation.success) {
         return res.status(400).json({ error: fromZodError(validation.error).toString() });
       }
@@ -69,7 +69,7 @@ export function registerUserRoutes(app: Express) {
       const { passwordHash: _, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
     } catch (error: any) {
-      if (error?.code === '23505') {
+      if (error?.code === "23505") {
         return res.status(400).json({ error: "Email already exists" });
       }
       res.status(500).json({ error: "Failed to create user" });
@@ -81,7 +81,7 @@ export function registerUserRoutes(app: Express) {
     try {
       const currentUser = req.user as User;
       const organizationId = currentUser?.organizationId;
-      
+
       if (!organizationId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -108,7 +108,10 @@ export function registerUserRoutes(app: Express) {
         dataToUpdate.passwordHash = `${salt}:${buf.toString("hex")}`;
       }
 
-      const validation = insertUserSchema.partial().omit({ organizationId: true }).safeParse(dataToUpdate);
+      const validation = insertUserSchema
+        .partial()
+        .omit({ organizationId: true })
+        .safeParse(dataToUpdate);
       if (!validation.success) {
         return res.status(400).json({ error: fromZodError(validation.error).toString() });
       }
@@ -126,7 +129,7 @@ export function registerUserRoutes(app: Express) {
       const currentUser = req.user as User;
       const organizationId = currentUser?.organizationId;
       const currentUserId = currentUser?.id;
-      
+
       if (!organizationId) {
         return res.status(401).json({ error: "Unauthorized" });
       }

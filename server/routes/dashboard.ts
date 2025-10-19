@@ -4,7 +4,6 @@ import { requireAuth } from "../auth";
 import type { User } from "@shared/schema";
 import { db } from "../db";
 
-
 export function registerDashboardRoutes(app: Express) {
   app.get("/api/dashboard/stats", requireAuth, async (req, res) => {
     try {
@@ -27,7 +26,11 @@ export function registerDashboardRoutes(app: Express) {
         // Use provided dates, defaulting to earliest/latest available
         const effectiveStartDate = startDate || new Date(0); // Beginning of time
         const effectiveEndDate = endDate || now; // Now
-        revenueStats = await storage.getRevenueStats(organizationId, effectiveStartDate, effectiveEndDate);
+        revenueStats = await storage.getRevenueStats(
+          organizationId,
+          effectiveStartDate,
+          effectiveEndDate
+        );
       } else {
         // No date range - use all-time
         revenueStats = await storage.getAllTimeRevenueStats(organizationId);
@@ -40,7 +43,7 @@ export function registerDashboardRoutes(app: Express) {
         lastMonthRevenueStats,
         attendanceRecords,
         lastMonthAttendanceRecords,
-        classes
+        classes,
       ] = await Promise.all([
         storage.getStudentCount(organizationId),
         storage.getActiveStudentCount(organizationId),
@@ -48,32 +51,40 @@ export function registerDashboardRoutes(app: Express) {
         storage.getRevenueStats(organizationId, lastMonth, thisMonth),
         storage.getAttendance(organizationId), // Get ALL attendance records
         storage.getAttendance(organizationId, lastMonth, thisMonth),
-        storage.getClasses(organizationId)
+        storage.getClasses(organizationId),
       ]);
 
-      const attendanceRate = attendanceRecords.length > 0 
-        ? (attendanceRecords.filter(a => a.status === 'attended').length / attendanceRecords.length) * 100 
-        : 0;
-      
-      const lastMonthAttendanceRate = lastMonthAttendanceRecords.length > 0
-        ? (lastMonthAttendanceRecords.filter(a => a.status === 'attended').length / lastMonthAttendanceRecords.length) * 100
-        : 0;
+      const attendanceRate =
+        attendanceRecords.length > 0
+          ? (attendanceRecords.filter((a) => a.status === "attended").length /
+              attendanceRecords.length) *
+            100
+          : 0;
 
-      const revenueChange = lastMonthRevenueStats.total > 0
-        ? ((thisMonthRevenueStats.total - lastMonthRevenueStats.total) / lastMonthRevenueStats.total) * 100
-        : 0;
+      const lastMonthAttendanceRate =
+        lastMonthAttendanceRecords.length > 0
+          ? (lastMonthAttendanceRecords.filter((a) => a.status === "attended").length /
+              lastMonthAttendanceRecords.length) *
+            100
+          : 0;
 
-      const attendanceChange = lastMonthAttendanceRate > 0
-        ? attendanceRate - lastMonthAttendanceRate
-        : 0;
+      const revenueChange =
+        lastMonthRevenueStats.total > 0
+          ? ((thisMonthRevenueStats.total - lastMonthRevenueStats.total) /
+              lastMonthRevenueStats.total) *
+            100
+          : 0;
+
+      const attendanceChange =
+        lastMonthAttendanceRate > 0 ? attendanceRate - lastMonthAttendanceRate : 0;
 
       // Prevent browser caching to ensure fresh attendance data
-      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
-      
+      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
+
       console.log(`[Dashboard Stats] Attendance records count: ${attendanceRecords.length}`);
-      
+
       res.json({
         totalRevenue: revenueStats.total,
         revenueChange: revenueChange.toFixed(1),
@@ -85,7 +96,7 @@ export function registerDashboardRoutes(app: Express) {
         totalAttendanceRecords: attendanceRecords.length,
         classesThisMonth: classes.length,
         classChange: "+8.2",
-        _timestamp: Date.now() // Cache-busting timestamp
+        _timestamp: Date.now(), // Cache-busting timestamp
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch dashboard stats" });
@@ -102,19 +113,23 @@ export function registerDashboardRoutes(app: Express) {
       // Parse dates and normalize to UTC to avoid timezone issues
       let startDate: Date | undefined;
       let endDate: Date | undefined;
-      
+
       if (req.query.startDate) {
         const dateStr = req.query.startDate as string;
         startDate = new Date(dateStr);
         // Ensure it's treated as start of day UTC
-        startDate = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate()));
+        startDate = new Date(
+          Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate())
+        );
       }
-      
+
       if (req.query.endDate) {
         const dateStr = req.query.endDate as string;
         endDate = new Date(dateStr);
         // Ensure it's treated as start of day UTC
-        endDate = new Date(Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate()));
+        endDate = new Date(
+          Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate())
+        );
       }
 
       const data = await storage.getMonthlyRevenueTrend(organizationId, startDate, endDate);

@@ -2,7 +2,14 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 
 export function LoginForm() {
@@ -21,9 +28,7 @@ export function LoginForm() {
     <Card className="w-full max-w-md">
       <CardHeader className="space-y-1">
         <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
-        <CardDescription>
-          Enter your credentials to access your account
-        </CardDescription>
+        <CardDescription>Enter your credentials to access your account</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -60,12 +65,7 @@ export function LoginForm() {
               data-testid="input-password"
             />
           </div>
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={isLoading}
-            data-testid="button-login"
-          >
+          <Button type="submit" className="w-full" disabled={isLoading} data-testid="button-login">
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Sign In
           </Button>

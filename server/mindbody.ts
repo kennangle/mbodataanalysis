@@ -38,8 +38,8 @@ interface MindbodyClass {
 
 interface MindbodyVisit {
   ClientId: string;
-  ClassId: number;  // Lowercase "Id" per actual API response
-  StartDateTime: string;  // Not "VisitDateTime"
+  ClassId: number; // Lowercase "Id" per actual API response
+  StartDateTime: string; // Not "VisitDateTime"
   SignedIn: boolean;
 }
 
@@ -65,10 +65,10 @@ const MINDBODY_API_BASE = "https://api.mindbodyonline.com/public/v6";
 
 function getRedirectUri(): string {
   if (process.env.REPLIT_DOMAINS) {
-    const domains = process.env.REPLIT_DOMAINS.split(',');
+    const domains = process.env.REPLIT_DOMAINS.split(",");
     return `https://${domains[0]}/api/mindbody/callback`;
   }
-  return 'http://localhost:5000/api/mindbody/callback';
+  return "http://localhost:5000/api/mindbody/callback";
 }
 
 export class MindbodyService {
@@ -80,35 +80,31 @@ export class MindbodyService {
     const redirectUri = getRedirectUri();
 
     const params = new URLSearchParams({
-      grant_type: 'authorization_code',
+      grant_type: "authorization_code",
       code: code,
-      client_id: process.env.MINDBODY_CLIENT_ID || '',
-      client_secret: process.env.MINDBODY_CLIENT_SECRET || '',
+      client_id: process.env.MINDBODY_CLIENT_ID || "",
+      client_secret: process.env.MINDBODY_CLIENT_SECRET || "",
       redirect_uri: redirectUri,
-      scope: 'email profile openid offline_access Mindbody.Api.Public.v6'
+      scope: "email profile openid offline_access Mindbody.Api.Public.v6",
     });
 
-    const response = await fetch('https://signin.mindbodyonline.com/connect/token', {
-      method: 'POST',
+    const response = await fetch("https://signin.mindbodyonline.com/connect/token", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        "Content-Type": "application/x-www-form-urlencoded",
       },
       body: params.toString(),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Token exchange failed:', errorText);
+      console.error("Token exchange failed:", errorText);
       throw new Error(`Failed to exchange authorization code: ${response.status}`);
     }
 
     const data: MindbodyTokenResponse = await response.json();
-    
-    await storage.updateOrganizationTokens(
-      organizationId,
-      data.access_token,
-      data.refresh_token
-    );
+
+    await storage.updateOrganizationTokens(organizationId, data.access_token, data.refresh_token);
   }
 
   async refreshAccessToken(organizationId: string): Promise<string> {
@@ -134,12 +130,8 @@ export class MindbodyService {
     }
 
     const data: MindbodyTokenResponse = await response.json();
-    
-    await storage.updateOrganizationTokens(
-      organizationId,
-      data.access_token,
-      data.refresh_token
-    );
+
+    await storage.updateOrganizationTokens(organizationId, data.access_token, data.refresh_token);
 
     return data.access_token;
   }
@@ -154,7 +146,7 @@ export class MindbodyService {
     const apiKey = process.env.MINDBODY_API_KEY;
     const clientSecret = process.env.MINDBODY_CLIENT_SECRET;
     const siteId = "133";
-    
+
     if (!apiKey || !clientSecret) {
       throw new Error("MINDBODY_API_KEY and MINDBODY_CLIENT_SECRET required");
     }
@@ -165,7 +157,7 @@ export class MindbodyService {
       headers: {
         "Content-Type": "application/json",
         "Api-Key": apiKey,
-        "SiteId": siteId,
+        SiteId: siteId,
       },
       body: JSON.stringify({
         Username: "_YHC", // Source name with underscore prefix
@@ -180,11 +172,11 @@ export class MindbodyService {
     }
 
     const data = await response.json();
-    
+
     // Cache token for 55 minutes (expires in 60)
     this.cachedUserToken = data.AccessToken;
-    this.tokenExpiryTime = now + (55 * 60 * 1000);
-    
+    this.tokenExpiryTime = now + 55 * 60 * 1000;
+
     return data.AccessToken;
   }
 
@@ -195,7 +187,7 @@ export class MindbodyService {
   ): Promise<any> {
     const apiKey = process.env.MINDBODY_API_KEY;
     const siteId = "133";
-    
+
     if (!apiKey) {
       throw new Error("MINDBODY_API_KEY not configured");
     }
@@ -209,8 +201,8 @@ export class MindbodyService {
         ...options.headers,
         "Content-Type": "application/json",
         "Api-Key": apiKey,
-        "SiteId": siteId,
-        "Authorization": `Bearer ${userToken}`,
+        SiteId: siteId,
+        Authorization: `Bearer ${userToken}`,
       },
     });
 
@@ -221,13 +213,13 @@ export class MindbodyService {
       const errorText = await response.text();
       console.error(`Mindbody API error: ${response.status} - ${errorText}`);
       console.error(`Request URL: ${MINDBODY_API_BASE}${endpoint}`);
-      
+
       // Clear cached token on authentication errors and retry once
       if (response.status === 401) {
-        console.log('Authentication error detected, clearing token cache and retrying...');
+        console.log("Authentication error detected, clearing token cache and retrying...");
         this.cachedUserToken = null;
         this.tokenExpiryTime = 0;
-        
+
         // Retry once with fresh token
         const newToken = await this.getUserToken();
         const retryResponse = await fetch(`${MINDBODY_API_BASE}${endpoint}`, {
@@ -236,23 +228,23 @@ export class MindbodyService {
             ...options.headers,
             "Content-Type": "application/json",
             "Api-Key": apiKey,
-            "SiteId": siteId,
-            "Authorization": `Bearer ${newToken}`,
+            SiteId: siteId,
+            Authorization: `Bearer ${newToken}`,
           },
         });
-        
+
         if (!retryResponse.ok) {
           const retryErrorText = await retryResponse.text();
           console.error(`Mindbody API retry failed: ${retryResponse.status} - ${retryErrorText}`);
           throw new Error(`Mindbody API error: ${retryResponse.statusText}`);
         }
-        
+
         // Track retry API call
         this.apiCallCounter++;
-        
+
         return await retryResponse.json();
       }
-      
+
       throw new Error(`Mindbody API error: ${response.statusText}`);
     }
 
@@ -273,14 +265,14 @@ export class MindbodyService {
     baseEndpoint: string,
     resultsKey: string,
     pageSize: number = 200
-  ): Promise<{ results: T[], apiCalls: number }> {
+  ): Promise<{ results: T[]; apiCalls: number }> {
     let allResults: T[] = [];
     let offset = 0;
     let hasMorePages = true;
     let apiCallCount = 0;
 
     while (hasMorePages) {
-      const separator = baseEndpoint.includes('?') ? '&' : '?';
+      const separator = baseEndpoint.includes("?") ? "&" : "?";
       const endpoint = `${baseEndpoint}${separator}Limit=${pageSize}&Offset=${offset}`;
       const data = await this.makeAuthenticatedRequest(organizationId, endpoint);
       apiCallCount++; // Track API call
@@ -289,11 +281,13 @@ export class MindbodyService {
       allResults = allResults.concat(results);
 
       const pagination: MindbodyPaginationResponse | undefined = data.PaginationResponse;
-      
+
       if (pagination) {
         // Guard against offset exceeding total results
         if (offset >= pagination.TotalResults) {
-          console.warn(`Offset ${offset} exceeds TotalResults ${pagination.TotalResults}, stopping pagination`);
+          console.warn(
+            `Offset ${offset} exceeds TotalResults ${pagination.TotalResults}, stopping pagination`
+          );
           hasMorePages = false;
         }
         // Check if we've retrieved all results
@@ -301,13 +295,16 @@ export class MindbodyService {
           hasMorePages = false;
         } else {
           // Use actual results length as the increment (PageSize may not reflect true count)
-          const actualPageSize = results.length > 0 ? results.length : (pagination.RequestedLimit || pageSize);
-          
+          const actualPageSize =
+            results.length > 0 ? results.length : pagination.RequestedLimit || pageSize;
+
           // Verify offset won't skip records
           if (pagination.PageSize > results.length && results.length > 0) {
-            console.warn(`PageSize (${pagination.PageSize}) > actual results (${results.length}), using results.length`);
+            console.warn(
+              `PageSize (${pagination.PageSize}) > actual results (${results.length}), using results.length`
+            );
           }
-          
+
           offset += actualPageSize;
         }
       } else {
@@ -328,31 +325,31 @@ export class MindbodyService {
   ): Promise<{ imported: number; updated: number; nextOffset: number; completed: boolean }> {
     const BATCH_SIZE = 200;
     const BATCH_DELAY = 200; // 200ms delay between batches
-    
+
     // Fetch first page to get total count
     const endpoint = `/client/clients?LastModifiedDate=${startDate.toISOString()}&Limit=${BATCH_SIZE}&Offset=${startOffset}`;
     const data = await this.makeAuthenticatedRequest(organizationId, endpoint);
-    
+
     const pagination: MindbodyPaginationResponse | undefined = data.PaginationResponse;
     const totalResults = pagination?.TotalResults || 0;
     const clients: MindbodyClient[] = data.Clients || [];
-    
+
     if (clients.length === 0) {
       return { imported: 0, updated: 0, nextOffset: startOffset, completed: true };
     }
-    
+
     // Load existing students for duplicate detection
     const existingStudents = await storage.getStudents(organizationId, 100000);
-    const studentMap = new Map(existingStudents.map(s => [s.mindbodyClientId, s]));
-    
+    const studentMap = new Map(existingStudents.map((s) => [s.mindbodyClientId, s]));
+
     let imported = 0;
     let updated = 0;
-    
+
     // Process this batch
     for (const client of clients) {
       try {
         const existingStudent = studentMap.get(client.Id);
-        
+
         if (existingStudent) {
           await storage.updateStudent(existingStudent.id, {
             firstName: client.FirstName,
@@ -382,18 +379,18 @@ export class MindbodyService {
         console.error(`Failed to import client ${client.Id}:`, error);
       }
     }
-    
+
     const nextOffset = startOffset + clients.length;
     const completed = nextOffset >= totalResults;
-    
+
     // Report progress
     await onProgress(nextOffset, totalResults);
-    
+
     // Delay before next batch (unless completed)
     if (!completed) {
-      await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+      await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY));
     }
-    
+
     return { imported, updated, nextOffset, completed };
   }
 
@@ -406,39 +403,44 @@ export class MindbodyService {
   ): Promise<{ imported: number; nextOffset: number; completed: boolean }> {
     const BATCH_SIZE = 200;
     const BATCH_DELAY = 200; // 200ms delay between batches
-    
+
     // Fetch first page to get total count
     const endpoint = `/class/classes?StartDateTime=${startDate.toISOString()}&EndDateTime=${endDate.toISOString()}&Limit=${BATCH_SIZE}&Offset=${startOffset}`;
     const data = await this.makeAuthenticatedRequest(organizationId, endpoint);
-    
+
     const pagination: MindbodyPaginationResponse | undefined = data.PaginationResponse;
     const totalResults = pagination?.TotalResults || 0;
     const classes: MindbodyClass[] = data.Classes || [];
-    
+
     if (classes.length === 0) {
       return { imported: 0, nextOffset: startOffset, completed: true };
     }
-    
+
     // Load existing classes once for efficient lookup
     const existingClasses = await storage.getClasses(organizationId);
-    const classMap = new Map(existingClasses.map(c => [c.mindbodyClassId, c]));
-    
+    const classMap = new Map(existingClasses.map((c) => [c.mindbodyClassId, c]));
+
     let imported = 0;
-    
+
     // Process this batch
     for (const mbClass of classes) {
       try {
-        if (!mbClass.ClassDescription?.Id || !mbClass.ClassScheduleId || !mbClass.StartDateTime || !mbClass.EndDateTime) {
+        if (
+          !mbClass.ClassDescription?.Id ||
+          !mbClass.ClassScheduleId ||
+          !mbClass.StartDateTime ||
+          !mbClass.EndDateTime
+        ) {
           continue;
         }
-        
+
         let classRecord = classMap.get(mbClass.ClassDescription.Id.toString());
-        
+
         if (!classRecord) {
           classRecord = await storage.createClass({
             organizationId,
             mindbodyClassId: mbClass.ClassDescription.Id.toString(),
-            name: mbClass.ClassDescription.Name || 'Unknown Class',
+            name: mbClass.ClassDescription.Name || "Unknown Class",
             description: mbClass.ClassDescription.Description || null,
             instructorName: mbClass.Staff?.Name || null,
             capacity: mbClass.MaxCapacity || null,
@@ -446,7 +448,7 @@ export class MindbodyService {
           });
           classMap.set(classRecord.mindbodyClassId!, classRecord);
         }
-        
+
         await storage.createClassSchedule({
           organizationId,
           classId: classRecord.id,
@@ -455,24 +457,24 @@ export class MindbodyService {
           endTime: new Date(mbClass.EndDateTime),
           location: mbClass.Location?.Name || null,
         });
-        
+
         imported++;
       } catch (error) {
         console.error(`Failed to import class ${mbClass.ClassScheduleId}:`, error);
       }
     }
-    
+
     const nextOffset = startOffset + classes.length;
     const completed = nextOffset >= totalResults;
-    
+
     // Report progress
     await onProgress(nextOffset, totalResults);
-    
+
     // Delay before next batch (unless completed)
     if (!completed) {
-      await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+      await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY));
     }
-    
+
     return { imported, nextOffset, completed };
   }
 
@@ -485,82 +487,85 @@ export class MindbodyService {
   ): Promise<{ imported: number; nextStudentIndex: number; completed: boolean }> {
     const BATCH_SIZE = 100; // Process 100 students per batch
     const BATCH_DELAY = 250; // 250ms delay between batches
-    
+
     // Load all students once
     const allStudents = await storage.getStudents(organizationId, 100000);
     const totalStudents = allStudents.length;
-    
+
     if (startStudentIndex >= totalStudents) {
       return { imported: 0, nextStudentIndex: startStudentIndex, completed: true };
     }
-    
+
     // Get batch of students to process
     const endIndex = Math.min(startStudentIndex + BATCH_SIZE, totalStudents);
     const studentBatch = allStudents.slice(startStudentIndex, endIndex);
-    
+
     // Load schedules once for efficient lookup
     // Match by StartDateTime since ClassId in visits != ClassScheduleId in schedules
     const schedules = await storage.getClassSchedules(organizationId);
-    const schedulesByTime = new Map(schedules.map(s => [s.startTime.toISOString(), s]));
-    
+    const schedulesByTime = new Map(schedules.map((s) => [s.startTime.toISOString(), s]));
+
     // DEBUG: Log sample schedule times
     const sampleTimes = Array.from(schedulesByTime.keys()).slice(0, 5);
-    console.log('=== DEBUG: Sample schedule times in map ===');
+    console.log("=== DEBUG: Sample schedule times in map ===");
     console.log(sampleTimes);
-    console.log('===========================================');
-    
+    console.log("===========================================");
+
     let imported = 0;
     let processedStudents = 0;
     let totalVisitsFound = 0;
     let unmatchedClassIds = new Set<string>();
-    
+
     // Process students sequentially in this batch
     for (const student of studentBatch) {
       try {
         const { results: visits } = await this.fetchAllPages<MindbodyVisit>(
           organizationId,
           `/client/clientvisits?ClientId=${student.mindbodyClientId}&StartDate=${startDate.toISOString()}&EndDate=${endDate.toISOString()}`,
-          'Visits',
+          "Visits",
           200
         );
-        
+
         if (visits.length > 0) {
           totalVisitsFound += visits.length;
           // DEBUG: Log first visit structure to understand API response
           if (totalVisitsFound <= 3) {
-            console.log('=== DEBUG: Visit structure from API ===');
+            console.log("=== DEBUG: Visit structure from API ===");
             console.log(JSON.stringify(visits[0], null, 2));
-            console.log('=======================================');
+            console.log("=======================================");
           }
         }
-        
+
         for (const visit of visits) {
           try {
             if (!visit.ClassId || !visit.StartDateTime) {
               // Log first few skipped visits with full data
               if (totalVisitsFound <= 5) {
-                console.log(`Skipping visit for client ${student.mindbodyClientId}. Full visit data:`, JSON.stringify(visit, null, 2));
+                console.log(
+                  `Skipping visit for client ${student.mindbodyClientId}. Full visit data:`,
+                  JSON.stringify(visit, null, 2)
+                );
               }
               continue;
             }
-            
+
             // Match by StartDateTime instead of ClassId
             const visitStartTime = new Date(visit.StartDateTime).toISOString();
             const schedule = schedulesByTime.get(visitStartTime);
-            
+
             // DEBUG: Log first few match attempts
             if (totalVisitsFound <= 5) {
               console.log(`=== DEBUG: Matching attempt ===`);
               console.log(`Visit time: ${visit.StartDateTime} -> ${visitStartTime}`);
-              console.log(`Found schedule: ${schedule ? 'YES' : 'NO'}`);
+              console.log(`Found schedule: ${schedule ? "YES" : "NO"}`);
               console.log(`==============================`);
             }
-            
+
             if (!schedule) {
               unmatchedClassIds.add(`${visit.ClassId} at ${visit.StartDateTime}`);
               continue;
             }
-            
+
             await storage.createAttendance({
               organizationId,
               studentId: student.id,
@@ -568,7 +573,7 @@ export class MindbodyService {
               attendedAt: new Date(visit.StartDateTime),
               status: visit.SignedIn ? "attended" : "noshow",
             });
-            
+
             imported++;
           } catch (error) {
             console.error(`Failed to import visit for client ${student.mindbodyClientId}:`, error);
@@ -577,28 +582,33 @@ export class MindbodyService {
       } catch (error) {
         console.error(`Failed to fetch visits for client ${student.mindbodyClientId}:`, error);
       }
-      
+
       // Update progress after each student to show real-time API count
       processedStudents++;
       await onProgress(startStudentIndex + processedStudents, totalStudents);
     }
-    
+
     // Log diagnostic information
     if (totalVisitsFound > 0) {
-      console.log(`Visit import batch: Found ${totalVisitsFound} visits, imported ${imported} attendance records`);
+      console.log(
+        `Visit import batch: Found ${totalVisitsFound} visits, imported ${imported} attendance records`
+      );
       if (unmatchedClassIds.size > 0) {
-        console.log(`Unmatched ClassIds (visits skipped):`, Array.from(unmatchedClassIds).slice(0, 10).join(', '));
+        console.log(
+          `Unmatched ClassIds (visits skipped):`,
+          Array.from(unmatchedClassIds).slice(0, 10).join(", ")
+        );
       }
     }
-    
+
     const nextStudentIndex = endIndex;
     const completed = nextStudentIndex >= totalStudents;
-    
+
     // Delay before next batch (unless completed)
     if (!completed) {
-      await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+      await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY));
     }
-    
+
     return { imported, nextStudentIndex, completed };
   }
 
@@ -613,104 +623,129 @@ export class MindbodyService {
     // Fetch sales at SITE LEVEL (not per-client) as ClientId filter may not be supported
     const SALES_BATCH_SIZE = 200; // Fetch 200 sales at a time
     const BATCH_DELAY = 250;
-    
+
     // Load all students once for ID lookup
-    const allStudents = cachedStudents || await storage.getStudents(organizationId, 100000);
-    const studentMap = new Map(allStudents.map(s => [s.mindbodyClientId, s.id]));
-    
-    const dateFormat = startDate.toISOString().split('T')[0]; // YYYY-MM-DD
-    const endDateFormat = endDate.toISOString().split('T')[0];
-    
-    console.log(`[Sales Import] Fetching site-level sales, date range: ${dateFormat} to ${endDateFormat}`);
-    
+    const allStudents = cachedStudents || (await storage.getStudents(organizationId, 100000));
+    const studentMap = new Map(allStudents.map((s) => [s.mindbodyClientId, s.id]));
+
+    const dateFormat = startDate.toISOString().split("T")[0]; // YYYY-MM-DD
+    const endDateFormat = endDate.toISOString().split("T")[0];
+
+    console.log(
+      `[Sales Import] Fetching site-level sales, date range: ${dateFormat} to ${endDateFormat}`
+    );
+
     try {
       // Make a test call to see what we get
       const testEndpoint = `/sale/sales?StartDate=${dateFormat}&EndDate=${endDateFormat}&Limit=10&Offset=0`;
       console.log(`[Sales Import] Test endpoint: ${testEndpoint}`);
       console.log(`[Sales Import] Requested date range: ${dateFormat} to ${endDateFormat}`);
-      
+
       const testData = await this.makeAuthenticatedRequest(organizationId, testEndpoint);
-      console.log(`[Sales Import] PaginationResponse:`, JSON.stringify(testData.PaginationResponse));
-      
+      console.log(
+        `[Sales Import] PaginationResponse:`,
+        JSON.stringify(testData.PaginationResponse)
+      );
+
       // Check if API returned correct date range (detect if date params are ignored)
       let dateRangeRespected = true;
       if (testData.Sales && testData.Sales.length > 0) {
-        const firstSaleDate = new Date(testData.Sales[0].SaleDateTime || testData.Sales[0].SaleDate);
+        const firstSaleDate = new Date(
+          testData.Sales[0].SaleDateTime || testData.Sales[0].SaleDate
+        );
         const requestedStartDate = new Date(dateFormat);
-        
+
         // If the API returned sales more than 7 days after our requested start date,
         // it's ignoring the date parameters
-        const daysDifference = (firstSaleDate.getTime() - requestedStartDate.getTime()) / (1000 * 60 * 60 * 24);
+        const daysDifference =
+          (firstSaleDate.getTime() - requestedStartDate.getTime()) / (1000 * 60 * 60 * 24);
         if (Math.abs(daysDifference) > 7) {
-          console.log(`[Sales Import] WARNING: /sale/sales ignoring date parameters! Requested ${dateFormat}, got ${firstSaleDate.toISOString()}`);
+          console.log(
+            `[Sales Import] WARNING: /sale/sales ignoring date parameters! Requested ${dateFormat}, got ${firstSaleDate.toISOString()}`
+          );
           console.log(`[Sales Import] Falling back to /sale/transactions for historical data`);
           dateRangeRespected = false;
         }
       }
-      
+
       const totalResults = testData.PaginationResponse?.TotalResults || 0;
-      
+
       // If /sale/sales returns no results OR ignores date parameters, fall back to /sale/transactions
       if (totalResults === 0 || !dateRangeRespected) {
         if (totalResults === 0) {
-          console.log(`[Sales Import] /sale/sales returned 0 results, falling back to /sale/transactions`);
+          console.log(
+            `[Sales Import] /sale/sales returned 0 results, falling back to /sale/transactions`
+          );
         }
-        
+
         // Use ISO datetime format with timezone for transactions endpoint
         const startDateTime = startDate.toISOString(); // e.g., 2024-01-01T00:00:00.000Z
         const endDateTime = endDate.toISOString();
-        
+
         const { results: transactions } = await this.fetchAllPages<any>(
           organizationId,
           `/sale/transactions?StartSaleDateTime=${startDateTime}&EndSaleDateTime=${endDateTime}`,
-          'Transactions',
+          "Transactions",
           SALES_BATCH_SIZE
         );
-        
-        console.log(`[Sales Import] Fetched ${transactions.length} transactions from /sale/transactions`);
-        
+
+        console.log(
+          `[Sales Import] Fetched ${transactions.length} transactions from /sale/transactions`
+        );
+
         // Log first transaction to see structure
         if (transactions.length > 0) {
           console.log(`[Sales Import] Sample transaction fields:`, Object.keys(transactions[0]));
-          console.log(`[Sales Import] Sample transaction:`, JSON.stringify(transactions[0], null, 2));
+          console.log(
+            `[Sales Import] Sample transaction:`,
+            JSON.stringify(transactions[0], null, 2)
+          );
         }
-        
+
         let imported = 0;
         let skipped = 0;
-        
+
         for (const transaction of transactions) {
           try {
             // Find a valid date field
-            const dateStr = transaction.SaleDateTime || transaction.CreatedDateTime || transaction.TransactionDate || transaction.CompletedDate;
-            
+            const dateStr =
+              transaction.SaleDateTime ||
+              transaction.CreatedDateTime ||
+              transaction.TransactionDate ||
+              transaction.CompletedDate;
+
             if (!dateStr) {
-              console.log(`[Sales Import] Transaction ${transaction.Id} has no valid date field, skipping`);
+              console.log(
+                `[Sales Import] Transaction ${transaction.Id} has no valid date field, skipping`
+              );
               skipped++;
               continue;
             }
-            
+
             const transactionDate = new Date(dateStr);
             if (isNaN(transactionDate.getTime())) {
-              console.log(`[Sales Import] Transaction ${transaction.Id} has invalid date "${dateStr}", skipping`);
+              console.log(
+                `[Sales Import] Transaction ${transaction.Id} has invalid date "${dateStr}", skipping`
+              );
               skipped++;
               continue;
             }
-            
+
             // Get student ID from ClientId
             const studentId = studentMap.get(transaction.ClientId?.toString());
-            
+
             // Build description from payment info
-            const paymentMethod = transaction.Method || 'Unknown';
-            const lastFour = transaction.LastFour || 'N/A';
-            const status = transaction.Status || 'Unknown';
+            const paymentMethod = transaction.Method || "Unknown";
+            const lastFour = transaction.LastFour || "N/A";
+            const status = transaction.Status || "Unknown";
             const description = `${paymentMethod} payment ending in ${lastFour} (${status})`;
-            
+
             await storage.upsertRevenue({
               organizationId,
               studentId: studentId || null,
               mindbodySaleId: transaction.Id?.toString() || null,
               mindbodyItemId: null, // Transactions don't have item-level detail
-              amount: transaction.Amount?.toString() || '0',
+              amount: transaction.Amount?.toString() || "0",
               type: paymentMethod,
               description,
               transactionDate,
@@ -721,30 +756,33 @@ export class MindbodyService {
             skipped++;
           }
         }
-        
-        console.log(`[Sales Import] Results: ${imported} imported, ${skipped} skipped (invalid dates)`);
 
-        
+        console.log(
+          `[Sales Import] Results: ${imported} imported, ${skipped} skipped (invalid dates)`
+        );
+
         await onProgress(transactions.length, transactions.length);
-        console.log(`[Sales Import] Completed - imported ${imported} revenue records from ${transactions.length} transactions`);
-        
+        console.log(
+          `[Sales Import] Completed - imported ${imported} revenue records from ${transactions.length} transactions`
+        );
+
         return { imported, nextStudentIndex: transactions.length, completed: true };
       }
-      
+
       // If /sale/sales has results, use it for detailed line-item data
       const { results: sales } = await this.fetchAllPages<any>(
         organizationId,
         `/sale/sales?StartDate=${dateFormat}&EndDate=${endDateFormat}`,
-        'Sales',
+        "Sales",
         SALES_BATCH_SIZE
       );
-      
+
       console.log(`[Sales Import] Fetched ${sales.length} total sales`);
-      
+
       let imported = 0;
       let matchedClients = 0;
       let unmatchedClients = 0;
-      
+
       for (const sale of sales) {
         try {
           // Skip if missing sale date/time
@@ -752,7 +790,7 @@ export class MindbodyService {
             console.log(`Sale ${sale.Id} missing SaleDateTime, skipping`);
             continue;
           }
-          
+
           // Get student ID from MindbodyClientId (optional - client may not be in our students table)
           const studentId = studentMap.get(sale.ClientId?.toString()) || null;
           if (studentId) {
@@ -760,43 +798,50 @@ export class MindbodyService {
           } else {
             unmatchedClients++;
           }
-          
+
           // Handle both array and single object for PurchasedItems
-          const purchasedItems = Array.isArray(sale.PurchasedItems) 
-            ? sale.PurchasedItems 
-            : (sale.PurchasedItems ? [sale.PurchasedItems] : []);
-          
+          const purchasedItems = Array.isArray(sale.PurchasedItems)
+            ? sale.PurchasedItems
+            : sale.PurchasedItems
+              ? [sale.PurchasedItems]
+              : [];
+
           if (purchasedItems.length === 0) {
             // Log first few instances for debugging
             if (imported < 5) {
-              console.log(`Sale ${sale.Id} has no purchased items, structure:`, JSON.stringify(sale).substring(0, 300));
+              console.log(
+                `Sale ${sale.Id} has no purchased items, structure:`,
+                JSON.stringify(sale).substring(0, 300)
+              );
             }
             continue;
           }
-          
+
           // Create a revenue record for each purchased item (line-item tracking)
           for (const item of purchasedItems) {
             try {
               // Get amount from correct field: Amount, or calculate from UnitPrice * Quantity
-              const amount = item.Amount ?? (item.UnitPrice && item.Quantity ? item.UnitPrice * item.Quantity : null);
-              
+              const amount =
+                item.Amount ??
+                (item.UnitPrice && item.Quantity ? item.UnitPrice * item.Quantity : null);
+
               // Skip items with no amount or zero amount
               if (!amount && amount !== 0) continue;
               if (amount === 0) continue;
-              
+
               // Build description: Item name + quantity (if > 1)
-              let description = item.Name || item.Description || 'Unknown item';
+              let description = item.Name || item.Description || "Unknown item";
               if (item.Quantity && item.Quantity > 1) {
                 description = `${description} (Qty: ${item.Quantity})`;
               }
-              
+
               await storage.upsertRevenue({
                 organizationId,
                 studentId,
                 mindbodySaleId: sale.Id?.toString() || null,
                 mindbodyItemId: item.Id?.toString() || item.SaleDetailId?.toString() || null,
                 amount: amount.toString(),
-                type: item.IsService ? 'Service' : (item.Type || 'Product'),
+                type: item.IsService ? "Service" : item.Type || "Product",
                 description,
                 transactionDate: new Date(sale.SaleDateTime),
               });
@@ -809,13 +854,17 @@ export class MindbodyService {
           console.error(`Failed to process sale ${sale.Id}:`, error);
         }
       }
-      
+
       // Since fetchAllPages gets everything, we're done in one call
       await onProgress(sales.length, sales.length);
-      
-      console.log(`[Sales Import] Completed - imported ${imported} revenue records from ${sales.length} sales`);
-      console.log(`[Sales Import] Client matching: ${matchedClients} matched, ${unmatchedClients} unmatched (linked to null studentId)`);
-      
+
+      console.log(
+        `[Sales Import] Completed - imported ${imported} revenue records from ${sales.length} sales`
+      );
+      console.log(
+        `[Sales Import] Client matching: ${matchedClients} matched, ${unmatchedClients} unmatched (linked to null studentId)`
+      );
+
       return { imported, nextStudentIndex: sales.length, completed: true };
     } catch (error) {
       console.error(`Failed to fetch site-level sales:`, error);
@@ -831,18 +880,18 @@ export class MindbodyService {
   ): Promise<{ subscriptionId: string; messageSignatureKey: string }> {
     const userToken = await this.getUserToken();
     const WEBHOOKS_API_BASE = "https://api.mindbodyonline.com/webhooks/v6";
-    
+
     const org = await storage.getOrganization(organizationId);
     if (!org?.mindbodySiteId) {
       throw new Error("Mindbody site ID not configured");
     }
 
     const response = await fetch(`${WEBHOOKS_API_BASE}/subscriptions`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Api-Key': process.env.MINDBODY_API_KEY || '',
-        'Authorization': `Bearer ${userToken}`,
-        'Content-Type': 'application/json',
+        "Api-Key": process.env.MINDBODY_API_KEY || "",
+        Authorization: `Bearer ${userToken}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         eventType,
@@ -873,10 +922,10 @@ export class MindbodyService {
     const WEBHOOKS_API_BASE = "https://api.mindbodyonline.com/webhooks/v6";
 
     const response = await fetch(`${WEBHOOKS_API_BASE}/subscriptions/${mindbodySubscriptionId}`, {
-      method: 'DELETE',
+      method: "DELETE",
       headers: {
-        'Api-Key': process.env.MINDBODY_API_KEY || '',
-        'Authorization': `Bearer ${userToken}`,
+        "Api-Key": process.env.MINDBODY_API_KEY || "",
+        Authorization: `Bearer ${userToken}`,
       },
     });
 
@@ -886,26 +935,22 @@ export class MindbodyService {
     }
   }
 
-  verifyWebhookSignature(
-    payload: string,
-    signatureHeader: string,
-    signatureKey: string
-  ): boolean {
-    const crypto = require('crypto');
-    
+  verifyWebhookSignature(payload: string, signatureHeader: string, signatureKey: string): boolean {
+    const crypto = require("crypto");
+
     // Compute HMAC-SHA256
-    const hmac = crypto.createHmac('sha256', signatureKey);
-    const hash = hmac.update(payload).digest('base64');
+    const hmac = crypto.createHmac("sha256", signatureKey);
+    const hash = hmac.update(payload).digest("base64");
     const computedSignature = `sha256=${hash}`;
-    
+
     // Timing-safe comparison
-    const expected = Buffer.from(computedSignature, 'utf8');
-    const received = Buffer.from(signatureHeader || '', 'utf8');
-    
+    const expected = Buffer.from(computedSignature, "utf8");
+    const received = Buffer.from(signatureHeader || "", "utf8");
+
     if (expected.length !== received.length) {
       return false;
     }
-    
+
     return crypto.timingSafeEqual(expected, received);
   }
 }

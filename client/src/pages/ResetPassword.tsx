@@ -3,7 +3,14 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from "@/components/ui/card";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { BarChart3, Loader2, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -19,7 +26,7 @@ export default function ResetPassword() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const tokenParam = params.get('token');
+    const tokenParam = params.get("token");
     if (tokenParam) {
       setToken(tokenParam);
     }
@@ -49,22 +56,22 @@ export default function ResetPassword() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, newPassword }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to reset password');
+        throw new Error(data.error || "Failed to reset password");
       }
 
       setIsSuccess(true);
-      
+
       setTimeout(() => {
-        setLocation('/login');
+        setLocation("/login");
       }, 2000);
     } catch (error) {
       toast({
@@ -82,7 +89,11 @@ export default function ResetPassword() {
       <div className="min-h-screen flex flex-col">
         <header className="border-b">
           <div className="container flex h-16 items-center justify-between px-6">
-            <a href="/" className="flex items-center gap-2 hover-elevate active-elevate-2 rounded-md px-2 py-1 -ml-2 cursor-pointer" data-testid="link-home-logo">
+            <a
+              href="/"
+              className="flex items-center gap-2 hover-elevate active-elevate-2 rounded-md px-2 py-1 -ml-2 cursor-pointer"
+              data-testid="link-home-logo"
+            >
               <BarChart3 className="h-6 w-6 text-primary" />
               <span className="text-lg font-bold">Mindbody Analytics</span>
             </a>
@@ -94,14 +105,12 @@ export default function ResetPassword() {
           <Card className="w-full max-w-md">
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl font-bold">Invalid reset link</CardTitle>
-              <CardDescription>
-                This password reset link is invalid or has expired
-              </CardDescription>
+              <CardDescription>This password reset link is invalid or has expired</CardDescription>
             </CardHeader>
             <CardFooter>
               <Button
                 variant="outline"
-                onClick={() => setLocation('/forgot-password')}
+                onClick={() => setLocation("/forgot-password")}
                 data-testid="button-request-new-link"
                 className="w-full"
               >
@@ -118,7 +127,11 @@ export default function ResetPassword() {
     <div className="min-h-screen flex flex-col">
       <header className="border-b">
         <div className="container flex h-16 items-center justify-between px-6">
-          <a href="/" className="flex items-center gap-2 hover-elevate active-elevate-2 rounded-md px-2 py-1 -ml-2 cursor-pointer" data-testid="link-home-logo">
+          <a
+            href="/"
+            className="flex items-center gap-2 hover-elevate active-elevate-2 rounded-md px-2 py-1 -ml-2 cursor-pointer"
+            data-testid="link-home-logo"
+          >
             <BarChart3 className="h-6 w-6 text-primary" />
             <span className="text-lg font-bold">Mindbody Analytics</span>
           </a>
@@ -130,9 +143,7 @@ export default function ResetPassword() {
         <Card className="w-full max-w-md">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-bold">Reset your password</CardTitle>
-            <CardDescription>
-              Enter your new password below
-            </CardDescription>
+            <CardDescription>Enter your new password below</CardDescription>
           </CardHeader>
           <CardContent>
             {isSuccess ? (
@@ -140,9 +151,7 @@ export default function ResetPassword() {
                 <CheckCircle2 className="h-16 w-16 text-green-500" />
                 <div className="text-center space-y-2">
                   <h3 className="font-semibold text-lg">Password reset successful!</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Redirecting to login page...
-                  </p>
+                  <p className="text-sm text-muted-foreground">Redirecting to login page...</p>
                 </div>
               </div>
             ) : (

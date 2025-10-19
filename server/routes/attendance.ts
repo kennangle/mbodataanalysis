@@ -16,7 +16,7 @@ export function registerAttendanceRoutes(app: Express) {
 
       const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
       const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
-      
+
       const attendance = await storage.getAttendance(organizationId, startDate, endDate);
       res.json(attendance);
     } catch (error) {

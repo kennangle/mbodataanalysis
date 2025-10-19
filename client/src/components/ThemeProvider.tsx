@@ -12,14 +12,9 @@ type ThemeProviderState = {
   setTheme: (theme: Theme) => void;
 };
 
-const ThemeProviderContext = createContext<ThemeProviderState | undefined>(
-  undefined
-);
+const ThemeProviderContext = createContext<ThemeProviderState | undefined>(undefined);
 
-export function ThemeProvider({
-  children,
-  defaultTheme = "light",
-}: ThemeProviderProps) {
+export function ThemeProvider({ children, defaultTheme = "light" }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(
     () => (localStorage.getItem("theme") as Theme) || defaultTheme
   );

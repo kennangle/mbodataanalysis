@@ -34,10 +34,9 @@ export function registerRevenueRoutes(app: Express) {
 
       const elapsed = (Date.now() - progress.startTime) / 1000;
       // Guard against division by zero for empty CSV files
-      const percentage = progress.total > 0 
-        ? Math.round((progress.processed / progress.total) * 100)
-        : 0;
-      
+      const percentage =
+        progress.total > 0 ? Math.round((progress.processed / progress.total) * 100) : 0;
+
       res.json({
         ...progress,
         percentage,
@@ -57,7 +56,7 @@ export function registerRevenueRoutes(app: Express) {
 
       const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
       const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
-      
+
       const revenue = await storage.getRevenue(organizationId, startDate, endDate);
       res.json(revenue);
     } catch (error) {
@@ -73,9 +72,11 @@ export function registerRevenueRoutes(app: Express) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const startDate = req.query.startDate
+        ? new Date(req.query.startDate as string)
+        : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       const endDate = req.query.endDate ? new Date(req.query.endDate as string) : new Date();
-      
+
       const stats = await storage.getRevenueStats(organizationId, startDate, endDate);
       res.json(stats);
     } catch (error) {
@@ -104,13 +105,13 @@ export function registerRevenueRoutes(app: Express) {
   });
 
   // CSV upload configuration
-  const upload = multer({ 
+  const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit for large CSV files
+    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit for large CSV files
   });
 
   // Import revenue from CSV
-  app.post("/api/revenue/import-csv", requireAuth, upload.single('file'), async (req, res) => {
+  app.post("/api/revenue/import-csv", requireAuth, upload.single("file"), async (req, res) => {
     try {
       const organizationId = (req.user as User)?.organizationId;
       if (!organizationId) {
@@ -122,23 +123,23 @@ export function registerRevenueRoutes(app: Express) {
       }
 
       // Validate file type
-      const validMimeTypes = ['text/csv', 'application/csv', 'text/plain'];
-      const isValidExtension = req.file.originalname.toLowerCase().endsWith('.csv');
-      
+      const validMimeTypes = ["text/csv", "application/csv", "text/plain"];
+      const isValidExtension = req.file.originalname.toLowerCase().endsWith(".csv");
+
       if (!validMimeTypes.includes(req.file.mimetype) && !isValidExtension) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: "Invalid file type",
-          details: "Please upload a CSV file"
+          details: "Please upload a CSV file",
         });
       }
 
       // Parse CSV (handle BOM if present)
-      let csvText = req.file.buffer.toString('utf-8');
+      let csvText = req.file.buffer.toString("utf-8");
       // Remove BOM if present
-      if (csvText.charCodeAt(0) === 0xFEFF) {
+      if (csvText.charCodeAt(0) === 0xfeff) {
         csvText = csvText.slice(1);
       }
-      
+
       const parseResult = Papa.parse(csvText, {
         header: true,
         skipEmptyLines: true,
@@ -146,24 +147,24 @@ export function registerRevenueRoutes(app: Express) {
       });
 
       if (parseResult.errors.length > 0) {
-        return res.status(400).json({ 
-          error: "CSV parsing failed", 
-          details: parseResult.errors 
+        return res.status(400).json({
+          error: "CSV parsing failed",
+          details: parseResult.errors,
         });
       }
 
       // Get student maps for matching by Mindbody ID, email, or name
       const students = await storage.getStudents(organizationId);
       const studentMapByMindbodyId = new Map(
-        students.filter(s => s.mindbodyClientId).map(s => [s.mindbodyClientId!, s.id])
+        students.filter((s) => s.mindbodyClientId).map((s) => [s.mindbodyClientId!, s.id])
       );
       const studentMapByEmail = new Map(
-        students.filter(s => s.email).map(s => [s.email!.toLowerCase(), s.id])
+        students.filter((s) => s.email).map((s) => [s.email!.toLowerCase(), s.id])
       );
       const studentMapByName = new Map(
         students
-          .filter(s => s.firstName && s.lastName)
-          .map(s => [`${s.firstName.toLowerCase()} ${s.lastName.toLowerCase()}`, s.id])
+          .filter((s) => s.firstName && s.lastName)
+          .map((s) => [`${s.firstName.toLowerCase()} ${s.lastName.toLowerCase()}`, s.id])
       );
 
       let imported = 0;
@@ -185,7 +186,7 @@ export function registerRevenueRoutes(app: Express) {
 
       for (let index = 0; index < rows.length; index++) {
         const row = rows[index];
-        
+
         // Update progress on every row for real-time accuracy
         importProgressMap.set(organizationId, {
           total: rows.length,
@@ -194,40 +195,49 @@ export function registerRevenueRoutes(app: Express) {
           skipped,
           startTime,
         });
-        
+
         // Log progress every 1000 rows
         if (index > 0 && index % 1000 === 0) {
           const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-          console.log(`[CSV Import] Progress: ${index}/${rows.length} rows processed (${elapsed}s, ${imported} imported, ${skipped} skipped)`);
+          console.log(
+            `[CSV Import] Progress: ${index}/${rows.length} rows processed (${elapsed}s, ${imported} imported, ${skipped} skipped)`
+          );
         }
         try {
           // Map CSV columns to revenue fields (flexible column matching)
           // Mindbody format: "Sale ID", "Item Total", "Client ID", "Client", "Item name", "Payment Method"
-          const saleId = row['Sale ID'] || row['SaleId'] || row['ID'] || null;
-          const itemId = row['Item ID'] || row['ItemId'] || null;
-          const amountStr = row['Item Total'] || row['Amount'] || row['Total'] || row['Price'];
-          
+          const saleId = row["Sale ID"] || row["SaleId"] || row["ID"] || null;
+          const itemId = row["Item ID"] || row["ItemId"] || null;
+          const amountStr = row["Item Total"] || row["Amount"] || row["Total"] || row["Price"];
+
           // Validate amount is present
-          if (!amountStr || amountStr.toString().trim() === '') {
+          if (!amountStr || amountStr.toString().trim() === "") {
             errors.push(`Row ${index + 1}: Missing amount field`);
             skipped++;
             continue;
           }
-          
+
           // Clean and validate amount
-          const cleanedAmount = amountStr.toString().replace(/[^0-9.-]/g, '');
+          const cleanedAmount = amountStr.toString().replace(/[^0-9.-]/g, "");
           const amount = parseFloat(cleanedAmount);
           if (isNaN(amount)) {
             errors.push(`Row ${index + 1}: Invalid amount "${amountStr}"`);
             skipped++;
             continue;
           }
-          
-          const type = row['Payment Method'] || row['Type'] || row['Category'] || 'Sale';
-          const description = row['Item name'] || row['Description'] || row['Item'] || row['Product'] || row['Service'] || '';
-          
+
+          const type = row["Payment Method"] || row["Type"] || row["Category"] || "Sale";
+          const description =
+            row["Item name"] ||
+            row["Description"] ||
+            row["Item"] ||
+            row["Product"] ||
+            row["Service"] ||
+            "";
+
           // Handle various date formats
-          const dateStr = row['Sale Date'] || row['Date'] || row['Transaction Date'] || row['SaleDate'];
+          const dateStr =
+            row["Sale Date"] || row["Date"] || row["Transaction Date"] || row["SaleDate"];
           if (!dateStr) {
             errors.push(`Row ${index + 1}: Missing date field`);
             skipped++;
@@ -243,25 +253,25 @@ export function registerRevenueRoutes(app: Express) {
 
           // Try to match student by Mindbody Client ID, email, or name
           let studentId: string | null = null;
-          const clientId = row['Client ID'] || row['ClientID'] || row['Client Id'];
-          const clientEmail = row['Client Email'] || row['Email'] || row['ClientEmail'];
-          let clientName = row['Client'] || row['Client Name'] || row['ClientName'];
-          
+          const clientId = row["Client ID"] || row["ClientID"] || row["Client Id"];
+          const clientEmail = row["Client Email"] || row["Email"] || row["ClientEmail"];
+          let clientName = row["Client"] || row["Client Name"] || row["ClientName"];
+
           // First, try matching by Mindbody Client ID (most accurate)
           if (clientId) {
             studentId = studentMapByMindbodyId.get(clientId) || null;
           }
-          
+
           // If no match, try email
           if (!studentId && clientEmail) {
             studentId = studentMapByEmail.get(clientEmail.toLowerCase()) || null;
           }
-          
+
           // If no match, try name (handle "Last, First" format from Mindbody)
           if (!studentId && clientName) {
             // Convert "Last, First" to "First Last" for matching
-            if (clientName.includes(',')) {
-              const parts = clientName.split(',').map((p: string) => p.trim());
+            if (clientName.includes(",")) {
+              const parts = clientName.split(",").map((p: string) => p.trim());
               if (parts.length === 2) {
                 clientName = `${parts[1]} ${parts[0]}`; // "First Last"
               }
@@ -290,11 +300,16 @@ export function registerRevenueRoutes(app: Express) {
 
       // Log final summary
       const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
-      console.log(`[CSV Import] Completed: ${imported} imported, ${skipped} skipped, ${rows.length} total in ${totalTime}s`);
-      
+      console.log(
+        `[CSV Import] Completed: ${imported} imported, ${skipped} skipped, ${rows.length} total in ${totalTime}s`
+      );
+
       // Log errors for debugging
       if (errors.length > 0) {
-        console.error(`[CSV Import] Errors (showing first 10 of ${errors.length}):`, errors.slice(0, 10));
+        console.error(
+          `[CSV Import] Errors (showing first 10 of ${errors.length}):`,
+          errors.slice(0, 10)
+        );
       }
 
       // Clear progress tracking
@@ -308,14 +323,14 @@ export function registerRevenueRoutes(app: Express) {
         errors: errors.length > 0 ? errors.slice(0, 10) : undefined, // Return first 10 errors
       });
     } catch (error: any) {
-      console.error('CSV import error:', error);
-      
+      console.error("CSV import error:", error);
+
       // Clear progress on error
       const organizationId = (req.user as User)?.organizationId;
       if (organizationId) {
         importProgressMap.delete(organizationId);
       }
-      
+
       res.status(500).json({ error: "Failed to import CSV", details: error.message });
     }
   });

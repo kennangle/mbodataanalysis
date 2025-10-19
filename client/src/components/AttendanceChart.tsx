@@ -1,5 +1,14 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
 import { useQuery } from "@tanstack/react-query";
 
 interface AttendanceChartProps {
@@ -8,7 +17,6 @@ interface AttendanceChartProps {
 }
 
 export function AttendanceChart({ startDate, endDate }: AttendanceChartProps) {
-
   const queryParams = new URLSearchParams();
   if (startDate) {
     queryParams.append("startDate", startDate.toISOString());
@@ -18,11 +26,13 @@ export function AttendanceChart({ startDate, endDate }: AttendanceChartProps) {
   }
 
   const queryString = queryParams.toString();
-  const queryKey = queryString 
+  const queryKey = queryString
     ? `/api/dashboard/attendance-by-time?${queryString}`
     : "/api/dashboard/attendance-by-time";
 
-  const { data, isLoading } = useQuery<Array<{ day: string; morning: number; afternoon: number; evening: number }>>({
+  const { data, isLoading } = useQuery<
+    Array<{ day: string; morning: number; afternoon: number; evening: number }>
+  >({
     queryKey: [queryKey],
   });
 
@@ -31,7 +41,9 @@ export function AttendanceChart({ startDate, endDate }: AttendanceChartProps) {
       <Card>
         <CardHeader>
           <CardTitle>Class Attendance by Time</CardTitle>
-          <CardDescription>Average attendance distribution across different time slots</CardDescription>
+          <CardDescription>
+            Average attendance distribution across different time slots
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="h-[350px] flex items-center justify-center">
@@ -42,16 +54,17 @@ export function AttendanceChart({ startDate, endDate }: AttendanceChartProps) {
     );
   }
 
-  const hasData = data && data.length > 0 && data.some(d => d.morning > 0 || d.afternoon > 0 || d.evening > 0);
+  const hasData =
+    data && data.length > 0 && data.some((d) => d.morning > 0 || d.afternoon > 0 || d.evening > 0);
 
   // Generate description based on date range
   const getDescription = () => {
     if (startDate && endDate) {
-      return `Attendance distribution from ${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} to ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+      return `Attendance distribution from ${startDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} to ${endDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
     } else if (startDate) {
-      return `Attendance distribution from ${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} to present`;
+      return `Attendance distribution from ${startDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} to present`;
     } else if (endDate) {
-      return `Attendance distribution through ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+      return `Attendance distribution through ${endDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
     }
     return "Average attendance distribution across different time slots";
   };
@@ -75,16 +88,13 @@ export function AttendanceChart({ startDate, endDate }: AttendanceChartProps) {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" opacity={0.3} />
-                <XAxis 
-                  dataKey="day" 
-                  className="text-xs" 
+                <XAxis
+                  dataKey="day"
+                  className="text-xs"
                   tick={{ fill: "hsl(var(--muted-foreground))" }}
                 />
-                <YAxis 
-                  className="text-xs" 
-                  tick={{ fill: "hsl(var(--muted-foreground))" }}
-                />
-                <Tooltip 
+                <YAxis className="text-xs" tick={{ fill: "hsl(var(--muted-foreground))" }} />
+                <Tooltip
                   contentStyle={{
                     backgroundColor: "hsl(var(--popover))",
                     border: "1px solid hsl(var(--border))",

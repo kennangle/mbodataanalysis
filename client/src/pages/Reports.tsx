@@ -19,18 +19,18 @@ export default function Reports() {
     setDownloadingReport(reportName);
     try {
       const response = await fetch(endpoint, {
-        credentials: 'include'
+        credentials: "include",
       });
-      
+
       if (!response.ok) {
-        throw new Error('Failed to generate report');
+        throw new Error("Failed to generate report");
       }
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
-      a.download = `${reportName}-${new Date().toISOString().split('T')[0]}.csv`;
+      a.download = `${reportName}-${new Date().toISOString().split("T")[0]}.csv`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -81,7 +81,7 @@ export default function Reports() {
       icon: DollarSign,
       color: "text-green-600 dark:text-green-400",
       endpoint: "/api/reports/revenue",
-      filename: "revenue-report"
+      filename: "revenue-report",
     },
     {
       title: "Attendance Report",
@@ -89,7 +89,7 @@ export default function Reports() {
       icon: Users,
       color: "text-blue-600 dark:text-blue-400",
       endpoint: "/api/reports/attendance",
-      filename: "attendance-report"
+      filename: "attendance-report",
     },
     {
       title: "Class Performance",
@@ -97,7 +97,7 @@ export default function Reports() {
       icon: TrendingUp,
       color: "text-purple-600 dark:text-purple-400",
       endpoint: "/api/reports/class-performance",
-      filename: "class-performance"
+      filename: "class-performance",
     },
     {
       title: "Monthly Summary",
@@ -105,7 +105,7 @@ export default function Reports() {
       icon: Calendar,
       color: "text-orange-600 dark:text-orange-400",
       endpoint: "/api/reports/monthly-summary",
-      filename: "monthly-summary"
+      filename: "monthly-summary",
     },
   ];
 
@@ -172,7 +172,9 @@ export default function Reports() {
                           disabled={downloadingReport === report.filename}
                         >
                           <Download className="h-4 w-4" />
-                          {downloadingReport === report.filename ? "Generating..." : "Generate Report"}
+                          {downloadingReport === report.filename
+                            ? "Generating..."
+                            : "Generate Report"}
                         </Button>
                       </CardContent>
                     </Card>
@@ -187,9 +189,7 @@ export default function Reports() {
                     <FileText className="h-5 w-5 text-primary" />
                     <CardTitle>Recent Reports</CardTitle>
                   </div>
-                  <CardDescription>
-                    Your recently generated reports
-                  </CardDescription>
+                  <CardDescription>Your recently generated reports</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-col items-center justify-center py-12 text-center">

@@ -71,20 +71,13 @@ export default function Settings() {
               <Card>
                 <CardHeader>
                   <CardTitle>Account Information</CardTitle>
-                  <CardDescription>
-                    Your account details and profile information
-                  </CardDescription>
+                  <CardDescription>Your account details and profile information</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="name">Full Name</Label>
-                      <Input
-                        id="name"
-                        defaultValue={user.name}
-                        disabled
-                        data-testid="input-name"
-                      />
+                      <Input id="name" defaultValue={user.name} disabled data-testid="input-name" />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
@@ -99,12 +92,7 @@ export default function Settings() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="role">Role</Label>
-                    <Input
-                      id="role"
-                      defaultValue={user.role}
-                      disabled
-                      data-testid="input-role"
-                    />
+                    <Input id="role" defaultValue={user.role} disabled data-testid="input-role" />
                   </div>
                 </CardContent>
               </Card>
@@ -113,9 +101,7 @@ export default function Settings() {
               <Card>
                 <CardHeader>
                   <CardTitle>Organization</CardTitle>
-                  <CardDescription>
-                    Manage your organization settings
-                  </CardDescription>
+                  <CardDescription>Manage your organization settings</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
@@ -134,9 +120,7 @@ export default function Settings() {
               <Card>
                 <CardHeader>
                   <CardTitle>Security</CardTitle>
-                  <CardDescription>
-                    Manage your account security settings
-                  </CardDescription>
+                  <CardDescription>Manage your account security settings</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -158,11 +142,7 @@ export default function Settings() {
                         Sign out of your account on this device
                       </p>
                     </div>
-                    <Button
-                      variant="outline"
-                      onClick={handleLogout}
-                      data-testid="button-logout"
-                    >
+                    <Button variant="outline" onClick={handleLogout} data-testid="button-logout">
                       Sign Out
                     </Button>
                   </div>

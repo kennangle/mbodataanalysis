@@ -13,7 +13,12 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string, organizationName?: string) => Promise<void>;
+  register: (
+    email: string,
+    password: string,
+    name: string,
+    organizationName?: string
+  ) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -32,7 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await fetch("/api/auth/me", {
         credentials: "include",
       });
-      
+
       if (response.ok) {
         const userData = await response.json();
         setUser(userData);
@@ -61,7 +66,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(userData);
   };
 
-  const register = async (email: string, password: string, name: string, organizationName?: string) => {
+  const register = async (
+    email: string,
+    password: string,
+    name: string,
+    organizationName?: string
+  ) => {
     const response = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

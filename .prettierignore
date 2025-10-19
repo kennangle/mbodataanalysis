@@ -7,6 +7,11 @@ build/
 .next/
 out/
 
+# Replit system files
+.local/
+.cache/
+.config/
+
 # Database
 *.db
 *.sqlite

@@ -7,7 +7,7 @@
 ```
 1. Students (Clients) FIRST
    ↓
-2. Classes (Schedules) SECOND  
+2. Classes (Schedules) SECOND
    ↓
 3. Visits (Attendance) THIRD
    ↓
@@ -30,17 +30,20 @@ Each data type depends on the previous one existing in your database:
 ### What Happens If You Skip Steps
 
 ❌ **Import Visits before Classes**:
+
 - Result: 0 records imported
 - Reason: Visit ClassIds can't match non-existent class schedules
 - Solution: Import classes for the same date range first
 
-❌ **Import Visits before Students**:  
+❌ **Import Visits before Students**:
+
 - Result: 0 records imported
 - Reason: Visits need student records to link to
 - Solution: Import students first
 
 ❌ **Import Sales before Students**:
-- Result: 0 records imported  
+
+- Result: 0 records imported
 - Reason: Sales need student records to assign to
 - Solution: Import students first
 
@@ -53,11 +56,13 @@ Each data type depends on the previous one existing in your database:
 **Purpose**: Create the foundation - all other data references students
 
 **What to Configure**:
+
 - Start Date: January 1 of earliest year you need
 - End Date: Today's date
 - Select: ☑️ **Students only**
 
 **What Gets Imported**:
+
 - Student profiles (name, email, phone, status)
 - Membership information
 - Mindbody Client IDs (used for future lookups)
@@ -66,7 +71,8 @@ Each data type depends on the previous one existing in your database:
 
 **Expected Time**: 30 seconds - 2 minutes
 
-**Success Indicator**: 
+**Success Indicator**:
+
 ```
 ✅ Students imported: 1,234
 ```
@@ -78,15 +84,18 @@ Each data type depends on the previous one existing in your database:
 **Purpose**: Create class schedule records that visits will reference
 
 **What to Configure**:
+
 - Start Date: Beginning of period you need (e.g., Jan 1, 2025)
 - End Date: End of period you need (e.g., Dec 31, 2025)
 - Select: ☑️ **Classes only**
 
 **What Gets Imported**:
+
 - Class schedules (times, locations, instructors)
 - Mindbody Class/Schedule IDs (used to match visits)
 
-**Important**: 
+**Important**:
+
 - ⚠️ The date range for classes MUST match or exceed your visits date range
 - Example: To import September visits, you need September classes first
 
@@ -95,6 +104,7 @@ Each data type depends on the previous one existing in your database:
 **Expected Time**: 1-5 minutes
 
 **Success Indicator**:
+
 ```
 ✅ Classes imported: 450
 ```
@@ -106,40 +116,48 @@ Each data type depends on the previous one existing in your database:
 **Purpose**: Create attendance records showing who attended which classes
 
 **Prerequisites**:
+
 - ✅ Students imported for the same date range
 - ✅ Classes imported for the same date range
 
 **What to Configure**:
+
 - Start Date: Beginning of attendance period (e.g., Sep 1, 2025)
 - End Date: End of attendance period (e.g., Oct 1, 2025)
 - Select: ☑️ **Visits only**
 
 **What Gets Imported**:
+
 - Attendance records (student + class + date/time)
 - Attendance status (attended, no-show, late cancel)
 
 **How It Works**:
+
 1. System loads all students (~6,000 clients)
 2. For each student, checks if they have visits in date range
 3. Matches visit ClassId to imported class schedules
 4. Creates attendance record linking student → schedule
 
-**API Calls**: 
+**API Calls**:
+
 - ⚠️ **1 API call per student** (most expensive operation)
 - 1,000 students = 1,000 API calls
 - May take multiple days on free tier (1,000 calls/day limit)
 
-**Expected Time**: 
+**Expected Time**:
+
 - 100 students: 5-10 minutes
-- 1,000 students: 45-90 minutes  
+- 1,000 students: 45-90 minutes
 - 6,000 students: 4-6 hours (if API limit allows)
 
 **Success Indicator**:
+
 ```
 ✅ Visits imported: 847 (from 1,000 students checked)
 ```
 
 **Why Lower Numbers Are Normal**:
+
 - System checks ALL students but only creates records for those with visits
 - If 1,000 students were checked but only 200 attended classes, you'll see 200 visits
 
@@ -150,26 +168,31 @@ Each data type depends on the previous one existing in your database:
 **Purpose**: Import purchase and payment data
 
 **Prerequisites**:
+
 - ✅ Students imported for the same date range
 
 **What to Configure**:
+
 - Start Date: Beginning of sales period
-- End Date: End of sales period  
+- End Date: End of sales period
 - Select: ☑️ **Sales only**
 
 **What Gets Imported**:
+
 - Purchase transactions
 - Payment amounts
 - Product/service descriptions
 - Transaction dates
 
-**API Calls**: 
+**API Calls**:
+
 - **1 API call per student** (same as visits)
 - 1,000 students = 1,000 API calls
 
 **Expected Time**: Similar to visits import
 
 **Success Indicator**:
+
 ```
 ✅ Sales imported: 543
 ```
@@ -183,26 +206,29 @@ Each data type depends on the previous one existing in your database:
 **Goal**: Import all data for 2025 for a studio with 1,200 students
 
 #### Day 1: Foundation Import
+
 ```
 □ Start Import
   - Start Date: January 1, 2024
   - End Date: December 31, 2025
   - Select: ☑️ Students only
-  
+
 ✅ Result: 1,200 students imported (~10 API calls)
 ```
 
 #### Day 1 (continued): Classes Import
+
 ```
-□ Start Import  
+□ Start Import
   - Start Date: January 1, 2025
   - End Date: December 31, 2025
   - Select: ☑️ Classes only
-  
+
 ✅ Result: 850 class schedules imported (~20 API calls)
 ```
 
 #### Day 2-3: Visits Import (Multi-Day)
+
 ```
 □ Day 2: Start Import
   - Start Date: January 1, 2025
@@ -210,32 +236,34 @@ Each data type depends on the previous one existing in your database:
   - Select: ☑️ Visits only
   - Monitor API counter
   - Pause at ~900 calls (processed ~900 students)
-  
+
 ✅ Partial Result: 450 visits imported, 900 students checked
 
 □ Day 3: Resume Import
   - Click "Resume Import" button
   - Continues from student #901
   - Completes remaining 300 students
-  
+
 ✅ Final Result: 680 visits imported total, 1,200 students checked
 ```
 
 #### Day 4-5: Sales Import
+
 ```
 □ Day 4: Start Import
-  - Start Date: January 1, 2025  
+  - Start Date: January 1, 2025
   - End Date: December 31, 2025
   - Select: ☑️ Sales only
   - Pause at ~900 calls
-  
+
 □ Day 5: Resume Import
   - Complete remaining students
-  
+
 ✅ Result: 1,543 sales imported
 ```
 
 #### Day 6: Enable Webhooks
+
 ```
 □ Go to Dashboard → Real-Time Sync
 □ Toggle "Enable Real-Time Sync"
@@ -249,20 +277,23 @@ Each data type depends on the previous one existing in your database:
 
 ### ❌ Mistake 1: Wrong Year in Date Range
 
-**Problem**: 
+**Problem**:
+
 - Imported 2024 classes
-- Trying to import 2025 visits  
+- Trying to import 2025 visits
 - Result: 0 visits imported
 
 **Solution**:
+
 1. Import 2025 classes FIRST
 2. Then import 2025 visits
 
 **How to Check**:
+
 ```sql
 -- Check which years you have classes for
-SELECT DATE_PART('year', start_time) as year, COUNT(*) 
-FROM class_schedules 
+SELECT DATE_PART('year', start_time) as year, COUNT(*)
+FROM class_schedules
 GROUP BY year;
 ```
 
@@ -271,10 +302,12 @@ GROUP BY year;
 ### ❌ Mistake 2: Skipping Students Import
 
 **Problem**:
+
 - Imported classes and visits
 - Result: 0 visits imported (no students to link to)
 
 **Solution**:
+
 1. Import students first
 2. Then import classes
 3. Then import visits
@@ -284,12 +317,14 @@ GROUP BY year;
 ### ❌ Mistake 3: Date Range Mismatch
 
 **Problem**:
+
 - Students: Jan-Dec 2025
 - Classes: Sep-Oct 2025 only
 - Visits: Jan-Dec 2025
 - Result: Only Sep-Oct visits imported
 
-**Solution**: 
+**Solution**:
+
 - Classes date range must match or exceed visits date range
 - If importing full year visits, import full year classes
 
@@ -298,16 +333,19 @@ GROUP BY year;
 ### ❌ Mistake 4: Expecting All Students to Have Visits
 
 **Problem**:
+
 - 6,842 students in system
 - Only 300 visits imported
 - "Where are my visits?"
 
 **Reality**:
+
 - The system checks ALL students (6,842)
 - But only students who attended create visit records
 - If only 300 students attended classes → 300 visits is correct
 
 **How to Verify**:
+
 - Import progress shows "6,842 total" (students to check)
 - Import result shows "300 imported" (actual visits found)
 - Both numbers are correct!
@@ -326,16 +364,19 @@ Visits imported: 0
 ```
 
 **What this means**:
+
 - **400 / 6,842**: Checked 400 students out of 6,842 total
 - **Visits imported: 0**: None of those 400 students had visits in your date range
 
 Later:
+
 ```
 Progress: 1,250 / 6,842 (18.2%)
 Visits imported: 87
 ```
 
 **What changed**:
+
 - **1,250 / 6,842**: Now checked 1,250 students
 - **Visits imported: 87**: Found 87 students who had visits
 
@@ -347,8 +388,9 @@ Estimated time to limit: hours remaining
 ```
 
 **What this tells you**:
+
 - **456 calls made** this month (out of 5,000 monthly free tier)
-- **45.6 calls/hour**: Current rate  
+- **45.6 calls/hour**: Current rate
 - **Estimated time**: When you'll reach the 5,000 free tier limit at current rate
 
 **Strategy**: When you see "4,500 / 5,000", you're approaching the free tier limit. After 5,000 calls, Mindbody charges $0.002 per call ($2 per 1,000 calls).
@@ -384,7 +426,7 @@ Estimated time to limit: hours remaining
 ✅ **Exact position**: Resumes at the right student/offset  
 ✅ **API count preserved**: Tracks monthly usage across all sessions  
 ✅ **Session resilient**: Survives page reloads and browser restarts  
-✅ **No wait time**: Resume immediately - no 24-hour restrictions  
+✅ **No wait time**: Resume immediately - no 24-hour restrictions
 
 ---
 
@@ -446,12 +488,14 @@ Got: 300 visits
 ```
 
 **Likely Reasons**:
+
 1. ✅ Correct - only 300 students attended in date range
 2. ⚠️ Date range too narrow - expand dates
 3. ⚠️ Classes missing for some dates - import more classes
 4. ⚠️ Wrong year - check class year vs visit year
 
 **How to Verify**:
+
 - Log into Mindbody directly
 - Run a report for same date range
 - Compare numbers
@@ -466,21 +510,21 @@ Got: 300 visits
 □ Step 1: Import Students (All Time)
    Date: Jan 2020 - Today
    Types: ☑️ Students
-   
-□ Step 2: Import Classes (Desired Period)  
+
+□ Step 2: Import Classes (Desired Period)
    Date: Jan 2025 - Dec 2025
    Types: ☑️ Classes
-   
+
 □ Step 3: Import Visits (Same Period)
-   Date: Jan 2025 - Dec 2025  
+   Date: Jan 2025 - Dec 2025
    Types: ☑️ Visits
    (May require multiple days)
-   
+
 □ Step 4: Import Sales (Same Period)
    Date: Jan 2025 - Dec 2025
    Types: ☑️ Sales
    (May require multiple days)
-   
+
 □ Step 5: Enable Webhooks
    Dashboard → Real-Time Sync → Toggle ON
 ```
@@ -501,7 +545,7 @@ Just need to see if it works?
 
 ```
 □ Import Students: Last 30 days
-□ Import Classes: Last 30 days  
+□ Import Classes: Last 30 days
 □ Import Visits: Last 30 days
 □ Check Dashboard - see real data!
 □ Then expand date ranges as needed
@@ -514,22 +558,26 @@ Just need to see if it works?
 Once initial import is complete:
 
 ### Step 1: Verify Data
+
 - Check Dashboard for populated charts
 - Review Students page for imported data
 - Confirm date ranges look correct
 
 ### Step 2: Enable Real-Time Sync
+
 - Go to Dashboard
 - Scroll to "Real-Time Sync" section
 - Toggle switch to enable
 - System creates Mindbody webhook subscription
 
 ### Step 3: Test
+
 - Book a test class in Mindbody
 - Within 1 minute, check Dashboard
 - New attendance should appear automatically
 
 ### Step 4: Ongoing Maintenance
+
 - ✅ Webhooks handle all new visits automatically
 - ✅ No more daily imports needed
 - ✅ Data stays current in real-time
@@ -542,13 +590,15 @@ Once initial import is complete:
 ### Free Tier (5,000 calls/month)
 
 **Budget Allocation**:
+
 - Students import: 10-20 calls
-- Classes import: 20-50 calls  
+- Classes import: 20-50 calls
 - **Visits import: 1 call per student** ⚠️ (biggest cost)
 - Sales import: 1 call per student ⚠️
 - Buffer/testing: 100-200 calls
 
 **Monthly Planning**:
+
 ```
 5,000 students × 1 call = 5,000 calls just for visits
 Free tier: Import up to ~4,900 students in free tier
@@ -595,12 +645,14 @@ Paid tier: After 5,000 calls, only $0.002/call ($2 per 1,000 calls)
 ## Support & Resources
 
 ### In-App Resources
+
 - **Dashboard**: Real-time import status and API usage
 - **Students Page**: Verify imported client data
 - **Classes Page**: Check imported schedules
 - **Import Modal**: Configure and start imports
 
 ### Documentation
+
 - **This Guide**: Import sequence and troubleshooting
 - **WEBHOOKS_AND_API_GUIDE.md**: Multi-day strategies and webhook setup
 - **replit.md**: Technical architecture and system details
@@ -608,6 +660,7 @@ Paid tier: After 5,000 calls, only $0.002/call ($2 per 1,000 calls)
 ### Getting Help
 
 **Data Not Importing?**
+
 1. Check this guide's troubleshooting section
 2. Verify import sequence was followed
 3. Check browser console for errors
@@ -615,12 +668,14 @@ Paid tier: After 5,000 calls, only $0.002/call ($2 per 1,000 calls)
 5. Use `/diagnose` command (Cmd+K) for AI-powered troubleshooting
 
 **API Limit Issues?**
+
 1. See WEBHOOKS_AND_API_GUIDE.md for multi-day strategies
 2. Consider Mindbody API tier upgrade
 3. Use webhooks to reduce ongoing API usage
 4. Use `/anal performance` command (Cmd+K) for API usage analysis
 
 **Technical Issues?**
+
 1. Check replit.md for system architecture
 2. Review database schema in shared/schema.ts
 3. Examine server/mindbody.ts for import logic
@@ -639,5 +694,5 @@ For complete command reference, see [slashcommands.md](./slashcommands.md).
 
 ---
 
-*Last Updated: October 2025*
-*Version: 1.0*
+_Last Updated: October 2025_
+_Version: 1.0_

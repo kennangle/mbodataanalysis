@@ -19,7 +19,7 @@ import { LogOut, Calendar } from "lucide-react";
 export default function Dashboard() {
   const { user, isLoading, logout } = useAuth();
   const [, setLocation] = useLocation();
-  
+
   // Shared date range state - default to all-time (no dates selected)
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
@@ -75,7 +75,7 @@ export default function Dashboard() {
           <main className="flex-1 overflow-y-auto p-6">
             <div className="max-w-screen-2xl mx-auto space-y-6">
               <DashboardStats startDate={startDate} endDate={endDate} />
-              
+
               {/* Centralized Date Range Picker */}
               <Card>
                 <CardHeader className="pb-3">
@@ -101,19 +101,21 @@ export default function Dashboard() {
                 <CardContent>
                   <div className="flex flex-wrap items-center gap-4">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground whitespace-nowrap">Start:</span>
-                      <DatePicker 
-                        value={startDate} 
-                        onChange={setStartDate} 
-                        placeholder="All time" 
+                      <span className="text-sm text-muted-foreground whitespace-nowrap">
+                        Start:
+                      </span>
+                      <DatePicker
+                        value={startDate}
+                        onChange={setStartDate}
+                        placeholder="All time"
                         data-testid="datepicker-start"
                       />
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-muted-foreground whitespace-nowrap">End:</span>
-                      <DatePicker 
-                        value={endDate} 
-                        onChange={setEndDate} 
+                      <DatePicker
+                        value={endDate}
+                        onChange={setEndDate}
                         placeholder="All time"
                         data-testid="datepicker-end"
                       />
@@ -121,11 +123,10 @@ export default function Dashboard() {
                     {(startDate || endDate) && (
                       <div className="text-sm text-muted-foreground">
                         {startDate && endDate
-                          ? `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+                          ? `${startDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} - ${endDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
                           : startDate
-                            ? `From ${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
-                            : `Through ${endDate?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
-                        }
+                            ? `From ${startDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+                            : `Through ${endDate?.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`}
                       </div>
                     )}
                   </div>
@@ -133,14 +134,8 @@ export default function Dashboard() {
               </Card>
 
               <div className="grid gap-6 lg:grid-cols-2">
-                <RevenueChart 
-                  startDate={startDate} 
-                  endDate={endDate}
-                />
-                <AttendanceChart 
-                  startDate={startDate}
-                  endDate={endDate}
-                />
+                <RevenueChart startDate={startDate} endDate={endDate} />
+                <AttendanceChart startDate={startDate} endDate={endDate} />
               </div>
 
               <div className="grid gap-6 lg:grid-cols-2">

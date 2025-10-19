@@ -141,9 +141,7 @@ export function UsersTable() {
     mutationFn: async (data: EditUserFormValues & { id: string }) => {
       const { id, password, ...updateData } = data;
       // Only include password if it's not empty
-      const finalData = password 
-        ? { ...updateData, password } 
-        : updateData;
+      const finalData = password ? { ...updateData, password } : updateData;
       return await apiRequest("PATCH", `/api/users/${id}`, finalData);
     },
     onSuccess: () => {
@@ -187,9 +185,10 @@ export function UsersTable() {
     },
   });
 
-  const filteredUsers = (users || []).filter((user) =>
-    user.name.toLowerCase().includes(search.toLowerCase()) ||
-    user.email.toLowerCase().includes(search.toLowerCase())
+  const filteredUsers = (users || []).filter(
+    (user) =>
+      user.name.toLowerCase().includes(search.toLowerCase()) ||
+      user.email.toLowerCase().includes(search.toLowerCase())
   );
 
   const handleEdit = (user: User) => {
@@ -262,28 +261,41 @@ export function UsersTable() {
                       <TableCell className="font-medium" data-testid={`text-name-${user.id}`}>
                         {user.name}
                       </TableCell>
-                      <TableCell className="text-muted-foreground" data-testid={`text-email-${user.id}`}>
+                      <TableCell
+                        className="text-muted-foreground"
+                        data-testid={`text-email-${user.id}`}
+                      >
                         {user.email}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={user.role === "admin" ? "default" : "secondary"} data-testid={`badge-role-${user.id}`}>
+                        <Badge
+                          variant={user.role === "admin" ? "default" : "secondary"}
+                          data-testid={`badge-role-${user.id}`}
+                        >
                           {user.role}
                         </Badge>
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" data-testid={`button-actions-${user.id}`}>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              data-testid={`button-actions-${user.id}`}
+                            >
                               <MoreVertical className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEdit(user)} data-testid={`button-edit-${user.id}`}>
+                            <DropdownMenuItem
+                              onClick={() => handleEdit(user)}
+                              data-testid={`button-edit-${user.id}`}
+                            >
                               <Pencil className="h-4 w-4 mr-2" />
                               Edit
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              className="text-destructive" 
+                            <DropdownMenuItem
+                              className="text-destructive"
                               onClick={() => handleDelete(user)}
                               data-testid={`button-delete-${user.id}`}
                             >
@@ -310,7 +322,10 @@ export function UsersTable() {
             <DialogDescription>Add a new user to your organization</DialogDescription>
           </DialogHeader>
           <Form {...createForm}>
-            <form onSubmit={createForm.handleSubmit((data) => createMutation.mutate(data))} className="space-y-4">
+            <form
+              onSubmit={createForm.handleSubmit((data) => createMutation.mutate(data))}
+              className="space-y-4"
+            >
               <FormField
                 control={createForm.control}
                 name="name"
@@ -331,7 +346,12 @@ export function UsersTable() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="john@example.com" {...field} data-testid="input-create-email" />
+                      <Input
+                        type="email"
+                        placeholder="john@example.com"
+                        {...field}
+                        data-testid="input-create-email"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -344,7 +364,12 @@ export function UsersTable() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} data-testid="input-create-password" />
+                      <Input
+                        type="password"
+                        placeholder="••••••••"
+                        {...field}
+                        data-testid="input-create-password"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -372,15 +397,19 @@ export function UsersTable() {
                 )}
               />
               <DialogFooter>
-                <Button 
-                  type="button" 
-                  variant="outline" 
+                <Button
+                  type="button"
+                  variant="outline"
                   onClick={() => setIsCreateDialogOpen(false)}
                   data-testid="button-cancel-create"
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={createMutation.isPending} data-testid="button-submit-create">
+                <Button
+                  type="submit"
+                  disabled={createMutation.isPending}
+                  data-testid="button-submit-create"
+                >
                   {createMutation.isPending ? "Creating..." : "Create User"}
                 </Button>
               </DialogFooter>
@@ -397,7 +426,12 @@ export function UsersTable() {
             <DialogDescription>Update user information</DialogDescription>
           </DialogHeader>
           <Form {...editForm}>
-            <form onSubmit={editForm.handleSubmit((data) => selectedUser && updateMutation.mutate({ ...data, id: selectedUser.id }))} className="space-y-4">
+            <form
+              onSubmit={editForm.handleSubmit(
+                (data) => selectedUser && updateMutation.mutate({ ...data, id: selectedUser.id })
+              )}
+              className="space-y-4"
+            >
               <FormField
                 control={editForm.control}
                 name="name"
@@ -418,7 +452,12 @@ export function UsersTable() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="john@example.com" {...field} data-testid="input-edit-email" />
+                      <Input
+                        type="email"
+                        placeholder="john@example.com"
+                        {...field}
+                        data-testid="input-edit-email"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -431,7 +470,12 @@ export function UsersTable() {
                   <FormItem>
                     <FormLabel>Password (leave blank to keep current)</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} data-testid="input-edit-password" />
+                      <Input
+                        type="password"
+                        placeholder="••••••••"
+                        {...field}
+                        data-testid="input-edit-password"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -459,15 +503,19 @@ export function UsersTable() {
                 )}
               />
               <DialogFooter>
-                <Button 
-                  type="button" 
-                  variant="outline" 
+                <Button
+                  type="button"
+                  variant="outline"
                   onClick={() => setIsEditDialogOpen(false)}
                   data-testid="button-cancel-edit"
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={updateMutation.isPending} data-testid="button-submit-edit">
+                <Button
+                  type="submit"
+                  disabled={updateMutation.isPending}
+                  data-testid="button-submit-edit"
+                >
                   {updateMutation.isPending ? "Updating..." : "Update User"}
                 </Button>
               </DialogFooter>
@@ -482,7 +530,8 @@ export function UsersTable() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the user "{selectedUser?.name}". This action cannot be undone.
+              This will permanently delete the user "{selectedUser?.name}". This action cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

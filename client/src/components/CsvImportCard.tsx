@@ -36,12 +36,12 @@ export function CsvImportCard() {
   // Poll for import progress
   const pollProgress = async () => {
     try {
-      const response = await fetch('/api/revenue/import-progress', {
-        credentials: 'include',
+      const response = await fetch("/api/revenue/import-progress", {
+        credentials: "include",
       });
-      
+
       if (response.ok) {
-        const data = await response.json() as ImportProgress;
+        const data = (await response.json()) as ImportProgress;
         setProgress(data);
       } else if (response.status === 404) {
         // Import completed or not started
@@ -52,7 +52,7 @@ export function CsvImportCard() {
         setProgress(null);
       }
     } catch (error) {
-      console.error('Failed to fetch progress:', error);
+      console.error("Failed to fetch progress:", error);
     }
   };
 
@@ -61,7 +61,7 @@ export function CsvImportCard() {
     if (progressIntervalRef.current) {
       clearInterval(progressIntervalRef.current);
     }
-    
+
     // Poll every 500ms for smooth progress updates
     progressIntervalRef.current = window.setInterval(pollProgress, 500);
   };
@@ -86,36 +86,38 @@ export function CsvImportCard() {
   const importMutation = useMutation({
     mutationFn: async (file: File) => {
       const formData = new FormData();
-      formData.append('file', file);
-      
+      formData.append("file", file);
+
       // Start polling for progress
       startProgressPolling();
-      
+
       // Create abort controller with 5 minute timeout for large files
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000); // 5 minutes
-      
+
       try {
         // Use fetch directly for multipart/form-data instead of apiRequest
-        const response = await fetch('/api/revenue/import-csv', {
-          method: 'POST',
+        const response = await fetch("/api/revenue/import-csv", {
+          method: "POST",
           body: formData,
-          credentials: 'include', // Include session cookie
+          credentials: "include", // Include session cookie
           signal: controller.signal,
         });
-        
+
         clearTimeout(timeoutId);
-        
+
         if (!response.ok) {
           const error = await response.json();
-          throw new Error(error.details || error.error || 'Import failed');
+          throw new Error(error.details || error.error || "Import failed");
         }
-        
-        return await response.json() as CsvImportResult;
+
+        return (await response.json()) as CsvImportResult;
       } catch (error: any) {
         clearTimeout(timeoutId);
-        if (error.name === 'AbortError') {
-          throw new Error('Import timed out - file may be too large. Try splitting into smaller files.');
+        if (error.name === "AbortError") {
+          throw new Error(
+            "Import timed out - file may be too large. Try splitting into smaller files."
+          );
         }
         throw error;
       } finally {
@@ -127,14 +129,14 @@ export function CsvImportCard() {
       setImportResult(data);
       setSelectedFile(null);
       if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+        fileInputRef.current.value = "";
       }
-      
+
       // Invalidate revenue queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ['/api/revenue'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/revenue-trend'] });
-      
+      queryClient.invalidateQueries({ queryKey: ["/api/revenue"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/revenue-trend"] });
+
       toast({
         title: "CSV Import Complete",
         description: `Successfully imported ${data.imported} of ${data.total} records. ${data.skipped} skipped.`,
@@ -153,7 +155,7 @@ export function CsvImportCard() {
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (!file.name.endsWith('.csv')) {
+      if (!file.name.endsWith(".csv")) {
         toast({
           title: "Invalid File Type",
           description: "Please select a CSV file",
@@ -176,7 +178,7 @@ export function CsvImportCard() {
     setSelectedFile(null);
     setImportResult(null);
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
@@ -203,18 +205,39 @@ export function CsvImportCard() {
           <>
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">
-                Upload a CSV file exported from Mindbody Business Intelligence with revenue/sales data.
+                Upload a CSV file exported from Mindbody Business Intelligence with revenue/sales
+                data.
               </p>
               <div className="bg-muted/50 p-3 rounded-md text-xs space-y-1">
                 <p className="font-medium">Expected CSV columns (flexible names):</p>
                 <ul className="list-disc list-inside space-y-0.5 text-muted-foreground">
-                  <li><span className="font-medium">Date</span> (or "Sale Date", "Transaction Date") - Required</li>
-                  <li><span className="font-medium">Amount</span> (or "Total", "Price") - Required</li>
-                  <li><span className="font-medium">Type</span> (or "Category", "Payment Method") - Optional</li>
-                  <li><span className="font-medium">Description</span> (or "Item", "Product", "Service") - Optional</li>
-                  <li><span className="font-medium">Client Email</span> (or "Email") - Optional, for student matching</li>
-                  <li><span className="font-medium">Client Name</span> (or "Client") - Optional, for student matching</li>
-                  <li><span className="font-medium">Sale ID</span> (or "SaleId", "ID") - Optional, prevents duplicates</li>
+                  <li>
+                    <span className="font-medium">Date</span> (or "Sale Date", "Transaction Date") -
+                    Required
+                  </li>
+                  <li>
+                    <span className="font-medium">Amount</span> (or "Total", "Price") - Required
+                  </li>
+                  <li>
+                    <span className="font-medium">Type</span> (or "Category", "Payment Method") -
+                    Optional
+                  </li>
+                  <li>
+                    <span className="font-medium">Description</span> (or "Item", "Product",
+                    "Service") - Optional
+                  </li>
+                  <li>
+                    <span className="font-medium">Client Email</span> (or "Email") - Optional, for
+                    student matching
+                  </li>
+                  <li>
+                    <span className="font-medium">Client Name</span> (or "Client") - Optional, for
+                    student matching
+                  </li>
+                  <li>
+                    <span className="font-medium">Sale ID</span> (or "SaleId", "ID") - Optional,
+                    prevents duplicates
+                  </li>
                 </ul>
               </div>
             </div>
@@ -228,7 +251,7 @@ export function CsvImportCard() {
                 className="hidden"
                 data-testid="input-csv-file"
               />
-              
+
               <Button
                 variant="outline"
                 onClick={() => fileInputRef.current?.click()}
@@ -236,7 +259,7 @@ export function CsvImportCard() {
                 data-testid="button-select-file"
               >
                 <Upload className="mr-2 h-4 w-4" />
-                {selectedFile ? selectedFile.name : 'Select CSV File'}
+                {selectedFile ? selectedFile.name : "Select CSV File"}
               </Button>
 
               {selectedFile && (
@@ -253,17 +276,21 @@ export function CsvImportCard() {
                               {progress.percentage}%
                             </span>
                           </div>
-                          <Progress value={progress.percentage} className="h-2" data-testid="progress-import" />
+                          <Progress
+                            value={progress.percentage}
+                            className="h-2"
+                            data-testid="progress-import"
+                          />
                           <div className="flex items-center justify-between text-xs text-blue-800 dark:text-blue-300">
                             <span>
-                              {progress.processed.toLocaleString()} / {progress.total.toLocaleString()} rows
+                              {progress.processed.toLocaleString()} /{" "}
+                              {progress.total.toLocaleString()} rows
                             </span>
-                            <span>
-                              {Math.floor(progress.elapsed)}s elapsed
-                            </span>
+                            <span>{Math.floor(progress.elapsed)}s elapsed</span>
                           </div>
                           <div className="text-xs text-blue-700 dark:text-blue-300">
-                            {progress.imported.toLocaleString()} imported • {progress.skipped.toLocaleString()} skipped
+                            {progress.imported.toLocaleString()} imported •{" "}
+                            {progress.skipped.toLocaleString()} skipped
                           </div>
                         </>
                       ) : (
@@ -281,8 +308,10 @@ export function CsvImportCard() {
                       className="flex-1"
                       data-testid="button-import-csv"
                     >
-                      {importMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      {importMutation.isPending ? 'Importing...' : 'Import CSV'}
+                      {importMutation.isPending && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      {importMutation.isPending ? "Importing..." : "Import CSV"}
                     </Button>
                     <Button
                       variant="outline"
@@ -321,11 +350,14 @@ export function CsvImportCard() {
               <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900 rounded-md p-4">
                 <h4 className="font-semibold text-yellow-900 dark:text-yellow-100 mb-2 flex items-center gap-2">
                   <AlertCircle className="h-4 w-4" />
-                  Import Warnings ({importResult.errors.length} {importResult.errors.length > 1 ? 'errors' : 'error'})
+                  Import Warnings ({importResult.errors.length}{" "}
+                  {importResult.errors.length > 1 ? "errors" : "error"})
                 </h4>
                 <ul className="text-xs space-y-1 text-yellow-800 dark:text-yellow-200 max-h-32 overflow-y-auto">
                   {importResult.errors.map((error, index) => (
-                    <li key={index} className="font-mono">{error}</li>
+                    <li key={index} className="font-mono">
+                      {error}
+                    </li>
                   ))}
                 </ul>
               </div>

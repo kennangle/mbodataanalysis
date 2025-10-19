@@ -9,7 +9,7 @@ function safeJsonParse<T = any>(value: any, fallback: T = {} as T): T {
   if (value === null || value === undefined) {
     return fallback;
   }
-  if (typeof value === 'object') {
+  if (typeof value === "object") {
     return value as T;
   }
   try {
@@ -23,7 +23,7 @@ export function registerMindbodyRoutes(app: Express) {
   app.get("/api/mindbody/auth-url", requireAuth, async (req, res) => {
     try {
       const siteId = req.query.siteId as string;
-      
+
       if (!siteId) {
         return res.status(400).json({ error: "siteId is required" });
       }
@@ -33,14 +33,15 @@ export function registerMindbodyRoutes(app: Express) {
         return res.status(500).json({ error: "MINDBODY_CLIENT_ID not configured" });
       }
 
-      let redirectUri = 'http://localhost:5000/api/mindbody/callback';
+      let redirectUri = "http://localhost:5000/api/mindbody/callback";
       if (process.env.REPLIT_DOMAINS) {
-        const domains = process.env.REPLIT_DOMAINS.split(',');
+        const domains = process.env.REPLIT_DOMAINS.split(",");
         redirectUri = `https://${domains[0]}/api/mindbody/callback`;
       }
-      
+
       const nonce = Math.random().toString(36).substring(7);
-      const authUrl = `https://signin.mindbodyonline.com/connect/authorize?` +
+      const authUrl =
+        `https://signin.mindbodyonline.com/connect/authorize?` +
         `response_mode=form_post` +
         `&response_type=code%20id_token` +
         `&client_id=${clientId}` +
@@ -60,7 +61,7 @@ export function registerMindbodyRoutes(app: Express) {
     try {
       const code = req.body.code as string;
       const idToken = req.body.id_token as string;
-      
+
       if (!code) {
         console.error("Missing authorization code in callback");
         return res.redirect("/import?error=missing_code");
@@ -93,7 +94,7 @@ export function registerMindbodyRoutes(app: Express) {
     try {
       const { code, siteId } = req.body;
       const organizationId = (req.user as User)?.organizationId;
-      
+
       if (!organizationId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -112,7 +113,8 @@ export function registerMindbodyRoutes(app: Express) {
 
       res.json({ success: true, message: "Mindbody account connected successfully" });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to connect Mindbody account";
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to connect Mindbody account";
       res.status(500).json({ error: errorMessage });
     }
   });
@@ -121,13 +123,13 @@ export function registerMindbodyRoutes(app: Express) {
   app.get("/api/mindbody/import/active", requireAuth, async (req, res) => {
     try {
       const organizationId = (req.user as User)?.organizationId;
-      
+
       if (!organizationId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
       const activeJob = await storage.getActiveImportJob(organizationId);
-      
+
       if (!activeJob) {
         return res.status(404).json({ error: "No active import job" });
       }
@@ -154,28 +156,28 @@ export function registerMindbodyRoutes(app: Express) {
   app.post("/api/mindbody/import/start", requireAuth, async (req, res) => {
     try {
       const organizationId = (req.user as User)?.organizationId;
-      
+
       if (!organizationId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
       const { config } = req.body;
-      
+
       // Check if there's already an active job (running or pending)
       const activeJob = await storage.getActiveImportJob(organizationId);
       if (activeJob) {
         // Allow starting new import if the active job is paused or cancelled
-        if (activeJob.status === 'paused' || activeJob.status === 'cancelled') {
+        if (activeJob.status === "paused" || activeJob.status === "cancelled") {
           // Clean up the old paused/cancelled job by marking it as cancelled
           await storage.updateImportJob(activeJob.id, {
-            status: 'cancelled',
-            error: activeJob.error || 'Replaced by new import',
+            status: "cancelled",
+            error: activeJob.error || "Replaced by new import",
           });
         } else {
           // Reject if there's a truly active (running/pending) job
-          return res.status(400).json({ 
-            error: "An import is already in progress", 
-            jobId: activeJob.id 
+          return res.status(400).json({
+            error: "An import is already in progress",
+            jobId: activeJob.id,
           });
         }
       }
@@ -183,30 +185,30 @@ export function registerMindbodyRoutes(app: Express) {
       // Parse config - avoid timezone issues by parsing date components
       let startDate: Date;
       let endDate: Date;
-      
+
       if (config?.startDate) {
         // Parse YYYY-MM-DD format avoiding timezone issues
-        const [year, month, day] = config.startDate.split('-').map(Number);
+        const [year, month, day] = config.startDate.split("-").map(Number);
         startDate = new Date(year, month - 1, day);
       } else {
         const defaultStart = new Date();
         defaultStart.setFullYear(defaultStart.getFullYear() - 1);
         startDate = defaultStart;
       }
-      
+
       if (config?.endDate) {
         // Parse YYYY-MM-DD format avoiding timezone issues
-        const [year, month, day] = config.endDate.split('-').map(Number);
+        const [year, month, day] = config.endDate.split("-").map(Number);
         endDate = new Date(year, month - 1, day);
       } else {
         endDate = new Date();
       }
       const dataTypes = [];
-      
-      if (config?.dataTypes?.clients) dataTypes.push('clients');
-      if (config?.dataTypes?.classes) dataTypes.push('classes');
-      if (config?.dataTypes?.visits) dataTypes.push('visits');
-      if (config?.dataTypes?.sales) dataTypes.push('sales');
+
+      if (config?.dataTypes?.clients) dataTypes.push("clients");
+      if (config?.dataTypes?.classes) dataTypes.push("classes");
+      if (config?.dataTypes?.visits) dataTypes.push("visits");
+      if (config?.dataTypes?.sales) dataTypes.push("sales");
 
       if (dataTypes.length === 0) {
         return res.status(400).json({ error: "At least one data type must be selected" });
@@ -215,7 +217,7 @@ export function registerMindbodyRoutes(app: Express) {
       // Create import job
       const job = await storage.createImportJob({
         organizationId,
-        status: 'pending',
+        status: "pending",
         dataTypes,
         startDate,
         endDate,
@@ -234,7 +236,7 @@ export function registerMindbodyRoutes(app: Express) {
       res.json({
         success: true,
         message: "Import job started",
-        jobId: job.id
+        jobId: job.id,
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to start import";
@@ -246,13 +248,13 @@ export function registerMindbodyRoutes(app: Express) {
     try {
       const organizationId = (req.user as User)?.organizationId;
       const jobId = req.params.id;
-      
+
       if (!organizationId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
       const job = await storage.getImportJob(jobId);
-      
+
       if (!job) {
         return res.status(404).json({ error: "Import job not found" });
       }
@@ -295,13 +297,13 @@ export function registerMindbodyRoutes(app: Express) {
     try {
       const organizationId = (req.user as User)?.organizationId;
       const jobId = req.params.id;
-      
+
       if (!organizationId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
       const job = await storage.getImportJob(jobId);
-      
+
       if (!job) {
         return res.status(404).json({ error: "Import job not found" });
       }
@@ -312,7 +314,7 @@ export function registerMindbodyRoutes(app: Express) {
       }
 
       // Can only resume paused or failed jobs
-      if (job.status !== 'paused' && job.status !== 'failed') {
+      if (job.status !== "paused" && job.status !== "failed") {
         return res.status(400).json({ error: "Job is not in a resumable state" });
       }
 
@@ -321,7 +323,7 @@ export function registerMindbodyRoutes(app: Express) {
 
       // Update status to pending and clear pausedAt
       await storage.updateImportJob(jobId, {
-        status: 'pending',
+        status: "pending",
         pausedAt: null,
         error: null,
       });
@@ -334,7 +336,7 @@ export function registerMindbodyRoutes(app: Express) {
 
       res.json({
         success: true,
-        message: "Import job resumed"
+        message: "Import job resumed",
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to resume import";
@@ -346,13 +348,13 @@ export function registerMindbodyRoutes(app: Express) {
     try {
       const organizationId = (req.user as User)?.organizationId;
       const jobId = req.params.id;
-      
+
       if (!organizationId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
       const job = await storage.getImportJob(jobId);
-      
+
       if (!job) {
         return res.status(404).json({ error: "Import job not found" });
       }
@@ -363,25 +365,25 @@ export function registerMindbodyRoutes(app: Express) {
       }
 
       // Can only pause pending or running jobs
-      if (job.status !== 'pending' && job.status !== 'running') {
+      if (job.status !== "pending" && job.status !== "running") {
         console.log(`Cannot pause job ${jobId}: status is ${job.status}, not pending or running`);
         return res.status(400).json({ error: "Job is not in a pausable state" });
       }
 
       console.log(`Pausing job ${jobId} (current status: ${job.status})`);
-      
+
       // Update status to paused with timestamp (can be resumed later)
       await storage.updateImportJob(jobId, {
-        status: 'paused',
+        status: "paused",
         pausedAt: new Date(),
-        error: 'Paused by user',
+        error: "Paused by user",
       });
-      
+
       console.log(`Job ${jobId} paused successfully`);
 
       res.json({
         success: true,
-        message: "Import job paused"
+        message: "Import job paused",
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to cancel import";
@@ -393,40 +395,39 @@ export function registerMindbodyRoutes(app: Express) {
   app.post("/api/mindbody/import/force-cancel", requireAuth, async (req, res) => {
     try {
       const organizationId = (req.user as User)?.organizationId;
-      
+
       if (!organizationId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
       // Find any active import job for this organization
       const activeJob = await storage.getActiveImportJob(organizationId);
-      
+
       if (!activeJob) {
         return res.json({
           success: true,
-          message: "No active import found"
+          message: "No active import found",
         });
       }
 
       console.log(`Force cancelling job ${activeJob.id} (current status: ${activeJob.status})`);
-      
+
       // Force cancel regardless of status
       await storage.updateImportJob(activeJob.id, {
-        status: 'cancelled',
-        error: 'Force cancelled by user',
+        status: "cancelled",
+        error: "Force cancelled by user",
       });
-      
+
       console.log(`Job ${activeJob.id} force cancelled successfully`);
 
       res.json({
         success: true,
         message: "Import job cancelled",
-        jobId: activeJob.id
+        jobId: activeJob.id,
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to force cancel import";
       res.status(500).json({ error: errorMessage });
     }
   });
-
 }

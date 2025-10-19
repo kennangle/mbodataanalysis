@@ -19,10 +19,17 @@ export function registerStudentRoutes(app: Express) {
       const status = req.query.status as string | undefined;
       const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
       const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
-      
-      const students = await storage.getStudents(organizationId, limit, offset, status, startDate, endDate);
+
+      const students = await storage.getStudents(
+        organizationId,
+        limit,
+        offset,
+        status,
+        startDate,
+        endDate
+      );
       const count = await storage.getStudentCount(organizationId, status, startDate, endDate);
-      
+
       res.json({ students, count });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch students" });

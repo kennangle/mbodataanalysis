@@ -31,7 +31,6 @@ This document outlines the technological components selected for the Mindbody Da
 
 - **Auth0**
   - Configuration: Provides secure user authentication with support for social logins, single sign-on, and multi-factor authentication.
-  
 - **NextAuth.js**
   - Configuration: Used alongside Auth0 for seamless integration with Next.js applications, simplifying the implementation of authentication flows.
 
@@ -39,7 +38,6 @@ This document outlines the technological components selected for the Mindbody Da
 
 - **Heroku**
   - Configuration: Deployment platform for hosting the application with auto-scaling capabilities and integrated monitoring.
-  
 - **Cloudflare R2**
   - Configuration: Used for CDN integration to enhance content delivery and application performance.
 

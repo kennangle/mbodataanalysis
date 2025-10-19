@@ -5,8 +5,9 @@
 ### API Routes
 
 #### User Authentication
+
 - **POST** `/api/auth/login`
-  - **Request**: 
+  - **Request**:
     ```json
     {
       "email": "user@example.com",
@@ -26,7 +27,7 @@
     ```
 
 - **POST** `/api/auth/register`
-  - **Request**: 
+  - **Request**:
     ```json
     {
       "email": "user@example.com",
@@ -46,7 +47,7 @@
     ```
 
 - **POST** `/api/auth/password-reset`
-  - **Request**: 
+  - **Request**:
     ```json
     {
       "email": "user@example.com"
@@ -60,8 +61,9 @@
     ```
 
 #### Data Import & Export
+
 - **POST** `/api/data/import`
-  - **Request**: 
+  - **Request**:
     ```json
     {
       "file": "datafile.csv"
@@ -76,7 +78,7 @@
     ```
 
 - **GET** `/api/data/export`
-  - **Request Parameters**: 
+  - **Request Parameters**:
     - `format`: csv or json
   - **Response**:
     ```json
@@ -86,8 +88,9 @@
     ```
 
 #### Analytics & Reports
+
 - **POST** `/api/reports/generate`
-  - **Request**: 
+  - **Request**:
     ```json
     {
       "reportType": "attendance_summary",
@@ -120,18 +123,23 @@
 ## Controllers and Services
 
 ### Authentication Controller
+
 - Responsible for handling user authentication requests, interacting with Auth0 and NextAuth.js for session management.
 
 ### Data Import Controller
+
 - Handles data upload, parsing, and storage in PostgreSQL using Drizzle ORM.
 
 ### Reports Controller
+
 - Manages report generation requests, interacts with database for data retrieval, and formats data for export.
 
 ### Notification Service
+
 - Sends email and SMS notifications using integrated third-party services.
 
 ### ChatGPT Integration Service
+
 - Manages language query processing using OpenAI's API, converting user queries into actionable database queries.
 
 ## Database Schema
@@ -139,7 +147,8 @@
 ### Tables
 
 #### Users
-- **Fields**: 
+
+- **Fields**:
   - `id` (UUID, Primary Key)
   - `email` (String, Unique)
   - `passwordHash` (String)
@@ -148,6 +157,7 @@
   - `updatedAt` (Timestamp)
 
 #### Students
+
 - **Fields**:
   - `id` (UUID, Primary Key)
   - `name` (String)
@@ -156,6 +166,7 @@
   - `createdAt` (Timestamp)
 
 #### Classes
+
 - **Fields**:
   - `id` (UUID, Primary Key)
   - `name` (String)
@@ -163,6 +174,7 @@
   - `instructorId` (UUID, Foreign Key)
 
 #### Attendances
+
 - **Fields**:
   - `id` (UUID, Primary Key)
   - `studentId` (UUID, Foreign Key)
@@ -170,6 +182,7 @@
   - `attendanceDate` (Date)
 
 #### Memberships
+
 - **Fields**:
   - `id` (UUID, Primary Key)
   - `studentId` (UUID, Foreign Key)

@@ -1,6 +1,7 @@
 # Frontend Design Document for Mindbody Data Analysis
 
 ## Table of Contents
+
 1. [Pages/Screens List](#pages/screens-list)
 2. [Wireframes or Layout Descriptions](#wireframes-or-layout-descriptions)
 3. [UI Components](#ui-components)
@@ -38,47 +39,59 @@
 ## Wireframes or Layout Descriptions
 
 ### Home Page
+
 - **Header:** Logo, Navigation Menu, User Avatar
 - **Main Section:** Welcome message, call-to-action buttons
 - **Footer:** Links to terms, privacy, and contact information
 
 ### Dashboard
+
 - **Sidebar:** Navigation links to various modules
 - **Main Content:** Overview of analytics, key performance metrics, quick links to reports
 - **Top Bar:** Search functionality, notifications, profile settings
 
 ### Profile
+
 - **Sections:** Personal Information, Security Settings, Membership Details
 - **Edit Modal:** Update personal and security details
 
 ### Login/Register
+
 - **Form Fields:** Email, Password, Confirm Password (for register)
 - **Buttons:** Submit, Forgot Password link
 
 ### Admin Dashboard
+
 - **Sections:** User Management, System Health, Analytics Overview
 
 ### Analytics Dashboard
+
 - **Graphs & Charts:** Utilization of Recharts for data visualization
 - **Filters:** Time period, class types, student demographics
 
 ### Reports Page
+
 - **Table Layout:** List of reports with export options
 - **Create Report:** Modal for custom report generation
 
 ### Settings
+
 - **Tabs:** General Settings, Account Settings, Notification Preferences
 
 ### Notifications Center
+
 - **List View:** Categorized notifications, mark as read functionality
 
 ### User Management
+
 - **Table View:** List of users with role-based access controls
 
 ### System Health Monitoring
+
 - **Status Indicators:** Real-time system health stats, alerts
 
 ### API Documentation
+
 - **Sections:** API Endpoints, Authentication, Rate Limits
 
 ---

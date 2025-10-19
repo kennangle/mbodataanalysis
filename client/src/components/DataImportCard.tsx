@@ -23,7 +23,13 @@ interface ImportConfig {
 }
 
 interface JobProgress {
-  clients?: { current: number; total: number; imported: number; updated: number; completed: boolean };
+  clients?: {
+    current: number;
+    total: number;
+    imported: number;
+    updated: number;
+    completed: boolean;
+  };
   classes?: { current: number; total: number; imported: number; completed: boolean };
   visits?: { current: number; total: number; imported: number; completed: boolean };
   sales?: { current: number; total: number; imported: number; completed: boolean };
@@ -33,7 +39,7 @@ interface JobProgress {
 
 interface JobStatus {
   id: string;
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'paused' | 'cancelled';
+  status: "pending" | "running" | "completed" | "failed" | "paused" | "cancelled";
   dataTypes: string[];
   startDate?: string;
   endDate?: string;
@@ -53,10 +59,10 @@ interface JobStatus {
 // Map internal data type names to user-friendly display names
 const getDisplayName = (dataType: string): string => {
   const displayNames: Record<string, string> = {
-    'clients': 'Students',
-    'classes': 'Classes',
-    'visits': 'Visits',
-    'sales': 'Sales'
+    clients: "Students",
+    classes: "Classes",
+    visits: "Visits",
+    sales: "Sales",
   };
   return displayNames[dataType] || dataType;
 };
@@ -65,8 +71,8 @@ const getDisplayName = (dataType: string): string => {
 // Handles formats like "2024-01-01", "2024-01-01T00:00:00", "2024-01-01 00:00:00"
 const parseDateSafe = (dateStr: string): Date => {
   // Extract just the date part (YYYY-MM-DD)
-  const datePart = dateStr.split('T')[0].split(' ')[0];
-  const [year, month, day] = datePart.split('-').map(Number);
+  const datePart = dateStr.split("T")[0].split(" ")[0];
+  const [year, month, day] = datePart.split("-").map(Number);
   // Create date in local timezone (month is 0-indexed)
   return new Date(year, month - 1, day);
 };
@@ -77,15 +83,21 @@ export function DataImportCard() {
   const [isLoadingActiveJob, setIsLoadingActiveJob] = useState(true);
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  
+
   // Track last progress snapshot to detect stalled imports
   const lastProgressRef = useRef<{ snapshot: string; timestamp: number } | null>(null);
 
   // Helper to create progress snapshot for staleness detection (memoized to prevent effect restarts)
   const getProgressSnapshot = useCallback((progress: JobProgress): string => {
     return JSON.stringify({
-      clients: { current: progress.clients?.current || 0, imported: progress.clients?.imported || 0 },
-      classes: { current: progress.classes?.current || 0, imported: progress.classes?.imported || 0 },
+      clients: {
+        current: progress.clients?.current || 0,
+        imported: progress.clients?.imported || 0,
+      },
+      classes: {
+        current: progress.classes?.current || 0,
+        imported: progress.classes?.imported || 0,
+      },
       visits: { current: progress.visits?.current || 0, imported: progress.visits?.imported || 0 },
       sales: { current: progress.sales?.current || 0, imported: progress.sales?.imported || 0 },
     });
@@ -97,14 +109,14 @@ export function DataImportCard() {
       try {
         const response = await apiRequest("GET", "/api/mindbody/import/active");
         if (response.ok) {
-          const job = await response.json() as JobStatus;
-          
+          const job = (await response.json()) as JobStatus;
+
           // Validate job has updatedAt and check if it's stale
-          if (job.updatedAt && job.status === 'running') {
+          if (job.updatedAt && job.status === "running") {
             const lastUpdate = new Date(job.updatedAt);
             const now = new Date();
             const minutesSinceUpdate = (now.getTime() - lastUpdate.getTime()) / (1000 * 60);
-            
+
             if (minutesSinceUpdate > 2) {
               // Job is stale - clear it and show message
               setCurrentJobId(null);
@@ -112,14 +124,15 @@ export function DataImportCard() {
               toast({
                 variant: "destructive",
                 title: "Previous import was stalled",
-                description: "Found an import that hasn't updated in over 2 minutes. Please refresh your browser (Ctrl+Shift+R or Cmd+Shift+R) to ensure a clean state, then start a new import.",
+                description:
+                  "Found an import that hasn't updated in over 2 minutes. Please refresh your browser (Ctrl+Shift+R or Cmd+Shift+R) to ensure a clean state, then start a new import.",
                 duration: 10000,
               });
               setIsLoadingActiveJob(false);
               return;
             }
           }
-          
+
           setCurrentJobId(job.id);
           setJobStatus(job);
         }
@@ -138,18 +151,18 @@ export function DataImportCard() {
   const getDefaultStartDate = () => {
     const date = new Date();
     date.setFullYear(date.getFullYear() - 1);
-    return date.toISOString().split('T')[0];
+    return date.toISOString().split("T")[0];
   };
 
   const getDefaultEndDate = () => {
-    return new Date().toISOString().split('T')[0];
+    return new Date().toISOString().split("T")[0];
   };
 
   // Calculate API rate and estimated time to reach 5000 calls (monthly free tier)
   const calculateApiMetrics = (progress: JobProgress) => {
     const apiCallCount = progress.apiCallCount || 0;
     const importStartTime = progress.importStartTime;
-    
+
     if (!importStartTime || apiCallCount === 0) {
       return {
         apiCallCount,
@@ -158,11 +171,11 @@ export function DataImportCard() {
         limitReachedAt: null,
       };
     }
-    
+
     const startTime = new Date(importStartTime);
     const now = new Date();
     const elapsedMinutes = (now.getTime() - startTime.getTime()) / (1000 * 60);
-    
+
     if (elapsedMinutes === 0) {
       return {
         apiCallCount,
@@ -171,10 +184,10 @@ export function DataImportCard() {
         limitReachedAt: null,
       };
     }
-    
+
     const rate = apiCallCount / elapsedMinutes; // calls per minute
     const remainingCalls = 5000 - apiCallCount;
-    
+
     if (remainingCalls <= 0) {
       return {
         apiCallCount,
@@ -184,10 +197,10 @@ export function DataImportCard() {
         limitExceeded: true,
       };
     }
-    
+
     const minutesToLimit = remainingCalls / rate;
     const limitReachedAt = new Date(now.getTime() + minutesToLimit * 60 * 1000);
-    
+
     return {
       apiCallCount,
       rate,
@@ -215,7 +228,7 @@ export function DataImportCard() {
     const pollInterval = setInterval(async () => {
       try {
         const response = await apiRequest("GET", `/api/mindbody/import/${currentJobId}/status`);
-        
+
         // Check for 404 directly from response
         if (response.status === 404) {
           clearInterval(pollInterval);
@@ -224,26 +237,27 @@ export function DataImportCard() {
           toast({
             variant: "destructive",
             title: "Import job not found",
-            description: "The import job no longer exists. Please refresh your browser (Ctrl+Shift+R or Cmd+Shift+R) and start a new import.",
+            description:
+              "The import job no longer exists. Please refresh your browser (Ctrl+Shift+R or Cmd+Shift+R) and start a new import.",
             duration: 10000,
           });
           return;
         }
-        
-        const status = await response.json() as JobStatus;
-        
+
+        const status = (await response.json()) as JobStatus;
+
         // Check for stalled import - progress hasn't changed in 2+ minutes
-        if (status.status === 'running') {
+        if (status.status === "running") {
           const currentSnapshot = getProgressSnapshot(status.progress);
           const now = Date.now();
-          
+
           if (lastProgressRef.current) {
             const { snapshot: lastSnapshot, timestamp: lastTimestamp } = lastProgressRef.current;
-            
+
             // If progress hasn't changed
             if (currentSnapshot === lastSnapshot) {
               const minutesSinceChange = (now - lastTimestamp) / (1000 * 60);
-              
+
               if (minutesSinceChange > 2) {
                 // Import is stalled - no progress in 2+ minutes
                 clearInterval(pollInterval);
@@ -253,7 +267,8 @@ export function DataImportCard() {
                 toast({
                   variant: "destructive",
                   title: "Import appears stalled",
-                  description: "The import hasn't made progress in over 2 minutes. Please refresh your browser (Ctrl+Shift+R or Cmd+Shift+R) and start a new import.",
+                  description:
+                    "The import hasn't made progress in over 2 minutes. Please refresh your browser (Ctrl+Shift+R or Cmd+Shift+R) and start a new import.",
                   duration: 10000,
                 });
                 return;
@@ -267,10 +282,10 @@ export function DataImportCard() {
             lastProgressRef.current = { snapshot: currentSnapshot, timestamp: now };
           }
         }
-        
+
         setJobStatus(status);
 
-        if (status.status === 'completed') {
+        if (status.status === "completed") {
           clearInterval(pollInterval);
           lastProgressRef.current = null;
           queryClient.invalidateQueries();
@@ -278,7 +293,7 @@ export function DataImportCard() {
             title: "Import completed",
             description: "All data has been imported successfully",
           });
-        } else if (status.status === 'failed') {
+        } else if (status.status === "failed") {
           clearInterval(pollInterval);
           lastProgressRef.current = null;
           toast({
@@ -286,7 +301,7 @@ export function DataImportCard() {
             title: "Import failed",
             description: status.error || "Unknown error occurred",
           });
-        } else if (status.status === 'paused') {
+        } else if (status.status === "paused") {
           clearInterval(pollInterval);
           lastProgressRef.current = null;
         }
@@ -299,7 +314,8 @@ export function DataImportCard() {
         toast({
           variant: "destructive",
           title: "Error checking import status",
-          description: "Please refresh your browser (Ctrl+Shift+R or Cmd+Shift+R) and start a new import.",
+          description:
+            "Please refresh your browser (Ctrl+Shift+R or Cmd+Shift+R) and start a new import.",
           duration: 10000,
         });
       }
@@ -314,7 +330,11 @@ export function DataImportCard() {
   const startImportMutation = useMutation({
     mutationFn: async (config: ImportConfig) => {
       const response = await apiRequest("POST", "/api/mindbody/import/start", { config });
-      const result = await response.json() as { success: boolean; jobId: string; message: string };
+      const result = (await response.json()) as {
+        success: boolean;
+        jobId: string;
+        message: string;
+      };
       return result;
     },
     onSuccess: (data) => {
@@ -339,29 +359,29 @@ export function DataImportCard() {
         method: "POST",
         credentials: "include",
       });
-      
+
       const data = await response.json();
-      
+
       // Handle 404 - job not found
       if (response.status === 404) {
         throw new Error("Import job not found. It may have been deleted or completed.");
       }
-      
+
       // Handle 429 rate limit error with detailed message
       if (response.status === 429) {
         const lastDownload = new Date(data.lastDownloadTime);
         const nextAvailable = new Date(data.nextAvailableTime);
         const hoursRemaining = data.hoursRemaining || 0;
-        
+
         throw new Error(
-          `Rate limit: Please wait ${hoursRemaining} more hour${hoursRemaining !== 1 ? 's' : ''} before resuming. Last download was at ${lastDownload.toLocaleString()}. Next available at ${nextAvailable.toLocaleString()}.`
+          `Rate limit: Please wait ${hoursRemaining} more hour${hoursRemaining !== 1 ? "s" : ""} before resuming. Last download was at ${lastDownload.toLocaleString()}. Next available at ${nextAvailable.toLocaleString()}.`
         );
       }
-      
+
       if (!response.ok) {
         throw new Error(data.error || data.message || "Failed to resume import");
       }
-      
+
       return data as { success: boolean; message: string };
     },
     onSuccess: () => {
@@ -376,7 +396,7 @@ export function DataImportCard() {
         title: "Failed to resume import",
         description: error.message,
       });
-      
+
       // If job not found, reset state
       if (error.message.includes("not found")) {
         setCurrentJobId(null);
@@ -388,7 +408,7 @@ export function DataImportCard() {
   const pauseImportMutation = useMutation({
     mutationFn: async (jobId: string) => {
       const response = await apiRequest("POST", `/api/mindbody/import/${jobId}/cancel`);
-      const result = await response.json() as { success: boolean; message: string };
+      const result = (await response.json()) as { success: boolean; message: string };
       return result;
     },
     onSuccess: () => {
@@ -409,7 +429,11 @@ export function DataImportCard() {
   const forceStopImportMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/mindbody/import/force-cancel");
-      const result = await response.json() as { success: boolean; message: string; jobId?: string };
+      const result = (await response.json()) as {
+        success: boolean;
+        message: string;
+        jobId?: string;
+      };
       return result;
     },
     onSuccess: (data) => {
@@ -433,7 +457,7 @@ export function DataImportCard() {
     // Validate date range
     const startDate = new Date(importConfig.startDate);
     const endDate = new Date(importConfig.endDate);
-    
+
     if (endDate < startDate) {
       toast({
         variant: "destructive",
@@ -443,7 +467,7 @@ export function DataImportCard() {
       });
       return;
     }
-    
+
     startImportMutation.mutate(importConfig);
   };
 
@@ -472,10 +496,10 @@ export function DataImportCard() {
   // Calculate overall progress
   const calculateProgress = (): number => {
     if (!jobStatus || !jobStatus.progress) return 0;
-    
+
     // Filter to only data type progress (not apiCallCount or importStartTime)
     const dataTypes = Object.keys(jobStatus.progress).filter(
-      key => key !== 'apiCallCount' && key !== 'importStartTime'
+      (key) => key !== "apiCallCount" && key !== "importStartTime"
     );
     if (dataTypes.length === 0) return 0;
 
@@ -484,7 +508,7 @@ export function DataImportCard() {
 
     dataTypes.forEach((type) => {
       const typeProgress = jobStatus.progress[type as keyof JobProgress];
-      if (typeProgress && typeof typeProgress === 'object' && 'completed' in typeProgress) {
+      if (typeProgress && typeof typeProgress === "object" && "completed" in typeProgress) {
         if (typeProgress.completed) {
           completedTypes++;
         } else if (typeProgress.total > 0) {
@@ -493,17 +517,16 @@ export function DataImportCard() {
       }
     });
 
-    const avgProgress = dataTypes.length > 0 
-      ? (completedTypes * 100 + totalProgress) / dataTypes.length 
-      : 0;
+    const avgProgress =
+      dataTypes.length > 0 ? (completedTypes * 100 + totalProgress) / dataTypes.length : 0;
 
     return Math.min(Math.round(avgProgress), 100);
   };
 
-  const isJobActive = jobStatus?.status === 'running' || jobStatus?.status === 'pending';
-  const isJobResumable = jobStatus?.status === 'failed' || jobStatus?.status === 'paused';
-  const isJobCompleted = jobStatus?.status === 'completed';
-  const isJobCancelled = jobStatus?.status === 'cancelled';
+  const isJobActive = jobStatus?.status === "running" || jobStatus?.status === "pending";
+  const isJobResumable = jobStatus?.status === "failed" || jobStatus?.status === "paused";
+  const isJobCompleted = jobStatus?.status === "completed";
+  const isJobCancelled = jobStatus?.status === "cancelled";
 
   return (
     <Card>
@@ -513,19 +536,16 @@ export function DataImportCard() {
             <CardTitle>Mindbody Data Import</CardTitle>
             <CardDescription>Import your Mindbody account data</CardDescription>
           </div>
-          {isJobCompleted && (
-            <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-          )}
-          {jobStatus?.status === 'failed' && (
-            <AlertCircle className="h-5 w-5 text-destructive" />
-          )}
+          {isJobCompleted && <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />}
+          {jobStatus?.status === "failed" && <AlertCircle className="h-5 w-5 text-destructive" />}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {!currentJobId && (
           <div className="space-y-6">
             <p className="text-sm text-muted-foreground">
-              Import your students, classes, schedules, attendance records, and revenue data from Mindbody.
+              Import your students, classes, schedules, attendance records, and revenue data from
+              Mindbody.
             </p>
 
             <div className="space-y-4">
@@ -533,22 +553,30 @@ export function DataImportCard() {
                 <Label className="text-sm font-medium">Date Range</Label>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="start-date" className="text-xs text-muted-foreground">Start Date</Label>
+                    <Label htmlFor="start-date" className="text-xs text-muted-foreground">
+                      Start Date
+                    </Label>
                     <Input
                       id="start-date"
                       type="date"
                       value={importConfig.startDate}
-                      onChange={(e) => setImportConfig(prev => ({ ...prev, startDate: e.target.value }))}
+                      onChange={(e) =>
+                        setImportConfig((prev) => ({ ...prev, startDate: e.target.value }))
+                      }
                       data-testid="input-start-date"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="end-date" className="text-xs text-muted-foreground">End Date</Label>
+                    <Label htmlFor="end-date" className="text-xs text-muted-foreground">
+                      End Date
+                    </Label>
                     <Input
                       id="end-date"
                       type="date"
                       value={importConfig.endDate}
-                      onChange={(e) => setImportConfig(prev => ({ ...prev, endDate: e.target.value }))}
+                      onChange={(e) =>
+                        setImportConfig((prev) => ({ ...prev, endDate: e.target.value }))
+                      }
                       data-testid="input-end-date"
                     />
                   </div>
@@ -562,10 +590,10 @@ export function DataImportCard() {
                     <Checkbox
                       id="clients"
                       checked={importConfig.dataTypes.clients}
-                      onCheckedChange={(checked) => 
-                        setImportConfig(prev => ({ 
-                          ...prev, 
-                          dataTypes: { ...prev.dataTypes, clients: checked as boolean } 
+                      onCheckedChange={(checked) =>
+                        setImportConfig((prev) => ({
+                          ...prev,
+                          dataTypes: { ...prev.dataTypes, clients: checked as boolean },
                         }))
                       }
                       data-testid="checkbox-clients"
@@ -578,10 +606,10 @@ export function DataImportCard() {
                     <Checkbox
                       id="classes"
                       checked={importConfig.dataTypes.classes}
-                      onCheckedChange={(checked) => 
-                        setImportConfig(prev => ({ 
-                          ...prev, 
-                          dataTypes: { ...prev.dataTypes, classes: checked as boolean } 
+                      onCheckedChange={(checked) =>
+                        setImportConfig((prev) => ({
+                          ...prev,
+                          dataTypes: { ...prev.dataTypes, classes: checked as boolean },
                         }))
                       }
                       data-testid="checkbox-classes"
@@ -594,10 +622,10 @@ export function DataImportCard() {
                     <Checkbox
                       id="visits"
                       checked={importConfig.dataTypes.visits}
-                      onCheckedChange={(checked) => 
-                        setImportConfig(prev => ({ 
-                          ...prev, 
-                          dataTypes: { ...prev.dataTypes, visits: checked as boolean } 
+                      onCheckedChange={(checked) =>
+                        setImportConfig((prev) => ({
+                          ...prev,
+                          dataTypes: { ...prev.dataTypes, visits: checked as boolean },
                         }))
                       }
                       data-testid="checkbox-visits"
@@ -610,10 +638,10 @@ export function DataImportCard() {
                     <Checkbox
                       id="sales"
                       checked={importConfig.dataTypes.sales}
-                      onCheckedChange={(checked) => 
-                        setImportConfig(prev => ({ 
-                          ...prev, 
-                          dataTypes: { ...prev.dataTypes, sales: checked as boolean } 
+                      onCheckedChange={(checked) =>
+                        setImportConfig((prev) => ({
+                          ...prev,
+                          dataTypes: { ...prev.dataTypes, sales: checked as boolean },
                         }))
                       }
                       data-testid="checkbox-sales"
@@ -626,8 +654,8 @@ export function DataImportCard() {
               </div>
             </div>
 
-            <Button 
-              onClick={handleStartImport} 
+            <Button
+              onClick={handleStartImport}
               className="w-full gap-2"
               disabled={startImportMutation.isPending}
               data-testid="button-start-import"
@@ -650,13 +678,18 @@ export function DataImportCard() {
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">
-                  Importing {jobStatus.currentDataType ? getDisplayName(jobStatus.currentDataType).toLowerCase() : 'data'}...
+                  Importing{" "}
+                  {jobStatus.currentDataType
+                    ? getDisplayName(jobStatus.currentDataType).toLowerCase()
+                    : "data"}
+                  ...
                 </span>
                 <span className="font-medium">{calculateProgress()}%</span>
               </div>
               {jobStatus.startDate && jobStatus.endDate && (
                 <div className="text-xs text-muted-foreground">
-                  {format(parseDateSafe(jobStatus.startDate), 'MMM d, yyyy')} - {format(parseDateSafe(jobStatus.endDate), 'MMM d, yyyy')}
+                  {format(parseDateSafe(jobStatus.startDate), "MMM d, yyyy")} -{" "}
+                  {format(parseDateSafe(jobStatus.endDate), "MMM d, yyyy")}
                 </div>
               )}
               <Progress value={calculateProgress()} />
@@ -665,13 +698,15 @@ export function DataImportCard() {
             {/* Show detailed progress for each data type */}
             <div className="space-y-2 text-xs">
               {Object.entries(jobStatus.progress)
-                .filter(([type]) => type !== 'apiCallCount' && type !== 'importStartTime')
+                .filter(([type]) => type !== "apiCallCount" && type !== "importStartTime")
                 .map(([type, data]) => {
-                  if (typeof data === 'object' && 'completed' in data) {
-                    const existingCount = jobStatus.existingCounts?.[type as keyof typeof jobStatus.existingCounts] || 0;
+                  if (typeof data === "object" && "completed" in data) {
+                    const existingCount =
+                      jobStatus.existingCounts?.[type as keyof typeof jobStatus.existingCounts] ||
+                      0;
                     const sessionImported = (data as any).imported || 0;
                     const totalRecords = existingCount + sessionImported;
-                    
+
                     return (
                       <div key={type} className="space-y-1">
                         <div className="flex justify-between text-muted-foreground">
@@ -679,10 +714,10 @@ export function DataImportCard() {
                           <span>
                             {data.completed ? (
                               <CheckCircle className="inline h-3 w-3 text-green-600" />
-                            ) : type === 'visits' ? (
-                              `Checking student ${data.current} / ${data.total || '?'}`
+                            ) : type === "visits" ? (
+                              `Checking student ${data.current} / ${data.total || "?"}`
                             ) : (
-                              `${data.current} / ${data.total || '?'}`
+                              `${data.current} / ${data.total || "?"}`
                             )}
                           </span>
                         </div>
@@ -693,7 +728,9 @@ export function DataImportCard() {
                               {totalRecords.toLocaleString()}
                               {existingCount > 0 && sessionImported > 0 && (
                                 <span className="text-muted-foreground font-normal">
-                                  {' '}({existingCount.toLocaleString()} + {sessionImported.toLocaleString()} new)
+                                  {" "}
+                                  ({existingCount.toLocaleString()} +{" "}
+                                  {sessionImported.toLocaleString()} new)
                                 </span>
                               )}
                             </span>
@@ -713,48 +750,58 @@ export function DataImportCard() {
               const hasExceededLimit = metrics.limitExceeded;
 
               return (
-                <div className={`p-3 rounded-md space-y-2 ${
-                  hasExceededLimit 
-                    ? 'bg-destructive/10 border border-destructive/20' 
-                    : isApproachingLimit 
-                      ? 'bg-amber-500/10 border border-amber-500/20'
-                      : 'bg-muted'
-                }`}>
+                <div
+                  className={`p-3 rounded-md space-y-2 ${
+                    hasExceededLimit
+                      ? "bg-destructive/10 border border-destructive/20"
+                      : isApproachingLimit
+                        ? "bg-amber-500/10 border border-amber-500/20"
+                        : "bg-muted"
+                  }`}
+                >
                   <div className="flex items-center justify-between text-sm">
                     <span className="font-medium">API Calls (Monthly)</span>
-                    <span className={`font-semibold ${
-                      hasExceededLimit 
-                        ? 'text-destructive' 
-                        : isApproachingLimit 
-                          ? 'text-amber-600 dark:text-amber-500'
-                          : ''
-                    }`}>
+                    <span
+                      className={`font-semibold ${
+                        hasExceededLimit
+                          ? "text-destructive"
+                          : isApproachingLimit
+                            ? "text-amber-600 dark:text-amber-500"
+                            : ""
+                      }`}
+                    >
                       {metrics.apiCallCount} / 5,000
                     </span>
                   </div>
-                  
+
                   {metrics.rate > 0 && (
                     <div className="text-xs space-y-1 text-muted-foreground">
                       <div className="flex justify-between">
                         <span>Rate:</span>
                         <span>{metrics.rate.toFixed(1)} calls/min</span>
                       </div>
-                      
+
                       {!hasExceededLimit && metrics.limitReachedAt && (
                         <div className="flex justify-between">
                           <span>Free tier limit at:</span>
-                          <span className={isApproachingLimit ? 'font-medium text-amber-600 dark:text-amber-500' : ''}>
-                            {format(metrics.limitReachedAt, 'MMM d, h:mm a')}
+                          <span
+                            className={
+                              isApproachingLimit
+                                ? "font-medium text-amber-600 dark:text-amber-500"
+                                : ""
+                            }
+                          >
+                            {format(metrics.limitReachedAt, "MMM d, h:mm a")}
                           </span>
                         </div>
                       )}
-                      
+
                       {hasExceededLimit && (
                         <div className="text-destructive font-medium">
                           ⚠️ Free tier limit exceeded - $0.002/call after 5,000
                         </div>
                       )}
-                      
+
                       {isApproachingLimit && !hasExceededLimit && (
                         <div className="text-amber-600 dark:text-amber-500 font-medium">
                           ⚠️ Approaching free tier limit - consider pausing
@@ -771,8 +818,8 @@ export function DataImportCard() {
               <span>Running in background. Safe to close this page.</span>
             </div>
 
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={handlePauseImport}
               className="w-full"
               disabled={pauseImportMutation.isPending}
@@ -795,7 +842,10 @@ export function DataImportCard() {
               </p>
               <div className="text-xs text-green-700 dark:text-green-300 mt-2 space-y-1">
                 {jobStatus.progress.clients && (
-                  <p>Students: {jobStatus.progress.clients.imported} new, {jobStatus.progress.clients.updated} updated</p>
+                  <p>
+                    Students: {jobStatus.progress.clients.imported} new,{" "}
+                    {jobStatus.progress.clients.updated} updated
+                  </p>
                 )}
                 {jobStatus.progress.classes && (
                   <p>Classes: {jobStatus.progress.classes.imported} imported</p>
@@ -808,8 +858,8 @@ export function DataImportCard() {
                 )}
               </div>
             </div>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={handleReset}
               className="w-full"
               data-testid="button-import-again"
@@ -822,17 +872,13 @@ export function DataImportCard() {
         {isJobCancelled && jobStatus && (
           <div className="space-y-4">
             <div className="rounded-lg bg-muted p-4">
-              <p className="text-sm font-medium">
-                Import cancelled
-              </p>
+              <p className="text-sm font-medium">Import cancelled</p>
               {jobStatus.error && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  {jobStatus.error}
-                </p>
+                <p className="text-xs text-muted-foreground mt-1">{jobStatus.error}</p>
               )}
             </div>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={handleReset}
               className="w-full"
               data-testid="button-start-new-import"
@@ -846,24 +892,25 @@ export function DataImportCard() {
           <div className="space-y-4">
             <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 p-4">
               <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
-                Import {jobStatus.status === 'failed' ? 'failed' : 'paused'}
+                Import {jobStatus.status === "failed" ? "failed" : "paused"}
               </p>
               {jobStatus.pausedAt && (
                 <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
-                  Paused: {format(new Date(jobStatus.pausedAt), 'MMM d, yyyy h:mm a')}
+                  Paused: {format(new Date(jobStatus.pausedAt), "MMM d, yyyy h:mm a")}
                 </p>
               )}
               {jobStatus.error && (
-                <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
-                  {jobStatus.error}
-                </p>
+                <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">{jobStatus.error}</p>
               )}
-              
+
               {/* Show progress at time of pausing */}
               <div className="text-xs text-amber-700 dark:text-amber-300 mt-3 space-y-1">
                 <p className="font-medium">Progress at pause:</p>
                 {jobStatus.progress.clients && (
-                  <p>Students: {jobStatus.progress.clients.imported} new, {jobStatus.progress.clients.updated} updated</p>
+                  <p>
+                    Students: {jobStatus.progress.clients.imported} new,{" "}
+                    {jobStatus.progress.clients.updated} updated
+                  </p>
                 )}
                 {jobStatus.progress.classes && (
                   <p>Classes: {jobStatus.progress.classes.imported} imported</p>
@@ -874,13 +921,14 @@ export function DataImportCard() {
                 {jobStatus.progress.sales && (
                   <p>Sales: {jobStatus.progress.sales.imported} imported</p>
                 )}
-                {jobStatus.progress.apiCallCount !== undefined && jobStatus.progress.apiCallCount > 0 && (
-                  <p>API Calls: {jobStatus.progress.apiCallCount} / 1000</p>
-                )}
+                {jobStatus.progress.apiCallCount !== undefined &&
+                  jobStatus.progress.apiCallCount > 0 && (
+                    <p>API Calls: {jobStatus.progress.apiCallCount} / 1000</p>
+                  )}
               </div>
             </div>
             <div className="flex gap-2">
-              <Button 
+              <Button
                 onClick={handleResumeImport}
                 className="flex-1 gap-2"
                 disabled={resumeImportMutation.isPending}
@@ -893,8 +941,8 @@ export function DataImportCard() {
                 )}
                 Resume Import
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={handleReset}
                 className="flex-1"
                 data-testid="button-cancel-import"

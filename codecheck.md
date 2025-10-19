@@ -24,6 +24,7 @@ npx prettier --write . && npx eslint . --ext .js,.jsx,.ts,.tsx --fix
 ## What Gets Checked
 
 ### 1. Prettier (Code Formatting)
+
 - Consistent code formatting
 - Automatic semicolons, quotes, indentation
 - Line width enforcement (100 chars)
@@ -33,6 +34,7 @@ npx prettier --write . && npx eslint . --ext .js,.jsx,.ts,.tsx --fix
 **Configuration:** `.prettierrc`
 
 ### 2. ESLint (Code Quality & Best Practices)
+
 - TypeScript code quality
 - React best practices
 - React Hooks rules
@@ -40,17 +42,20 @@ npx prettier --write . && npx eslint . --ext .js,.jsx,.ts,.tsx --fix
 - Code formatting issues
 
 **Files checked:**
+
 - `client/**/*.{ts,tsx}` - Frontend React/TypeScript
 - `server/**/*.{ts,tsx}` - Backend TypeScript
 - `shared/**/*.{ts,tsx}` - Shared types
 
 **Ignored:**
+
 - `node_modules/`
 - `dist/`
 - `build/`
 - Config files
 
 ### 3. TypeScript Type Checking
+
 - Type errors
 - Missing type definitions
 - Type compatibility issues
@@ -59,12 +64,14 @@ npx prettier --write . && npx eslint . --ext .js,.jsx,.ts,.tsx --fix
 ## Running the Checks
 
 ### Check Everything (Recommended)
+
 ```bash
 # Run Prettier, ESLint, and TypeScript checks
 npx prettier --check . && npx eslint . --ext .js,.jsx,.ts,.tsx && npm run check
 ```
 
 ### Prettier Only
+
 ```bash
 # Check formatting
 npx prettier --check .
@@ -77,6 +84,7 @@ npx prettier --write "client/src/**/*.{ts,tsx}"
 ```
 
 ### ESLint Only
+
 ```bash
 # Check for issues
 npx eslint . --ext .js,.jsx,.ts,.tsx
@@ -86,6 +94,7 @@ npx eslint . --ext .js,.jsx,.ts,.tsx --fix
 ```
 
 ### TypeScript Only
+
 ```bash
 npm run check
 # or
@@ -93,6 +102,7 @@ npx tsc --noEmit
 ```
 
 ### Fix Everything (Auto-fix)
+
 ```bash
 # Format with Prettier, then fix ESLint issues
 npx prettier --write . && npx eslint . --ext .js,.jsx,.ts,.tsx --fix
@@ -101,16 +111,21 @@ npx prettier --write . && npx eslint . --ext .js,.jsx,.ts,.tsx --fix
 ## Common Issues & Fixes
 
 ### Issue: "React is not in scope"
+
 **Fix:** Already configured - React imports are not required in this project
 
 ### Issue: Unused variables
+
 **Fix:** Prefix with underscore: `_unusedVar` or remove if truly unused
 
 ### Issue: TypeScript `any` type
+
 **Fix:** Use proper types or interfaces instead of `any`
 
 ### Issue: Missing dependencies
-**Fix:** 
+
+**Fix:**
+
 ```bash
 npm install
 ```
@@ -125,6 +140,7 @@ npm install
 ## Recommended Workflow
 
 ### Before Committing Code
+
 ```bash
 # 1. Format all files
 npx prettier --write .
@@ -137,6 +153,7 @@ npm run check
 ```
 
 ### Quick Quality Check
+
 ```bash
 # Check everything without fixing
 npx prettier --check . && npx eslint . --ext .js,.jsx,.ts,.tsx && npm run check
@@ -154,10 +171,12 @@ npm run lint && npm run check
 ## Current ESLint Rules
 
 ### Warnings
+
 - `@typescript-eslint/no-explicit-any` - Avoid using `any` type
 - `@typescript-eslint/no-unused-vars` - Remove unused variables (except `_prefixed`)
 
 ### Disabled
+
 - `react/react-in-jsx-scope` - React import not required
 - `no-console` - Console logs allowed
 
@@ -169,18 +188,23 @@ npm run lint && npm run check
 ## Quick Troubleshooting
 
 ### ESLint Not Found
+
 ```bash
 npm install
 ```
 
 ### Too Many Warnings
+
 Focus on errors first:
+
 ```bash
 npx eslint . --ext .js,.jsx,.ts,.tsx --quiet
 ```
 
 ### TypeScript Errors
+
 Check your `tsconfig.json` and ensure all dependencies are installed:
+
 ```bash
 npm install
 npm run check

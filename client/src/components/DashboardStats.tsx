@@ -30,9 +30,7 @@ export function DashboardStats({ startDate, endDate }: DashboardStatsProps) {
   }
 
   const queryString = queryParams.toString();
-  const queryKey = queryString 
-    ? `/api/dashboard/stats?${queryString}`
-    : "/api/dashboard/stats";
+  const queryKey = queryString ? `/api/dashboard/stats?${queryString}` : "/api/dashboard/stats";
 
   const { data, isLoading } = useQuery<DashboardStatsData>({
     queryKey: [queryKey],
@@ -60,7 +58,7 @@ export function DashboardStats({ startDate, endDate }: DashboardStatsProps) {
   const stats = [
     {
       title: "Total Revenue",
-      value: `$${data?.totalRevenue.toLocaleString(undefined, {maximumFractionDigits: 0}) || "0"}`,
+      value: `$${data?.totalRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 }) || "0"}`,
       change: `${data?.revenueChange || "0"}%`,
       trend: parseFloat(data?.revenueChange || "0") >= 0 ? "up" : "down",
       icon: DollarSign,
@@ -100,11 +98,12 @@ export function DashboardStats({ startDate, endDate }: DashboardStatsProps) {
       {stats.map((stat, index) => {
         const Icon = stat.icon;
         const TrendIcon = stat.trend === "up" ? TrendingUp : TrendingDown;
-        const trendColor = stat.trend === "up" 
-          ? "text-green-600 dark:text-green-400" 
-          : stat.trend === "down" 
-            ? "text-red-600 dark:text-red-400"
-            : "text-muted-foreground";
+        const trendColor =
+          stat.trend === "up"
+            ? "text-green-600 dark:text-green-400"
+            : stat.trend === "down"
+              ? "text-red-600 dark:text-red-400"
+              : "text-muted-foreground";
         const showTrendIcon = stat.trend !== "neutral";
 
         return (
@@ -121,7 +120,10 @@ export function DashboardStats({ startDate, endDate }: DashboardStatsProps) {
               </div>
               <div className={`flex items-center gap-1 text-xs ${trendColor} mt-1`}>
                 {showTrendIcon && <TrendIcon className="h-3 w-3" />}
-                <span>{stat.change}{stat.trend !== "neutral" ? " from last month" : ""}</span>
+                <span>
+                  {stat.change}
+                  {stat.trend !== "neutral" ? " from last month" : ""}
+                </span>
               </div>
             </CardContent>
           </Card>

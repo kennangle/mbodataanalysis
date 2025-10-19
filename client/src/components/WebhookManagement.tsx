@@ -32,7 +32,9 @@ export function WebhookManagement() {
   const [selectedEventType] = useState<string>("classVisit.created");
 
   // Fetch subscriptions
-  const { data: subscriptions = [], isLoading: loadingSubscriptions } = useQuery<WebhookSubscription[]>({
+  const { data: subscriptions = [], isLoading: loadingSubscriptions } = useQuery<
+    WebhookSubscription[]
+  >({
     queryKey: ["/api/webhooks/subscriptions"],
   });
 
@@ -159,7 +161,9 @@ export function WebhookManagement() {
               <span className="font-medium">Subscription Active</span>
             </div>
             <div className="text-xs text-muted-foreground space-y-1">
-              <p>Event: <span className="font-mono">{activeSubscription.eventType}</span></p>
+              <p>
+                Event: <span className="font-mono">{activeSubscription.eventType}</span>
+              </p>
               <p>Created: {formatDate(activeSubscription.createdAt)}</p>
             </div>
           </div>
@@ -174,7 +178,7 @@ export function WebhookManagement() {
                 {events.length} total
               </Badge>
             </div>
-            
+
             {loadingEvents ? (
               <div className="text-sm text-muted-foreground text-center py-4">
                 Loading events...
@@ -203,14 +207,10 @@ export function WebhookManagement() {
                           ) : (
                             <Clock className="h-4 w-4 text-yellow-500 flex-shrink-0" />
                           )}
-                          <span className="text-sm font-medium truncate">
-                            {event.eventType}
-                          </span>
+                          <span className="text-sm font-medium truncate">{event.eventType}</span>
                         </div>
                         {event.error && (
-                          <p className="text-xs text-destructive mt-1 truncate">
-                            {event.error}
-                          </p>
+                          <p className="text-xs text-destructive mt-1 truncate">{event.error}</p>
                         )}
                       </div>
                       <span className="text-xs text-muted-foreground whitespace-nowrap">

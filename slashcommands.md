@@ -29,7 +29,7 @@ This application supports enhanced AI interaction through slash commands for aut
 | `/mobile audit`         | Full mobile review         | Comprehensive mobile optimization audit         |
 | `/mobile quick`         | Quick mobile check         | Fast scan of common mobile problems             |
 | `/es`                   | Code quality check         | Run ESLint across entire codebase               |
-| `/codecheck`            | Full quality audit         | Run Prettier, ESLint, and TypeScript checks      |
+| `/codecheck`            | Full quality audit         | Run Prettier, ESLint, and TypeScript checks     |
 | `/gr`                   | Guardrails review          | Check policy compliance and violations          |
 | `/bug`                  | Bug reporting              | Capture and document issues systematically      |
 | `/unanswered`           | Find pending questions     | Identify unresolved questions in conversation   |
@@ -95,7 +95,7 @@ This application supports enhanced AI interaction through slash commands for aut
 - **Behavior**: Scans for fixed-width elements, checks horizontal scroll issues, identifies tables/forms needing responsive treatment, flags elements with fixed pixel widths
 - **Example**: `/mobile overflow find elements causing horizontal scroll`
 
-### `/mobile typography` - Mobile Text Optimization  
+### `/mobile typography` - Mobile Text Optimization
 
 - **Purpose**: Optimize text for mobile readability
 - **Behavior**: Verifies minimum 16px font sizes (prevents iOS zoom), checks line heights and spacing, ensures text doesn't overflow containers, reviews heading hierarchy

@@ -1,62 +1,63 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  Brain, 
-  BarChart3, 
-  Zap, 
-  Shield, 
-  Database, 
+import {
+  Brain,
+  BarChart3,
+  Zap,
+  Shield,
+  Database,
   TrendingUp,
   FileText,
   Bell,
-  Lock
+  Lock,
 } from "lucide-react";
 
 const features = [
   {
     icon: Brain,
     title: "AI-Powered Queries",
-    description: "Ask questions in plain English and get instant insights powered by advanced AI."
+    description: "Ask questions in plain English and get instant insights powered by advanced AI.",
   },
   {
     icon: BarChart3,
     title: "Real-Time Analytics",
-    description: "Interactive dashboards with live data synchronization and beautiful visualizations."
+    description:
+      "Interactive dashboards with live data synchronization and beautiful visualizations.",
   },
   {
     icon: Database,
     title: "Seamless Data Import",
-    description: "Connect your Mindbody account and import all your data with a single click."
+    description: "Connect your Mindbody account and import all your data with a single click.",
   },
   {
     icon: FileText,
     title: "Custom Reports",
-    description: "Generate detailed reports in multiple formats (PDF, Excel, CSV) on demand."
+    description: "Generate detailed reports in multiple formats (PDF, Excel, CSV) on demand.",
   },
   {
     icon: Zap,
     title: "Lightning Fast",
-    description: "Optimized for performance with intelligent caching and query optimization."
+    description: "Optimized for performance with intelligent caching and query optimization.",
   },
   {
     icon: TrendingUp,
     title: "Predictive Analytics",
-    description: "Forecast attendance, revenue, and retention with machine learning models."
+    description: "Forecast attendance, revenue, and retention with machine learning models.",
   },
   {
     icon: Bell,
     title: "Smart Notifications",
-    description: "Get alerted about important trends, milestones, and anomalies in your data."
+    description: "Get alerted about important trends, milestones, and anomalies in your data.",
   },
   {
     icon: Shield,
     title: "Enterprise Security",
-    description: "Bank-level encryption, role-based access control, and compliance ready."
+    description: "Bank-level encryption, role-based access control, and compliance ready.",
   },
   {
     icon: Lock,
     title: "Data Privacy",
-    description: "Your data stays yours. GDPR compliant with automatic backups and recovery."
-  }
+    description: "Your data stays yours. GDPR compliant with automatic backups and recovery.",
+  },
 ];
 
 export function FeaturesSection() {
@@ -68,8 +69,8 @@ export function FeaturesSection() {
             Everything You Need to Grow Your Business
           </h2>
           <p className="text-lg text-muted-foreground">
-            Powerful features designed for fitness and wellness professionals who want to
-            make data-driven decisions.
+            Powerful features designed for fitness and wellness professionals who want to make
+            data-driven decisions.
           </p>
         </div>
 
@@ -85,9 +86,7 @@ export function FeaturesSection() {
                   <CardTitle className="text-xl">{feature.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <CardDescription className="text-base">
-                    {feature.description}
-                  </CardDescription>
+                  <CardDescription className="text-base">{feature.description}</CardDescription>
                 </CardContent>
               </Card>
             );

@@ -9,6 +9,7 @@ Data must be imported in this specific order due to database dependencies:
 ```
 
 **Why this order matters:**
+
 - **Visits** require existing Class Schedules (created during Classes import)
 - **Sales** require existing Students
 - Importing out of order will result in 0 records imported
@@ -18,6 +19,7 @@ Data must be imported in this specific order due to database dependencies:
 ## Step-by-Step Import Instructions
 
 ### Step 1: Import Students
+
 **When:** First time only (or to add new students)
 
 1. Go to **Import** page
@@ -31,6 +33,7 @@ Data must be imported in this specific order due to database dependencies:
 ---
 
 ### Step 2: Import Classes
+
 **When:** After Students are imported
 
 1. Go to **Import** page
@@ -39,13 +42,15 @@ Data must be imported in this specific order due to database dependencies:
 4. Click: **Start Import**
 5. Wait for completion
 
-**Result:** 
+**Result:**
+
 - Class definitions created
 - Class schedules created (these are needed for Visits)
 
 ---
 
 ### Step 3: Import Visits (Attendance)
+
 **When:** After Classes are imported for the same date range
 
 1. Go to **Import** page
@@ -61,6 +66,7 @@ Data must be imported in this specific order due to database dependencies:
 ---
 
 ### Step 4: Import Sales (Revenue)
+
 **When:** After Students and Classes are imported (optional)
 
 1. Go to **Import** page
@@ -78,6 +84,7 @@ Data must be imported in this specific order due to database dependencies:
 ### Import All Data for a Date Range (e.g., 1/1/25 - 10/17/25)
 
 **First Time Setup:**
+
 ```
 1. Students:  Jan 1, 2025 → Oct 17, 2025  ☑ Students only
    (Wait for completion)
@@ -95,6 +102,7 @@ Data must be imported in this specific order due to database dependencies:
 ### Adding New Date Range (e.g., adding Nov 2025 to existing data)
 
 If you already have Students imported:
+
 ```
 1. Classes:   Nov 1, 2025 → Nov 30, 2025  ☑ Classes only
    (Wait for completion)
@@ -111,22 +119,28 @@ If you already have Students imported:
 ## Common Issues
 
 ### Problem: Import shows "0 records imported" for Visits
+
 **Cause:** No matching Class Schedules exist for the date range
 
-**Solution:** 
+**Solution:**
+
 1. Import Classes for the same date range first
 2. Then re-import Visits
 
 ### Problem: Import appears "stalled" or hung
+
 **Cause:** Import worker encountered an error or stopped updating
 
 **Solution:**
+
 1. Refresh browser (Cmd+Shift+R or Ctrl+Shift+R)
 2. If staleness warning appears, cancel the stalled import
 3. Start a new import
 
 ### Problem: Want to re-import data for a date range
-**Solution:** 
+
+**Solution:**
+
 - Data imports are additive and use duplicate prevention
 - Safe to re-import the same date range
 - System will skip duplicate records automatically
@@ -137,12 +151,12 @@ If you already have Students imported:
 
 For reference, data is stored in these tables:
 
-| Data Type | Database Table |
-|-----------|----------------|
-| Students  | `students`     |
+| Data Type | Database Table               |
+| --------- | ---------------------------- |
+| Students  | `students`                   |
 | Classes   | `classes`, `class_schedules` |
-| Visits    | `attendance`   |
-| Sales     | `revenue`      |
+| Visits    | `attendance`                 |
+| Sales     | `revenue`                    |
 
 ---
 

@@ -19,8 +19,7 @@ export class OpenAIService {
       const queryDate = new Date(q.createdAt);
       const now = new Date();
       return (
-        queryDate.getMonth() === now.getMonth() &&
-        queryDate.getFullYear() === now.getFullYear()
+        queryDate.getMonth() === now.getMonth() && queryDate.getFullYear() === now.getFullYear()
       );
     });
 
@@ -30,21 +29,19 @@ export class OpenAIService {
       );
     }
 
-    const [totalStudentCount, activeStudentCount, classes, attendance, revenue] = await Promise.all([
-      storage.getStudentCount(organizationId),
-      storage.getActiveStudentCount(organizationId),
-      storage.getClasses(organizationId),
-      storage.getAttendance(organizationId),
-      storage.getRevenue(organizationId),
-    ]);
+    const [totalStudentCount, activeStudentCount, classes, attendance, revenue] = await Promise.all(
+      [
+        storage.getStudentCount(organizationId),
+        storage.getActiveStudentCount(organizationId),
+        storage.getClasses(organizationId),
+        storage.getAttendance(organizationId),
+        storage.getRevenue(organizationId),
+      ]
+    );
 
     const now = new Date();
     const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const revenueStats = await storage.getRevenueStats(
-      organizationId,
-      lastMonth,
-      now
-    );
+    const revenueStats = await storage.getRevenueStats(organizationId, lastMonth, now);
 
     const inactiveStudentCount = totalStudentCount - activeStudentCount;
 
@@ -103,20 +100,16 @@ Based on this data, please answer the following question thoughtfully and provid
     queryLimit: number;
   }> {
     const queries = await storage.getAIQueries(organizationId, 1000);
-    
+
     const now = new Date();
     const thisMonthQueries = queries.filter((q) => {
       const queryDate = new Date(q.createdAt);
       return (
-        queryDate.getMonth() === now.getMonth() &&
-        queryDate.getFullYear() === now.getFullYear()
+        queryDate.getMonth() === now.getMonth() && queryDate.getFullYear() === now.getFullYear()
       );
     });
 
-    const tokensThisMonth = thisMonthQueries.reduce(
-      (sum, q) => sum + (q.tokensUsed || 0),
-      0
-    );
+    const tokensThisMonth = thisMonthQueries.reduce((sum, q) => sum + (q.tokensUsed || 0), 0);
 
     return {
       queriesThisMonth: thisMonthQueries.length,

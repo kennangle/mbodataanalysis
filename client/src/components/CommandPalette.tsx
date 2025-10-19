@@ -164,7 +164,7 @@ export function CommandPalette() {
 
   const handleCommandSelect = (command: Command) => {
     setOpen(false);
-    
+
     // Copy command to clipboard for use with AI
     navigator.clipboard.writeText(command.label).then(() => {
       // Show a toast notification
@@ -203,9 +203,7 @@ export function CommandPalette() {
                   {command.icon}
                   <div className="flex flex-col">
                     <span className="font-medium">{command.label}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {command.description}
-                    </span>
+                    <span className="text-xs text-muted-foreground">{command.description}</span>
                   </div>
                 </CommandItem>
               ))}
@@ -216,9 +214,13 @@ export function CommandPalette() {
       </CommandList>
       <div className="border-t p-2 text-xs text-muted-foreground">
         <div className="flex items-center justify-between">
-          <span>Press <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
-            <span className="text-xs">⌘</span>K
-          </kbd> to open</span>
+          <span>
+            Press{" "}
+            <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+              <span className="text-xs">⌘</span>K
+            </kbd>{" "}
+            to open
+          </span>
           <span>Dev-only: AI-powered workflow commands</span>
         </div>
       </div>

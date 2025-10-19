@@ -97,9 +97,12 @@ export const setupAuth = (app: Express) => {
 
             if (!user) {
               user = await storage.getUserByEmail(email);
-              
+
               if (user && user.provider === "local") {
-                return done(null, false, { message: "Email already registered with password. Please sign in with email and password." });
+                return done(null, false, {
+                  message:
+                    "Email already registered with password. Please sign in with email and password.",
+                });
               }
             }
 
@@ -191,7 +194,7 @@ export const setupAuth = (app: Express) => {
       if (err) {
         return res.status(500).json({ error: "Internal server error" });
       }
-      
+
       if (!user) {
         return res.status(401).json({ error: info?.message || "Invalid email or password" });
       }
@@ -200,7 +203,7 @@ export const setupAuth = (app: Express) => {
         if (err) {
           return res.status(500).json({ error: "Login failed" });
         }
-        
+
         return res.json({
           id: user.id,
           email: user.email,
@@ -238,7 +241,8 @@ export const setupAuth = (app: Express) => {
   // Google OAuth routes
   app.get("/api/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
 
-  app.get("/api/auth/google/callback", 
+  app.get(
+    "/api/auth/google/callback",
     passport.authenticate("google", { failureRedirect: "/login" }),
     (req, res) => {
       res.redirect("/");
@@ -255,13 +259,15 @@ export const setupAuth = (app: Express) => {
       }
 
       const user = await storage.getUserByEmail(email);
-      
+
       if (!user) {
         return res.json({ message: "If the email exists, a reset link has been sent" });
       }
 
       if (user.provider !== "local") {
-        return res.status(400).json({ error: "This account uses Google sign-in. No password reset needed." });
+        return res
+          .status(400)
+          .json({ error: "This account uses Google sign-in. No password reset needed." });
       }
 
       await storage.deleteExpiredPasswordResetTokens();
