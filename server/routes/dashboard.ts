@@ -56,6 +56,8 @@ export function registerDashboardRoutes(app: Express) {
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
       
+      console.log(`[Dashboard Stats] Attendance records count: ${attendanceRecords.length}`);
+      
       res.json({
         totalRevenue: revenueStats.total,
         revenueChange: revenueChange.toFixed(1),
@@ -66,7 +68,8 @@ export function registerDashboardRoutes(app: Express) {
         attendanceChange: attendanceChange.toFixed(1),
         totalAttendanceRecords: attendanceRecords.length,
         classesThisMonth: classes.length,
-        classChange: "+8.2"
+        classChange: "+8.2",
+        _timestamp: Date.now() // Cache-busting timestamp
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch dashboard stats" });
