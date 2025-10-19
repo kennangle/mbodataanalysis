@@ -631,19 +631,24 @@ export class MindbodyService {
     // Get batch of students to process
     const endIndex = Math.min(startStudentIndex + BATCH_SIZE, totalStudents);
     const studentBatch = allStudents.slice(startStudentIndex, endIndex);
+    console.log(`[MindbodyService] Processing batch from index ${startStudentIndex} to ${endIndex} (${studentBatch.length} students)`);
     
     let imported = 0;
     let processedStudents = 0;
     
     // Process students sequentially in this batch
+    console.log(`[MindbodyService] Starting student loop...`);
     for (const student of studentBatch) {
+      console.log(`[MindbodyService] Processing student ${student.mindbodyClientId} (${processedStudents + 1}/${studentBatch.length})`);
       try {
+        console.log(`[MindbodyService] Calling fetchAllPages for sales...`);
         const { results: sales } = await this.fetchAllPages<MindbodySale>(
           organizationId,
           `/sale/sales?ClientId=${student.mindbodyClientId}&StartSaleDateTime=${startDate.toISOString()}`,
           'Sales',
           200
         );
+        console.log(`[MindbodyService] Found ${sales.length} sales for student ${student.mindbodyClientId}`);
         
         for (const sale of sales) {
           for (const item of sale.PurchasedItems) {
