@@ -157,19 +157,18 @@ export class MindbodyService {
 
     console.log(`[getUserToken] Response status: ${response.status}`);
     const responseText = await response.text();
-    console.log(`[getUserToken] Response body (first 800 chars): ${responseText.substring(0, 800)}`);
 
     if (!response.ok) {
-      console.error(`[getUserToken] Failed to get user token: ${response.status} - ${responseText}`);
-      throw new Error(`Failed to authenticate with Mindbody (${response.status}): ${responseText.substring(0, 300)}`);
+      console.error(`[getUserToken] Failed to get user token: ${response.status}`);
+      throw new Error(`Failed to authenticate with Mindbody (${response.status})`);
     }
 
     let data;
     try {
       data = JSON.parse(responseText);
     } catch (parseError) {
-      console.error(`[getUserToken] Failed to parse Mindbody response as JSON: ${responseText.substring(0, 500)}`);
-      throw new Error(`Mindbody auth returned invalid JSON: ${responseText.substring(0, 200)}`);
+      console.error(`[getUserToken] Failed to parse Mindbody response as JSON`);
+      throw new Error(`Mindbody auth returned invalid JSON`);
     }
 
     // Cache token for 55 minutes (expires in 60)
@@ -313,6 +312,29 @@ export class MindbodyService {
     }
 
     return { results: allResults, apiCalls: apiCallCount };
+  }
+
+  private async fetchPage<T>(
+    organizationId: string,
+    baseEndpoint: string,
+    resultsKey: string,
+    offset: number,
+    pageSize: number = 200
+  ): Promise<{ results: T[]; totalResults: number; hasMore: boolean }> {
+    const separator = baseEndpoint.includes("?") ? "&" : "?";
+    const endpoint = `${baseEndpoint}${separator}Limit=${pageSize}&Offset=${offset}`;
+    const data = await this.makeAuthenticatedRequest(organizationId, endpoint);
+
+    const results = data[resultsKey] || [];
+    const pagination: MindbodyPaginationResponse | undefined = data.PaginationResponse;
+    const totalResults = pagination?.TotalResults || 0;
+    
+    // Check if there are more pages
+    const hasMore = pagination 
+      ? (offset + results.length < totalResults && results.length > 0)
+      : false;
+
+    return { results, totalResults, hasMore };
   }
 
   async importClientsResumable(
