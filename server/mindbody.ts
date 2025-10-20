@@ -902,19 +902,23 @@ export class MindbodyService {
       body: JSON.stringify(requestBody),
     });
 
-    if (!response.ok) {
-      const error = await response.text();
-      console.error(`Mindbody webhook subscription failed: ${response.status} - ${error}`);
-      throw new Error(`Failed to create webhook subscription: ${error}`);
-    }
+    console.log(`[Webhook] Response status: ${response.status}`);
+    console.log(`[Webhook] Response headers:`, Object.fromEntries(response.headers.entries()));
 
     const responseText = await response.text();
+    console.log(`[Webhook] Response body (first 1000 chars):`, responseText.substring(0, 1000));
+
+    if (!response.ok) {
+      console.error(`Mindbody webhook subscription failed: ${response.status} - ${responseText}`);
+      throw new Error(`Failed to create webhook subscription (${response.status}): ${responseText.substring(0, 300)}`);
+    }
+
     let data;
     try {
       data = JSON.parse(responseText);
     } catch (parseError) {
       console.error(`Failed to parse webhook subscription response as JSON: ${responseText.substring(0, 500)}`);
-      throw new Error(`Mindbody returned invalid JSON response for webhook subscription`);
+      throw new Error(`Mindbody returned invalid JSON response for webhook subscription: ${responseText.substring(0, 200)}`);
     }
 
     return {
