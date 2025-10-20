@@ -38,6 +38,7 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
 ### Core Features & Implementations
 
 - **Resumable Background Import System**: Utilizes a database-backed job queue for asynchronous, checkpointed data imports with real-time progress tracking, session resilience, resume capabilities, proper cancellation, and auto-cleanup of stale jobs. Includes API call tracking and limit management.
+- **Scheduled Automatic Imports**: Node-cron powered scheduler that automatically imports data on user-configured schedules (daily at 2 AM by default). Features include per-organization cron jobs, manual "run now" triggers, automatic schedule updates, collision detection, and configurable date ranges and data types. Serves as a reliable alternative to webhooks for organizations without premium Mindbody accounts.
 - **Real-Time Webhook Integration**: Supports Mindbody webhooks for instant data synchronization, including HMAC-SHA256 signature verification, deduplication, asynchronous event processing, and automatic attendance record creation.
 - **Automatic Pagination**: Implements a generic helper to retrieve all records from the Mindbody API efficiently.
 - **User Management**: Admin-only interface for managing users, including CRUD operations, role-based access, and multi-tenancy support.
