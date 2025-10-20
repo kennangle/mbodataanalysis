@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { Search, Plus, MoreVertical, Pencil, Trash2, Eye, EyeOff } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -89,6 +89,8 @@ export function UsersTable() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showCreatePassword, setShowCreatePassword] = useState(false);
+  const [showEditPassword, setShowEditPassword] = useState(false);
   const { toast } = useToast();
 
   const { data: users, isLoading } = useQuery<User[]>({
@@ -364,12 +366,29 @@ export function UsersTable() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="••••••••"
-                        {...field}
-                        data-testid="input-create-password"
-                      />
+                      <div className="relative">
+                        <Input
+                          type={showCreatePassword ? "text" : "password"}
+                          placeholder="••••••••"
+                          {...field}
+                          data-testid="input-create-password"
+                          className="pr-10"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                          onClick={() => setShowCreatePassword(!showCreatePassword)}
+                          data-testid="button-toggle-create-password"
+                        >
+                          {showCreatePassword ? (
+                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </Button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -470,12 +489,29 @@ export function UsersTable() {
                   <FormItem>
                     <FormLabel>Password (leave blank to keep current)</FormLabel>
                     <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="••••••••"
-                        {...field}
-                        data-testid="input-edit-password"
-                      />
+                      <div className="relative">
+                        <Input
+                          type={showEditPassword ? "text" : "password"}
+                          placeholder="••••••••"
+                          {...field}
+                          data-testid="input-edit-password"
+                          className="pr-10"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                          onClick={() => setShowEditPassword(!showEditPassword)}
+                          data-testid="button-toggle-edit-password"
+                        >
+                          {showEditPassword ? (
+                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </Button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
