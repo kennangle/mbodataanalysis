@@ -159,7 +159,14 @@ export class MindbodyService {
       throw new Error(`Failed to authenticate with Mindbody: ${response.statusText}`);
     }
 
-    const data = await response.json();
+    const responseText = await response.text();
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error(`Failed to parse Mindbody response as JSON: ${responseText.substring(0, 500)}`);
+      throw new Error(`Mindbody returned invalid JSON response`);
+    }
 
     // Cache token for 55 minutes (expires in 60)
     this.cachedUserToken = data.AccessToken;
@@ -892,10 +899,19 @@ export class MindbodyService {
 
     if (!response.ok) {
       const error = await response.text();
+      console.error(`Mindbody webhook subscription failed: ${response.status} - ${error}`);
       throw new Error(`Failed to create webhook subscription: ${error}`);
     }
 
-    const data = await response.json();
+    const responseText = await response.text();
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error(`Failed to parse webhook subscription response as JSON: ${responseText.substring(0, 500)}`);
+      throw new Error(`Mindbody returned invalid JSON response for webhook subscription`);
+    }
+
     return {
       subscriptionId: data.id,
       messageSignatureKey: data.messageSignatureKey,
