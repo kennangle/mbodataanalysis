@@ -540,64 +540,83 @@ export class MindbodyService {
     // Process students sequentially in this batch
     for (const student of studentBatch) {
       try {
-        const { results: visits } = await this.fetchAllPages<MindbodyVisit>(
-          organizationId,
-          `/client/clientvisits?ClientId=${student.mindbodyClientId}&StartDate=${startDate.toISOString()}&EndDate=${endDate.toISOString()}`,
-          "Visits",
-          200
-        );
+        // Fetch visits page-by-page to avoid memory issues
+        let visitOffset = 0;
+        let hasMoreVisits = true;
+        const PAGE_SIZE = 100; // Smaller page size for memory safety
 
-        if (visits.length > 0) {
-          totalVisitsFound += visits.length;
-          // DEBUG: Log first visit structure to understand API response
-          if (totalVisitsFound <= 3) {
-            console.log("=== DEBUG: Visit structure from API ===");
-            console.log(JSON.stringify(visits[0], null, 2));
-            console.log("=======================================");
+        while (hasMoreVisits) {
+          const { results: visits, hasMore } = await this.fetchPage<MindbodyVisit>(
+            organizationId,
+            `/client/clientvisits?ClientId=${student.mindbodyClientId}&StartDate=${startDate.toISOString()}&EndDate=${endDate.toISOString()}`,
+            "Visits",
+            visitOffset,
+            PAGE_SIZE
+          );
+
+          hasMoreVisits = hasMore;
+
+          if (visits.length > 0) {
+            totalVisitsFound += visits.length;
+            // DEBUG: Log first visit structure to understand API response
+            if (totalVisitsFound <= 3) {
+              console.log("=== DEBUG: Visit structure from API ===");
+              console.log(JSON.stringify(visits[0], null, 2));
+              console.log("=======================================");
+            }
           }
-        }
 
-        for (const visit of visits) {
-          try {
-            if (!visit.ClassId || !visit.StartDateTime) {
-              // Log first few skipped visits with full data
-              if (totalVisitsFound <= 5) {
-                console.log(
-                  `Skipping visit for client ${student.mindbodyClientId}. Full visit data:`,
-                  JSON.stringify(visit, null, 2)
-                );
+          // Process this page of visits immediately
+          for (const visit of visits) {
+            try {
+              if (!visit.ClassId || !visit.StartDateTime) {
+                // Log first few skipped visits with full data
+                if (totalVisitsFound <= 5) {
+                  console.log(
+                    `Skipping visit for client ${student.mindbodyClientId}. Full visit data:`,
+                    JSON.stringify(visit, null, 2)
+                  );
+                }
+                continue;
               }
-              continue;
+
+              // Match by StartDateTime instead of ClassId
+              const visitStartTime = new Date(visit.StartDateTime).toISOString();
+              const schedule = schedulesByTime.get(visitStartTime);
+
+              // DEBUG: Log first few match attempts
+              if (totalVisitsFound <= 5) {
+                console.log(`=== DEBUG: Matching attempt ===`);
+                console.log(`Visit time: ${visit.StartDateTime} -> ${visitStartTime}`);
+                console.log(`Found schedule: ${schedule ? "YES" : "NO"}`);
+                console.log(`==============================`);
+              }
+
+              if (!schedule) {
+                unmatchedClassIds.add(`${visit.ClassId} at ${visit.StartDateTime}`);
+                continue;
+              }
+
+              await storage.createAttendance({
+                organizationId,
+                studentId: student.id,
+                scheduleId: schedule.id,
+                attendedAt: new Date(visit.StartDateTime),
+                status: visit.SignedIn ? "attended" : "noshow",
+              });
+
+              imported++;
+            } catch (error) {
+              console.error(`Failed to import visit for client ${student.mindbodyClientId}:`, error);
             }
+          }
 
-            // Match by StartDateTime instead of ClassId
-            const visitStartTime = new Date(visit.StartDateTime).toISOString();
-            const schedule = schedulesByTime.get(visitStartTime);
+          // Move to next page
+          visitOffset += visits.length;
 
-            // DEBUG: Log first few match attempts
-            if (totalVisitsFound <= 5) {
-              console.log(`=== DEBUG: Matching attempt ===`);
-              console.log(`Visit time: ${visit.StartDateTime} -> ${visitStartTime}`);
-              console.log(`Found schedule: ${schedule ? "YES" : "NO"}`);
-              console.log(`==============================`);
-            }
-
-            if (!schedule) {
-              unmatchedClassIds.add(`${visit.ClassId} at ${visit.StartDateTime}`);
-              continue;
-            }
-
-            await storage.createAttendance({
-              organizationId,
-              studentId: student.id,
-              scheduleId: schedule.id,
-              attendedAt: new Date(visit.StartDateTime),
-              status: visit.SignedIn ? "attended" : "noshow",
-            });
-
-            imported++;
-          } catch (error) {
-            console.error(`Failed to import visit for client ${student.mindbodyClientId}:`, error);
+          // Allow garbage collection between pages
+          if (hasMoreVisits) {
+            await new Promise(resolve => setImmediate(resolve));
           }
         }
       } catch (error) {
@@ -703,30 +722,33 @@ export class MindbodyService {
         const startDateTime = startDate.toISOString(); // e.g., 2024-01-01T00:00:00.000Z
         const endDateTime = endDate.toISOString();
 
-        const { results: transactions } = await this.fetchAllPages<any>(
-          organizationId,
-          `/sale/transactions?StartSaleDateTime=${startDateTime}&EndSaleDateTime=${endDateTime}`,
-          "Transactions",
-          SALES_BATCH_SIZE
-        );
-
-        console.log(
-          `[Sales Import] Fetched ${transactions.length} transactions from /sale/transactions`
-        );
-
-        // Log first transaction to see structure
-        if (transactions.length > 0) {
-          console.log(`[Sales Import] Sample transaction fields:`, Object.keys(transactions[0]));
-          console.log(
-            `[Sales Import] Sample transaction:`,
-            JSON.stringify(transactions[0], null, 2)
-          );
-        }
-
         let imported = 0;
         let skipped = 0;
+        let transactionOffset = 0;
+        let hasMoreTransactions = true;
+        let totalProcessed = 0;
 
-        for (const transaction of transactions) {
+        console.log(`[Sales Import] Processing transactions page-by-page from /sale/transactions`);
+
+        while (hasMoreTransactions) {
+          const { results: transactions, totalResults, hasMore } = await this.fetchPage<any>(
+            organizationId,
+            `/sale/transactions?StartSaleDateTime=${startDateTime}&EndSaleDateTime=${endDateTime}`,
+            "Transactions",
+            transactionOffset,
+            SALES_BATCH_SIZE
+          );
+
+          hasMoreTransactions = hasMore;
+
+          // Log first transaction to see structure (only once)
+          if (transactionOffset === 0 && transactions.length > 0) {
+            console.log(`[Sales Import] Total transactions: ${totalResults}`);
+            console.log(`[Sales Import] Sample transaction fields:`, Object.keys(transactions[0]));
+          }
+
+          // Process this page immediately
+          for (const transaction of transactions) {
           try {
             // Find a valid date field
             const dateStr =
@@ -778,33 +800,58 @@ export class MindbodyService {
           }
         }
 
+        // Move to next page
+        transactionOffset += transactions.length;
+        totalProcessed += transactions.length;
+
+        // Report progress
+        await onProgress(totalProcessed, totalResults);
+
+        // Allow garbage collection between pages
+        if (hasMoreTransactions) {
+          await new Promise(resolve => setImmediate(resolve));
+        }
+      }
+
         console.log(
           `[Sales Import] Results: ${imported} imported, ${skipped} skipped (invalid dates)`
         );
 
-        await onProgress(transactions.length, transactions.length);
         console.log(
-          `[Sales Import] Completed - imported ${imported} revenue records from ${transactions.length} transactions`
+          `[Sales Import] Completed - imported ${imported} revenue records from ${totalProcessed} transactions`
         );
 
-        return { imported, nextStudentIndex: transactions.length, completed: true };
+        return { imported, nextStudentIndex: totalProcessed, completed: true };
       }
 
       // If /sale/sales has results, use it for detailed line-item data
-      const { results: sales } = await this.fetchAllPages<any>(
-        organizationId,
-        `/sale/sales?StartDate=${dateFormat}&EndDate=${endDateFormat}`,
-        "Sales",
-        SALES_BATCH_SIZE
-      );
-
-      console.log(`[Sales Import] Fetched ${sales.length} total sales`);
-
       let imported = 0;
       let matchedClients = 0;
       let unmatchedClients = 0;
+      let salesOffset = 0;
+      let hasMoreSales = true;
+      let totalProcessed = 0;
 
-      for (const sale of sales) {
+      console.log(`[Sales Import] Processing sales page-by-page from /sale/sales`);
+
+      while (hasMoreSales) {
+        const { results: sales, totalResults, hasMore } = await this.fetchPage<any>(
+          organizationId,
+          `/sale/sales?StartDate=${dateFormat}&EndDate=${endDateFormat}`,
+          "Sales",
+          salesOffset,
+          SALES_BATCH_SIZE
+        );
+
+        hasMoreSales = hasMore;
+
+        // Log total count (only once)
+        if (salesOffset === 0) {
+          console.log(`[Sales Import] Total sales: ${totalResults}`);
+        }
+
+        // Process this page immediately
+        for (const sale of sales) {
         try {
           // Skip if missing sale date/time
           if (!sale.SaleDateTime) {
@@ -876,17 +923,27 @@ export class MindbodyService {
         }
       }
 
-      // Since fetchAllPages gets everything, we're done in one call
-      await onProgress(sales.length, sales.length);
+        // Move to next page
+        salesOffset += sales.length;
+        totalProcessed += sales.length;
+
+        // Report progress
+        await onProgress(totalProcessed, totalResults);
+
+        // Allow garbage collection between pages
+        if (hasMoreSales) {
+          await new Promise(resolve => setImmediate(resolve));
+        }
+      }
 
       console.log(
-        `[Sales Import] Completed - imported ${imported} revenue records from ${sales.length} sales`
+        `[Sales Import] Completed - imported ${imported} revenue records from ${totalProcessed} sales`
       );
       console.log(
         `[Sales Import] Client matching: ${matchedClients} matched, ${unmatchedClients} unmatched (linked to null studentId)`
       );
 
-      return { imported, nextStudentIndex: sales.length, completed: true };
+      return { imported, nextStudentIndex: totalProcessed, completed: true };
     } catch (error) {
       console.error(`Failed to fetch site-level sales:`, error);
       throw error;
