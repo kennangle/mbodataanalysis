@@ -139,6 +139,8 @@ export class MindbodyService {
       throw new Error("MINDBODY_API_KEY and MINDBODY_CLIENT_SECRET required");
     }
 
+    console.log(`[getUserToken] Requesting user token for site ${siteId} with username _YHC`);
+    
     // Source credentials username must be prefixed with underscore
     const response = await fetch(`${MINDBODY_API_BASE}/usertoken/issue`, {
       method: "POST",
@@ -153,19 +155,21 @@ export class MindbodyService {
       }),
     });
 
+    console.log(`[getUserToken] Response status: ${response.status}`);
+    const responseText = await response.text();
+    console.log(`[getUserToken] Response body (first 800 chars): ${responseText.substring(0, 800)}`);
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Failed to get user token: ${response.status} - ${errorText}`);
-      throw new Error(`Failed to authenticate with Mindbody: ${response.statusText}`);
+      console.error(`[getUserToken] Failed to get user token: ${response.status} - ${responseText}`);
+      throw new Error(`Failed to authenticate with Mindbody (${response.status}): ${responseText.substring(0, 300)}`);
     }
 
-    const responseText = await response.text();
     let data;
     try {
       data = JSON.parse(responseText);
     } catch (parseError) {
-      console.error(`Failed to parse Mindbody response as JSON: ${responseText.substring(0, 500)}`);
-      throw new Error(`Mindbody returned invalid JSON response`);
+      console.error(`[getUserToken] Failed to parse Mindbody response as JSON: ${responseText.substring(0, 500)}`);
+      throw new Error(`Mindbody auth returned invalid JSON: ${responseText.substring(0, 200)}`);
     }
 
     // Cache token for 55 minutes (expires in 60)
