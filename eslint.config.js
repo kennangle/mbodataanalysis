@@ -30,21 +30,21 @@ export default [
         fetch: "readonly",
         URL: "readonly",
         URLSearchParams: "readonly",
-        
+
         // Node.js
         process: "readonly",
         Buffer: "readonly",
         __dirname: "readonly",
         __filename: "readonly",
         global: "readonly",
-        
+
         // Browser
         window: "readonly",
         document: "readonly",
         navigator: "readonly",
         location: "readonly",
         React: "readonly",
-        
+
         // Browser APIs
         File: "readonly",
         FileReader: "readonly",
