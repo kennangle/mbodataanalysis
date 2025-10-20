@@ -1,20 +1,10 @@
 import type { Express } from "express";
 import { storage } from "../storage";
 import { requireAuth } from "../auth";
-import {
-  insertStudentSchema,
-  insertClassSchema,
-  insertAttendanceSchema,
-  insertRevenueSchema,
-  insertUserSchema,
-  organizations,
-  webhookSubscriptions,
-} from "@shared/schema";
-import { fromZodError } from "zod-validation-error";
+import { webhookSubscriptions } from "@shared/schema";
 import type { User } from "@shared/schema";
 
 import { MindbodyService } from "../mindbody";
-import { openaiService } from "../openai";
 import { db } from "../db";
 
 export function registerWebhookRoutes(app: Express) {
@@ -78,7 +68,7 @@ export function registerWebhookRoutes(app: Express) {
 
       const subscriptions = await storage.getWebhookSubscriptions(organizationId);
       res.json(subscriptions);
-    } catch (error) {
+    } catch {
       res.status(500).json({ error: "Failed to fetch webhook subscriptions" });
     }
   });
@@ -128,7 +118,7 @@ export function registerWebhookRoutes(app: Express) {
 
       const events = await storage.getWebhookEvents(organizationId);
       res.json(events);
-    } catch (error) {
+    } catch {
       res.status(500).json({ error: "Failed to fetch webhook events" });
     }
   });

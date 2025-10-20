@@ -40,7 +40,7 @@ export default function Reports() {
         title: "Report Generated",
         description: `${reportName} has been downloaded successfully.`,
       });
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to generate report. Please try again.",

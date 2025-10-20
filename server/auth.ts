@@ -3,7 +3,7 @@ import { Strategy as LocalStrategy } from "passport-local";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { storage } from "./storage";
 import { scryptSync, randomBytes, timingSafeEqual } from "crypto";
-import type { Express, Request } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import type { User } from "@shared/schema";
 import ConnectPgSimple from "connect-pg-simple";
@@ -332,21 +332,19 @@ export const setupAuth = (app: Express) => {
   });
 };
 
-export const requireAuth = (req: Request, res: any, next: any) => {
+export const requireAuth = (req: Request, res: Response, next: NextFunction) => {
   if (!req.isAuthenticated()) {
     return res.status(401).json({ error: "Authentication required" });
   }
   next();
 };
 
-declare global {
-  namespace Express {
-    interface User {
-      id: string;
-      email: string;
-      name: string;
-      role: string;
-      organizationId: string | null;
-    }
+declare module "express-serve-static-core" {
+  interface User {
+    id: string;
+    email: string;
+    name: string;
+    role: string;
+    organizationId: string | null;
   }
 }

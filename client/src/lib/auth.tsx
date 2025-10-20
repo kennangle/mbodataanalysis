@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { apiRequest, queryClient } from "./queryClient";
+import { queryClient } from "./queryClient";
 
 interface User {
   id: string;
