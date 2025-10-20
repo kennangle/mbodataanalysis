@@ -53,6 +53,7 @@ export function registerWebhookRoutes(app: Express) {
 
       res.json(subscription);
     } catch (error) {
+      console.error("Webhook subscription creation error:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Failed to create webhook subscription";
       res.status(500).json({ error: errorMessage });

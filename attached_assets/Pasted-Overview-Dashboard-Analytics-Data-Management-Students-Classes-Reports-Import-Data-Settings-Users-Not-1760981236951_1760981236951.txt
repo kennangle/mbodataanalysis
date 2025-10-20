@@ -1,0 +1,227 @@
+Overview
+Dashboard
+Analytics
+Data Management
+Students
+Classes
+Reports
+Import Data
+Settings
+Users
+Notifications
+Settings
+
+Logout
+Toggle Sidebar
+Dashboard
+
+Toggle theme
+Total Revenue
+$1,084,929
+0.0% from last month
+Active Students
+539
++12.5 from last month
+All Students
+10,091
+539 active
+Class Attendance
+96.8%
+259,868 records
+Classes This Month
+104
++8.2 from last month
+Date Range Filter
+Clear
+Start:
+All time
+End:
+All time
+Revenue & Growth Trend
+Monthly revenue and student enrollment over the past year
+Nov 2024
+Jan 2025
+Mar 2025
+May 2025
+Jul 2025
+Oct 2025
+0
+35000
+70000
+105000
+140000
+revenuestudents
+Class Attendance by Time
+Average attendance distribution across different time slots
+Sun
+Mon
+Tue
+Wed
+Thu
+Fri
+Sat
+0
+9000
+18000
+27000
+36000
+morningafternoonevening
+AI-Powered Insights
+Ask questions about your data in plain English
+e.g., What are my peak attendance times? Which classes have the best retention? How can I increase revenue?
+Ask AI
+Mindbody Data Import
+Import your Mindbody account data
+Import your students, classes, schedules, attendance records, and revenue data from Mindbody.
+
+Date Range
+Start Date
+10/20/2024
+End Date
+10/20/2025
+Data Types to Import
+
+Students
+
+Classes (Schedules)
+
+Visits (Attendance Records)
+
+Sales (Revenue Transactions)
+Start Import
+Import runs in the background. You can close this page and check back later.
+
+Force Stop Import
+Use this if an import is stuck or blocking new imports
+
+Real-Time Sync
+Get instant updates when new bookings are created. No API calls used.
+Enable Webhooks
+Automatically sync new class visits in real-time
+
+
+Why enable webhooks?
+
+Get instant updates when bookings are created
+No API calls consumed - completely free
+Your data stays current automatically
+Students
+Manage and view your student roster
+Search students...
+Export
+
+All Status
+
+Pick join date range
+Name	Email	Membership	Status	
+Joseph Ab	jabadjka3@gmail.com	—	inactive	
+Lucia Abascia	Abascialuciamariel@gmail.com	—	inactive	
+Annie Abbott	5msprjs6p8@privaterelay.appleid.com	—	inactive	
+Dinara Abdrakhmatova	dabdrakhmatova@gmail.com	—	inactive	
+Abdu Abdullah	86abll@gmail.com	—	inactive	
+June Sarchett	j.sarchett@yahoo.com	—	inactive	
+Steph Abe	abe.k.steph@gmail.com	—	inactive	
+Irma Abelt	chiogom@gmail.com	—	active	
+Krista Abela	kristaabela@gmail.com	—	inactive	
+Nath Abhishek	abnath93@gmail.com	—	inactive	
+Diana Abitova	diana.abiitova@gmail.com	—	inactive	
+Larry Abrahams	larry.abrahams@sbcglobal.net	—	inactive	
+Nicholas Abram	nicklabram1@gmail.com	—	inactive	
+Jordyn Abrams	abrams.jordyn@gmail.com	—	inactive	
+Brooke Abrantes	brooke.abrantes@icloud.com	—	inactive	
+Eunice Abuel	eunice.abuel@accor.com	—	inactive	
+Eunice Abuel	euniceabuel@gmail.com	—	inactive	
+Krysta Accola	—	—	inactive	
+Hillary Acer	hillaryacer@gmail.com	—	inactive	
+AMELIA -	ameliaearheart@gmail.com	—	inactive	
+Stuti Deodhar	sanskriticalifornia@gmail.com	—	inactive	
+Jessica Achermann 9/19/2025	jessica.achermann@yahoo.com	—	inactive	
+Kristine A	k_argao@u.pacific.edu	—	inactive	
+Mariam A	maryam@talentreeglobal.com	—	inactive	
+Allison Aaronson	alliaaronson@gmail.com	—	inactive	
+Debbie Ababa	ababadebbie@gmail.com	—	inactive	
+Mary Abaya	82h8m5vfcf@privaterelay.appleid.com	—	inactive	
+Kim Abbi	kimberlyann.lam@yahoo.com	—	inactive	
+Kimberly Abbi	abbikimberly@gmail.com	—	inactive	
+Rana Abdel Sattar	rana.a.sattar@gmail.com	—	inactive	
+Annie Abbott	annieraeabbott@gmail.com	—	inactive	
+Aya Abdelhadi	ayah.hadi@gmail.com	—	inactive	
+Maher Abdel-Sattar	mahersat@hotmail.com	—	inactive	
+Zebo Abdisamatova	zebo.samat20@gmail.com	—	inactive	
+Irma Abelt	irmaabelt@gmail.com	—	inactive	
+Gita Abhiraman	fearglobalwarming@gmail.com	—	inactive	
+Nax Abousskkima	scaramelaa@hotmail.com	—	inactive	
+Sarah AbiEzzi	sarahezzi@yahoo.com	—	inactive	
+Kristine Abila	kristineloweavila@gmail.com	—	inactive	
+Jaileen Abouzeid	jaileenabouzeid@gmail.com	—	inactive	
+Elyse Abramson	elyse.abramson@gmail.com	—	inactive	
+Olivia Abramson	oliviabramson@gmail.com	—	inactive	
+Nina Abusharkh	jeannineshark@gmail.com	—	inactive	
+Amanda Acco Rosa	amandaacco@gmail.com	—	inactive	
+Jayme Ackemann	ackemannj@samtrans.com	—	inactive	
+Jaime Ackerhalt	jaime.ackerhalt@gmail.com	—	active	
+Nikki A	mypinkpaisley@yahoo.com	—	inactive	
+Katherine Aitken	katherine8ken@gmail.com	—	active	
+Winney .Chan	winniecthepooh@yahoo.com	—	inactive	
+R A	ratiag.dogfood@gmail.com	—	inactive	
+Erin A.	—	—	inactive	
+Gita Abhiraman	gita.abhiraman@gmail.com	—	inactive	
+Natalie Sardonia	nsardonia@gmail.com	—	inactive	
+Greg Adamson	gregtadamson@gmail.com	—	inactive	
+Silas Adkins	—	—	inactive	
+Layla Adle	layla.adle@icloud.com	—	inactive	
+Tom Ady	adytj1@gmail.com	—	inactive	
+Susan Aflak	saflak@hotmail.com	—	inactive	
+Joscel Agudo	elbowtheorist@gmail.com	—	inactive	
+Veenu Agarwal	agarwal.veenu18@gmail.com	—	inactive	
+Mystica Agnal	mysticaagnal1997@gmail.com	—	inactive	
+Allison Agnello	allisonagnello@gmail.com	—	inactive	
+Abhinav Agrawal	agrawal.abhinav@gmail.com	—	inactive	
+NIti Agrawal	rushabh0803@gmail.com	—	inactive	
+SONALI AGRAWAL	sonaliagrawal@gmail.com	—	inactive	
+Arleen Agricola	arleenagricola@gmail.com	—	inactive	
+Allison Ackley	allisonrowe16@gmail.com	—	inactive	
+Carolina Aguilar	carolinaguilar11@yahoo.com	—	inactive	
+isela aguilera	—	—	inactive	
+Isela Aguilera	sela715@gmail.com	—	inactive	
+Isela Aguilera sarabia	isela715.ia@gmail.com	—	inactive	
+Denys Aguirrebeitia	aguirrecita@gmail.com	—	inactive	
+Haneul Aharoni	hcaharoni@gmail.com	—	inactive	
+Taylor Aguon	tay.aguon@gmail.com	—	inactive	
+Hani Ahmadi	hani.ahmadi33@yahoo.com	—	inactive	
+Bilal Ahmed	short-panics.0d@icloud.com	—	inactive	
+Natalie Aho	nataliecal@comcast.net	—	active	
+Nikita Ahuja	harnitahuja20@gmail.com	—	inactive	
+Mitchell Aichang	yogahealth@aichang.com	—	inactive	
+Zara Ainge	zaraainge@gmail.com	—	inactive	
+Jonathan Ackerhalt	jmackerhalt@yahoo.com	—	inactive	
+Natalie Acosta	natalieacosta1414@gmail.com	—	inactive	
+Jessica Adair	jdadair@ucdavis.edu	—	inactive	
+Lauren Adair	Jennikadair@yahoo.com	—	inactive	
+Kostas Adam	kostas.g.adam@gmail.com	—	inactive	
+Louis Adamo	louis@hi-techaudio.com	—	inactive	
+Betsy Adams	betsy.arnold.adams@gmail.com	—	active	
+Arielle Adelman	arielleadelman@yahoo.com	—	inactive	
+Shivangi Agarwal	shivangi.agarwal2@parthenon.ey.com	—	inactive	
+Azi Afif	azinsanjose@gmail.com	—	inactive	
+Arpit Agrawal	arpit.ag.19@gmail.com	—	inactive	
+Shilpi Agrawal	shilpirakesh@gmail.com	—	inactive	
+Natalia Aguas	nfrancez@gmail.com	—	inactive	
+Eric Aguila	eaguila84spm@gmail.com	—	inactive	
+Eric Aguila	Eaguila84@gmail.com	—	inactive	
+Salar Ahangi	salar@ahangi.com	—	inactive	
+Sean Ahearn	seanahearn@gmail.com	—	inactive	
+Paul Aherne	paul@resollective.com	—	inactive	
+Zhaobo Ai	ee07b252@gmail.com	—	inactive	
+Rachel Acheson	rachel.acheson@gmail.com	—	inactive	
+9000
+[plugin:runtime-error-plugin] 500: {"error":"Unexpected token '<', \"<?xml vers\"... is not valid JSON"}
+/home/runner/workspace/client/src/lib/queryClient.ts:6:11
+4  |    if (!res.ok) {
+5  |      const text = (await res.text()) || res.statusText;
+6  |      throw new Error(`${res.status}: ${text}`);
+   |            ^
+7  |    }
+8  |  }
+    at throwIfResNotOk /home/runner/workspace/client/src/lib/queryClient.ts:6:11
+    at async apiRequest (https://309a84c5-7396-499e-ac30-1bcd1e6cb24a-00-1ubg4i1w7t5ov.riker.replit.dev/src/lib/queryClient.
