@@ -328,3 +328,31 @@ export const insertWebhookEventSchema = createInsertSchema(webhookEvents).omit({
 });
 export type InsertWebhookEvent = z.infer<typeof insertWebhookEventSchema>;
 export type WebhookEvent = typeof webhookEvents.$inferSelect;
+
+export const scheduledImports = pgTable(
+  "scheduled_imports",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id").notNull(),
+    enabled: boolean("enabled").notNull().default(false),
+    schedule: text("schedule").notNull().default("0 2 * * *"), // Cron expression (2am daily)
+    dataTypes: text("data_types").notNull().default("students,classes,visits,sales"), // Comma-separated
+    daysToImport: integer("days_to_import").notNull().default(7), // Import last N days
+    lastRunAt: timestamp("last_run_at"),
+    lastRunStatus: text("last_run_status"), // "success" | "failed" | "running"
+    lastRunError: text("last_run_error"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    orgIdx: uniqueIndex("scheduled_imports_org_idx").on(table.organizationId),
+  })
+);
+
+export const insertScheduledImportSchema = createInsertSchema(scheduledImports).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertScheduledImport = z.infer<typeof insertScheduledImportSchema>;
+export type ScheduledImport = typeof scheduledImports.$inferSelect;
