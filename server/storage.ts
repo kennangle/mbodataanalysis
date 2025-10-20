@@ -12,6 +12,7 @@ import {
   passwordResetTokens,
   webhookSubscriptions,
   webhookEvents,
+  scheduledImports,
   type User,
   type InsertUser,
   type Organization,
@@ -35,6 +36,8 @@ import {
   type InsertWebhookSubscription,
   type WebhookEvent,
   type InsertWebhookEvent,
+  type ScheduledImport,
+  type InsertScheduledImport,
 } from "@shared/schema";
 import { eq, and, desc, gte, lt, lte, sql } from "drizzle-orm";
 import { addDays } from "date-fns";
@@ -146,6 +149,14 @@ export interface IStorage {
   getWebhookEvent(messageId: string): Promise<WebhookEvent | undefined>;
   getWebhookEvents(organizationId: string, limit?: number): Promise<WebhookEvent[]>;
   updateWebhookEvent(id: string, event: Partial<InsertWebhookEvent>): Promise<void>;
+
+  // Scheduled Imports
+  getScheduledImport(organizationId: string): Promise<ScheduledImport | undefined>;
+  upsertScheduledImport(scheduledImport: InsertScheduledImport): Promise<ScheduledImport>;
+  updateScheduledImport(
+    organizationId: string,
+    scheduledImport: Partial<InsertScheduledImport>
+  ): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -840,6 +851,42 @@ export class DbStorage implements IStorage {
 
   async updateWebhookEvent(id: string, event: Partial<InsertWebhookEvent>): Promise<void> {
     await db.update(webhookEvents).set(event).where(eq(webhookEvents.id, id));
+  }
+
+  async getScheduledImport(organizationId: string): Promise<ScheduledImport | undefined> {
+    const result = await db
+      .select()
+      .from(scheduledImports)
+      .where(eq(scheduledImports.organizationId, organizationId))
+      .limit(1);
+    return result[0];
+  }
+
+  async upsertScheduledImport(scheduledImport: InsertScheduledImport): Promise<ScheduledImport> {
+    const existing = await this.getScheduledImport(scheduledImport.organizationId);
+    
+    if (existing) {
+      await db
+        .update(scheduledImports)
+        .set({ ...scheduledImport, updatedAt: new Date() })
+        .where(eq(scheduledImports.organizationId, scheduledImport.organizationId));
+      
+      const updated = await this.getScheduledImport(scheduledImport.organizationId);
+      return updated!;
+    }
+    
+    const result = await db.insert(scheduledImports).values(scheduledImport).returning();
+    return result[0];
+  }
+
+  async updateScheduledImport(
+    organizationId: string,
+    scheduledImport: Partial<InsertScheduledImport>
+  ): Promise<void> {
+    await db
+      .update(scheduledImports)
+      .set({ ...scheduledImport, updatedAt: new Date() })
+      .where(eq(scheduledImports.organizationId, organizationId));
   }
 }
 

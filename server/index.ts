@@ -90,6 +90,15 @@ app.use((req, res, next) => {
     // Don't abort startup if cleanup fails
   }
 
+  // Start the import scheduler
+  try {
+    const { importScheduler } = await import("./scheduler");
+    await importScheduler.startScheduler();
+  } catch (error) {
+    console.error("Failed to start import scheduler:", error);
+    // Don't abort startup if scheduler fails
+  }
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

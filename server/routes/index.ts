@@ -10,6 +10,7 @@ import { registerWebhookRoutes } from "./webhooks";
 import { registerAIRoutes } from "./ai";
 import { registerDashboardRoutes } from "./dashboard";
 import { registerReportRoutes } from "./reports";
+import { registerScheduledImportRoutes } from "./scheduled-imports";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Register all route modules
@@ -23,6 +24,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerAIRoutes(app);
   registerDashboardRoutes(app);
   registerReportRoutes(app);
+  registerScheduledImportRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;
