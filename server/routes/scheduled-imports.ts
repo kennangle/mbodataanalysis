@@ -78,7 +78,7 @@ export function registerScheduledImportRoutes(app: Express) {
       }
 
       const { importScheduler } = await import("../scheduler");
-      await importScheduler.runScheduledImport(organizationId);
+      await importScheduler.runScheduledImport(organizationId, true); // Pass true for manual run
 
       res.json({ message: "Import started" });
     } catch (error) {

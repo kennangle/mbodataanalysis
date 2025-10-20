@@ -3,65 +3,118 @@ import { storage } from "./storage";
 import { mindbodyService } from "./mindbody";
 import { subDays } from "date-fns";
 
+interface ScheduledJobInfo {
+  task: cron.ScheduledTask;
+  schedule: string;
+}
+
 class ImportScheduler {
-  private scheduledJobs: Map<string, cron.ScheduledTask> = new Map();
+  private scheduledJobs: Map<string, ScheduledJobInfo> = new Map();
 
   async startScheduler() {
     console.log("[Scheduler] Starting import scheduler...");
 
-    // Check for scheduled imports every 5 minutes
-    cron.schedule("*/5 * * * *", async () => {
-      await this.checkAndRunScheduledImports();
-    });
+    // Load all enabled scheduled imports and create cron jobs for them
+    await this.syncScheduledJobs();
 
-    // Initial check on startup
-    await this.checkAndRunScheduledImports();
+    // Periodically sync scheduled jobs (every 5 minutes) in case configs change
+    cron.schedule("*/5 * * * *", async () => {
+      await this.syncScheduledJobs();
+    });
   }
 
-  private async checkAndRunScheduledImports() {
+  private async syncScheduledJobs() {
     try {
-      // This is a simple implementation - in production, you'd query all organizations
-      // For now, we'll just check if there's an active import job and skip if so
       const db = await import("./db");
       const { scheduledImports } = await import("@shared/schema");
       const { eq } = await import("drizzle-orm");
 
       const allScheduled = await db.db.select().from(scheduledImports).where(eq(scheduledImports.enabled, true));
 
+      // Track which organizations should have jobs
+      const activeOrgs = new Set<string>();
+
       for (const scheduled of allScheduled) {
-        await this.runScheduledImport(scheduled.organizationId);
+        activeOrgs.add(scheduled.organizationId);
+
+        // Validate the cron expression first
+        if (!cron.validate(scheduled.schedule)) {
+          console.error(`[Scheduler] Invalid cron expression for org ${scheduled.organizationId}: ${scheduled.schedule}`);
+          continue;
+        }
+
+        // Check if we already have a job for this org
+        const existingJobInfo = this.scheduledJobs.get(scheduled.organizationId);
+        
+        // Recreate the job if the schedule has changed or there's no existing job
+        const scheduleChanged = existingJobInfo && existingJobInfo.schedule !== scheduled.schedule;
+        
+        if (!existingJobInfo || scheduleChanged) {
+          // Stop existing job if any
+          if (existingJobInfo) {
+            existingJobInfo.task.stop();
+            this.scheduledJobs.delete(scheduled.organizationId);
+            if (scheduleChanged) {
+              console.log(`[Scheduler] Schedule changed for org ${scheduled.organizationId} from "${existingJobInfo.schedule}" to "${scheduled.schedule}"`);
+            }
+          }
+
+          // Create a new cron job for this organization
+          const task = cron.schedule(scheduled.schedule, async () => {
+            console.log(`[Scheduler] Cron triggered for org ${scheduled.organizationId}`);
+            await this.runScheduledImport(scheduled.organizationId, false);
+          });
+
+          this.scheduledJobs.set(scheduled.organizationId, {
+            task,
+            schedule: scheduled.schedule,
+          });
+          console.log(`[Scheduler] Created cron job for org ${scheduled.organizationId} with schedule: ${scheduled.schedule}`);
+        }
+      }
+
+      // Remove jobs for organizations that are no longer enabled
+      for (const [orgId, jobInfo] of this.scheduledJobs.entries()) {
+        if (!activeOrgs.has(orgId)) {
+          jobInfo.task.stop();
+          this.scheduledJobs.delete(orgId);
+          console.log(`[Scheduler] Removed cron job for org ${orgId} (no longer enabled)`);
+        }
       }
     } catch (error) {
-      console.error("[Scheduler] Error checking scheduled imports:", error);
+      console.error("[Scheduler] Error syncing scheduled jobs:", error);
     }
   }
 
-  async runScheduledImport(organizationId: string) {
+  async runScheduledImport(organizationId: string, isManual: boolean = false) {
     try {
       const scheduledImport = await storage.getScheduledImport(organizationId);
       
       if (!scheduledImport || !scheduledImport.enabled) {
+        console.log(`[Scheduler] Skipping import for org ${organizationId} - not enabled`);
         return;
       }
 
       // Check if there's already an active import job for this organization
       const activeJob = await storage.getActiveImportJob(organizationId);
       if (activeJob) {
-        console.log(`[Scheduler] Skipping scheduled import for org ${organizationId} - active job already exists`);
+        console.log(`[Scheduler] Skipping import for org ${organizationId} - active job already exists`);
         return;
       }
 
-      // Check if enough time has passed since last run
-      if (scheduledImport.lastRunAt) {
+      // For automatic runs (not manual), check if enough time has passed since last run
+      // This prevents rapid re-runs if the cron schedule is very frequent
+      if (!isManual && scheduledImport.lastRunAt) {
         const timeSinceLastRun = Date.now() - scheduledImport.lastRunAt.getTime();
-        const minInterval = 60 * 60 * 1000; // 1 hour minimum between runs
+        const minInterval = 10 * 60 * 1000; // 10 minutes minimum between automatic runs
         
         if (timeSinceLastRun < minInterval) {
+          console.log(`[Scheduler] Skipping import for org ${organizationId} - ran ${Math.floor(timeSinceLastRun / 60000)} minutes ago`);
           return;
         }
       }
 
-      console.log(`[Scheduler] Starting scheduled import for org ${organizationId}`);
+      console.log(`[Scheduler] Starting ${isManual ? 'manual' : 'scheduled'} import for org ${organizationId}`);
 
       // Update status to running
       await storage.updateScheduledImport(organizationId, {
