@@ -111,6 +111,9 @@ export function registerMindbodyRoutes(app: Express) {
       const mindbodyService = new MindbodyService();
       await mindbodyService.exchangeCodeForTokens(code, organizationId);
 
+      // Store the site ID in the organization
+      await storage.updateOrganizationSiteId(organizationId, siteId);
+
       res.json({ success: true, message: "Mindbody account connected successfully" });
     } catch (error) {
       const errorMessage =

@@ -60,6 +60,7 @@ export interface IStorage {
   getOrganization(id: string): Promise<Organization | undefined>;
   createOrganization(org: InsertOrganization): Promise<Organization>;
   updateOrganizationTokens(id: string, accessToken: string, refreshToken: string): Promise<void>;
+  updateOrganizationSiteId(id: string, siteId: string): Promise<void>;
 
   getStudents(
     organizationId: string,
@@ -235,6 +236,13 @@ export class DbStorage implements IStorage {
     await db
       .update(organizations)
       .set({ mindbodyAccessToken: accessToken, mindbodyRefreshToken: refreshToken })
+      .where(eq(organizations.id, id));
+  }
+
+  async updateOrganizationSiteId(id: string, siteId: string): Promise<void> {
+    await db
+      .update(organizations)
+      .set({ mindbodySiteId: siteId })
       .where(eq(organizations.id, id));
   }
 
