@@ -1,5 +1,4 @@
 import { storage } from "./storage";
-import pLimit from "p-limit";
 
 interface MindbodyTokenResponse {
   access_token: string;
@@ -41,17 +40,6 @@ interface MindbodyVisit {
   ClassId: number; // Lowercase "Id" per actual API response
   StartDateTime: string; // Not "VisitDateTime"
   SignedIn: boolean;
-}
-
-interface MindbodySale {
-  Id: number;
-  SaleDateTime: string;
-  ClientId: string;
-  PurchasedItems: Array<{
-    Type: string;
-    Description: string;
-    AmountPaid: number;
-  }>;
 }
 
 interface MindbodyPaginationResponse {

@@ -184,7 +184,7 @@ export const setupAuth = (app: Express) => {
           organizationId: user.organizationId,
         });
       });
-    } catch (error) {
+    } catch {
       res.status(500).json({ error: "Registration failed" });
     }
   });
