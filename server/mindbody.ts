@@ -554,6 +554,11 @@ export class MindbodyService {
             PAGE_SIZE
           );
 
+          // Break if no results (safety check)
+          if (visits.length === 0) {
+            break;
+          }
+
           hasMoreVisits = hasMore;
 
           if (visits.length > 0) {
@@ -614,10 +619,8 @@ export class MindbodyService {
           // Move to next page
           visitOffset += visits.length;
 
-          // Allow garbage collection between pages
-          if (hasMoreVisits) {
-            await new Promise(resolve => setImmediate(resolve));
-          }
+          // Allow garbage collection and I/O fairness between pages
+          await new Promise(resolve => setImmediate(resolve));
         }
       } catch (error) {
         console.error(`Failed to fetch visits for client ${student.mindbodyClientId}:`, error);
@@ -739,6 +742,11 @@ export class MindbodyService {
             SALES_BATCH_SIZE
           );
 
+          // Break if no results (safety check)
+          if (transactions.length === 0) {
+            break;
+          }
+
           hasMoreTransactions = hasMore;
 
           // Log first transaction to see structure (only once)
@@ -807,10 +815,8 @@ export class MindbodyService {
         // Report progress
         await onProgress(totalProcessed, totalResults);
 
-        // Allow garbage collection between pages
-        if (hasMoreTransactions) {
-          await new Promise(resolve => setImmediate(resolve));
-        }
+        // Allow garbage collection and I/O fairness between pages
+        await new Promise(resolve => setImmediate(resolve));
       }
 
         console.log(
@@ -842,6 +848,11 @@ export class MindbodyService {
           salesOffset,
           SALES_BATCH_SIZE
         );
+
+        // Break if no results (safety check)
+        if (sales.length === 0) {
+          break;
+        }
 
         hasMoreSales = hasMore;
 
@@ -930,10 +941,8 @@ export class MindbodyService {
         // Report progress
         await onProgress(totalProcessed, totalResults);
 
-        // Allow garbage collection between pages
-        if (hasMoreSales) {
-          await new Promise(resolve => setImmediate(resolve));
-        }
+        // Allow garbage collection and I/O fairness between pages
+        await new Promise(resolve => setImmediate(resolve));
       }
 
       console.log(

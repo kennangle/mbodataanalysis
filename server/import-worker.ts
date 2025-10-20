@@ -2,6 +2,15 @@ import { storage } from "./storage";
 import { mindbodyService } from "./mindbody";
 import type { ImportJob } from "@shared/schema";
 
+// Helper function to log memory usage
+function logMemoryUsage(context: string): void {
+  const usage = process.memoryUsage();
+  const formatMB = (bytes: number) => (bytes / 1024 / 1024).toFixed(2);
+  console.log(
+    `[Memory] ${context} - RSS: ${formatMB(usage.rss)}MB, Heap Used: ${formatMB(usage.heapUsed)}MB / ${formatMB(usage.heapTotal)}MB`
+  );
+}
+
 // Safe JSON parser that handles null, objects, and invalid JSON
 function safeJsonParse<T = any>(value: any, fallback: T = {} as T): T {
   if (value === null || value === undefined) {
@@ -17,10 +26,62 @@ function safeJsonParse<T = any>(value: any, fallback: T = {} as T): T {
   }
 }
 
+// Module-level guard to prevent duplicate handler registration
+let shutdownHandlersRegistered = false;
+
 export class ImportWorker {
   private jobQueue: string[] = [];
   private isProcessing = false;
   private currentJobId: string | null = null;
+
+  constructor() {
+    this.registerShutdownHandlers();
+  }
+
+  private registerShutdownHandlers(): void {
+    if (shutdownHandlersRegistered) return;
+    shutdownHandlersRegistered = true;
+
+    // Handle graceful shutdown signals
+    const handleShutdown = async (signal: string) => {
+      console.log(`[ImportWorker] Received ${signal} signal, marking job as interrupted...`);
+      
+      if (this.currentJobId) {
+        try {
+          const job = await storage.getImportJob(this.currentJobId);
+          if (job && job.status === "running") {
+            await storage.updateImportJob(this.currentJobId, {
+              status: "failed",
+              error: `Import interrupted due to server ${signal === 'SIGTERM' ? 'restart' : 'error'}. Resume to continue from checkpoint.`,
+            });
+            console.log(`[ImportWorker] Job ${this.currentJobId} marked as interrupted`);
+          }
+        } catch (error) {
+          console.error(`[ImportWorker] Failed to mark job as interrupted:`, error);
+        }
+      }
+
+      // Exit gracefully after marking job
+      if (signal === 'SIGTERM' || signal === 'SIGINT') {
+        process.exit(0);
+      }
+    };
+
+    process.on('SIGTERM', () => handleShutdown('SIGTERM'));
+    process.on('SIGINT', () => handleShutdown('SIGINT'));
+    
+    process.on('uncaughtException', async (error) => {
+      console.error('[ImportWorker] Uncaught exception:', error);
+      await handleShutdown('uncaughtException');
+      process.exit(1);
+    });
+
+    process.on('unhandledRejection', async (reason) => {
+      console.error('[ImportWorker] Unhandled rejection:', reason);
+      await handleShutdown('unhandledRejection');
+      process.exit(1);
+    });
+  }
 
   async processJob(jobId: string): Promise<void> {
     // Add job to queue
@@ -44,6 +105,9 @@ export class ImportWorker {
   private async processJobInternal(jobId: string): Promise<void> {
     this.isProcessing = true;
     this.currentJobId = jobId;
+
+    // Log initial memory state
+    logMemoryUsage(`Starting job ${jobId}`);
 
     try {
       const job = await storage.getImportJob(jobId);
@@ -85,7 +149,9 @@ export class ImportWorker {
 
       // Process clients
       if (dataTypes.includes("clients") && !progress.clients?.completed) {
+        logMemoryUsage("Before processing clients");
         await this.processClients(job, startDate, endDate, progress, baselineApiCallCount);
+        logMemoryUsage("After processing clients");
 
         // API call count is already updated within processClients
 
@@ -98,7 +164,9 @@ export class ImportWorker {
 
       // Process classes
       if (dataTypes.includes("classes") && !progress.classes?.completed) {
+        logMemoryUsage("Before processing classes");
         await this.processClasses(job, startDate, endDate, progress, baselineApiCallCount);
+        logMemoryUsage("After processing classes");
 
         // API call count is already updated within processClasses
 
@@ -111,7 +179,9 @@ export class ImportWorker {
 
       // Process visits
       if (dataTypes.includes("visits") && !progress.visits?.completed) {
+        logMemoryUsage("Before processing visits");
         await this.processVisits(job, startDate, endDate, progress, baselineApiCallCount);
+        logMemoryUsage("After processing visits");
 
         // API call count is already updated within processVisits
 
@@ -124,7 +194,9 @@ export class ImportWorker {
 
       // Process sales
       if (dataTypes.includes("sales") && !progress.sales?.completed) {
+        logMemoryUsage("Before processing sales");
         await this.processSales(job, startDate, endDate, progress, baselineApiCallCount);
+        logMemoryUsage("After processing sales");
 
         // API call count is already updated within processSales
 
@@ -141,9 +213,11 @@ export class ImportWorker {
         progress: JSON.stringify(progress),
       });
 
+      logMemoryUsage(`Job ${jobId} completed successfully`);
       console.log(`Import job ${jobId} completed successfully`);
     } catch (error) {
       console.error(`Error processing job ${jobId}:`, error);
+      logMemoryUsage(`Job ${jobId} failed with error`);
       
       // Build a helpful error message with context
       let errorMessage = error instanceof Error ? error.message : "Unknown error";
