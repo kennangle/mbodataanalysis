@@ -881,6 +881,17 @@ export class MindbodyService {
       throw new Error("Mindbody site ID not configured");
     }
 
+    const requestBody = {
+      eventType,
+      webhookUrl,
+      eventSchemaVersion: 1,
+      referenceId: referenceId || organizationId,
+      siteIds: [parseInt(org.mindbodySiteId)],
+    };
+
+    console.log(`[Webhook] Creating subscription with payload:`, JSON.stringify(requestBody, null, 2));
+    console.log(`[Webhook] Using webhook URL: ${webhookUrl}`);
+
     const response = await fetch(`${WEBHOOKS_API_BASE}/subscriptions`, {
       method: "POST",
       headers: {
@@ -888,13 +899,7 @@ export class MindbodyService {
         Authorization: `Bearer ${userToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        eventType,
-        webhookUrl,
-        eventSchemaVersion: 1,
-        referenceId: referenceId || organizationId,
-        siteIds: [parseInt(org.mindbodySiteId)],
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
