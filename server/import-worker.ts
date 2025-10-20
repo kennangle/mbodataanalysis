@@ -144,9 +144,38 @@ export class ImportWorker {
       console.log(`Import job ${jobId} completed successfully`);
     } catch (error) {
       console.error(`Error processing job ${jobId}:`, error);
+      
+      // Build a helpful error message with context
+      let errorMessage = error instanceof Error ? error.message : "Unknown error";
+      
+      // Get the job to see what was being processed
+      const failedJob = await storage.getImportJob(jobId);
+      if (failedJob?.currentDataType) {
+        const dataTypeNames: Record<string, string> = {
+          clients: "Students",
+          classes: "Classes",
+          visits: "Visits",
+          sales: "Sales",
+        };
+        const displayName = dataTypeNames[failedJob.currentDataType] || failedJob.currentDataType;
+        errorMessage = `Failed while importing ${displayName}: ${errorMessage}`;
+      }
+      
+      // Add common error context (case-insensitive matching)
+      const lowerError = errorMessage.toLowerCase();
+      if (lowerError.includes("timeout") || lowerError.includes("etimedout") || lowerError.includes("408") || lowerError.includes("504")) {
+        errorMessage += " (Network timeout - this is common for large imports. Resume to continue.)";
+      } else if (lowerError.includes("429") || lowerError.includes("rate limit")) {
+        errorMessage += " (API rate limit reached. Wait a few minutes, then resume.)";
+      } else if (lowerError.includes("401") || lowerError.includes("403") || lowerError.includes("unauthorized") || lowerError.includes("forbidden") || lowerError.includes("permission")) {
+        errorMessage += " (Authentication/permission issue. Check your Mindbody connection.)";
+      } else if (lowerError.includes("memory")) {
+        errorMessage += " (Out of memory. Try importing smaller date ranges.)";
+      }
+      
       await storage.updateImportJob(jobId, {
         status: "failed",
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: errorMessage,
       });
     } finally {
       this.isProcessing = false;

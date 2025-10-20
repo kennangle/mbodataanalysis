@@ -890,41 +890,82 @@ export function DataImportCard() {
 
         {isJobResumable && jobStatus && (
           <div className="space-y-4">
-            <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 p-4">
-              <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
-                Import {jobStatus.status === "failed" ? "failed" : "paused"}
-              </p>
-              {jobStatus.pausedAt && (
-                <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
-                  Paused: {format(new Date(jobStatus.pausedAt), "MMM d, yyyy h:mm a")}
+            <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 p-4 space-y-3">
+              <div>
+                <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                  Import {jobStatus.status === "failed" ? "Failed" : "Paused"}
                 </p>
-              )}
-              {jobStatus.error && (
-                <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">{jobStatus.error}</p>
-              )}
-
-              {/* Show progress at time of pausing */}
-              <div className="text-xs text-amber-700 dark:text-amber-300 mt-3 space-y-1">
-                <p className="font-medium">Progress at pause:</p>
-                {jobStatus.progress.clients && (
-                  <p>
-                    Students: {jobStatus.progress.clients.imported} new,{" "}
-                    {jobStatus.progress.clients.updated} updated
+                {jobStatus.pausedAt && (
+                  <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                    {format(new Date(jobStatus.pausedAt), "MMM d, yyyy 'at' h:mm a")}
                   </p>
                 )}
-                {jobStatus.progress.classes && (
-                  <p>Classes: {jobStatus.progress.classes.imported} imported</p>
-                )}
-                {jobStatus.progress.visits && (
-                  <p>Visits: {jobStatus.progress.visits.imported} imported</p>
-                )}
-                {jobStatus.progress.sales && (
-                  <p>Sales: {jobStatus.progress.sales.imported} imported</p>
-                )}
-                {jobStatus.progress.apiCallCount !== undefined &&
-                  jobStatus.progress.apiCallCount > 0 && (
-                    <p>API Calls: {jobStatus.progress.apiCallCount} / 1000</p>
+              </div>
+
+              {/* Why it stopped */}
+              {jobStatus.error && (
+                <div className="pt-2 border-t border-amber-200 dark:border-amber-800">
+                  <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
+                    Reason:
+                  </p>
+                  <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                    {jobStatus.error}
+                  </p>
+                </div>
+              )}
+
+              {/* Where it stopped */}
+              <div className="pt-2 border-t border-amber-200 dark:border-amber-800">
+                <p className="text-xs font-medium text-amber-900 dark:text-amber-100 mb-2">
+                  Progress Checkpoint:
+                </p>
+                <div className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
+                  {jobStatus.currentDataType && (
+                    <p className="font-medium">
+                      Currently processing: {getDisplayName(jobStatus.currentDataType)}
+                    </p>
                   )}
+                  {jobStatus.progress.clients && jobStatus.progress.clients.total > 0 && (
+                    <p>
+                      • Students: {jobStatus.progress.clients.imported} new, {jobStatus.progress.clients.updated} updated ({jobStatus.progress.clients.current.toLocaleString()} / {jobStatus.progress.clients.total.toLocaleString()} processed)
+                      {!jobStatus.progress.clients.completed && " - Will resume from here"}
+                    </p>
+                  )}
+                  {jobStatus.progress.classes && jobStatus.progress.classes.total > 0 && (
+                    <p>
+                      • Classes: {jobStatus.progress.classes.imported.toLocaleString()} imported ({jobStatus.progress.classes.current.toLocaleString()} / {jobStatus.progress.classes.total.toLocaleString()} processed)
+                      {!jobStatus.progress.classes.completed && " - Will resume from here"}
+                    </p>
+                  )}
+                  {jobStatus.progress.visits && jobStatus.progress.visits.total > 0 && (
+                    <p>
+                      • Visits: {jobStatus.progress.visits.imported.toLocaleString()} imported ({jobStatus.progress.visits.current.toLocaleString()} / {jobStatus.progress.visits.total.toLocaleString()} processed)
+                      {!jobStatus.progress.visits.completed && " - Will resume from here"}
+                    </p>
+                  )}
+                  {jobStatus.progress.sales && jobStatus.progress.sales.total > 0 && (
+                    <p>
+                      • Sales: {jobStatus.progress.sales.imported.toLocaleString()} imported ({jobStatus.progress.sales.current.toLocaleString()} / {jobStatus.progress.sales.total.toLocaleString()} processed)
+                      {!jobStatus.progress.sales.completed && " - Will resume from here"}
+                    </p>
+                  )}
+                  {jobStatus.progress.apiCallCount !== undefined &&
+                    jobStatus.progress.apiCallCount > 0 && (
+                      <p className="pt-1">
+                        • API Calls Used: {jobStatus.progress.apiCallCount.toLocaleString()} / 5,000 (free tier limit)
+                      </p>
+                    )}
+                </div>
+              </div>
+
+              {/* What happens on resume */}
+              <div className="pt-2 border-t border-amber-200 dark:border-amber-800">
+                <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
+                  On Resume:
+                </p>
+                <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                  Import will continue from the last checkpoint. No data will be re-imported.
+                </p>
               </div>
             </div>
             <div className="flex gap-2">
@@ -939,7 +980,7 @@ export function DataImportCard() {
                 ) : (
                   <Play className="h-4 w-4" />
                 )}
-                Resume Import
+                Resume from Checkpoint
               </Button>
               <Button
                 variant="outline"
@@ -947,7 +988,7 @@ export function DataImportCard() {
                 className="flex-1"
                 data-testid="button-cancel-import"
               >
-                Cancel
+                Start Over
               </Button>
             </div>
           </div>
