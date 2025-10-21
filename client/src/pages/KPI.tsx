@@ -36,7 +36,8 @@ interface HeatmapData {
 }
 
 interface IntroConversion {
-  introBuyers: number;
+  introLineItems: number;
+  uniqueIntroBuyers: number;
   introRevenue: number;
   converted: number;
   conversionRate: string;
@@ -415,26 +416,41 @@ export default function KPI() {
             <div>Loading...</div>
           ) : (
             <div className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-4">
                 <div>
-                  <div className="text-sm text-muted-foreground">Intro Buyers</div>
-                  <div className="text-2xl font-bold" data-testid="text-intro-buyers">
-                    {introConversion?.introBuyers || 0}
+                  <div className="text-sm text-muted-foreground">Total Purchases</div>
+                  <div className="text-2xl font-bold" data-testid="text-intro-line-items">
+                    {introConversion?.introLineItems || 0}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    line items
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground">Unique Buyers</div>
+                  <div className="text-2xl font-bold" data-testid="text-unique-buyers">
+                    {introConversion?.uniqueIntroBuyers || 0}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     ${Number(introConversion?.introRevenue || 0).toLocaleString()} revenue
                   </div>
                 </div>
                 <div>
-                  <div className="text-sm text-muted-foreground">Converted to Members</div>
+                  <div className="text-sm text-muted-foreground">Converted</div>
                   <div className="text-2xl font-bold" data-testid="text-converted-members">
                     {introConversion?.converted || 0}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    became members
                   </div>
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground">Conversion Rate</div>
                   <div className="text-2xl font-bold text-green-600" data-testid="text-conversion-rate">
                     {introConversion?.conversionRate || 0}%
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    of unique buyers
                   </div>
                 </div>
               </div>
@@ -443,19 +459,19 @@ export default function KPI() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <div className="flex-1 bg-blue-500 h-12 rounded-md flex items-center justify-center text-white font-semibold">
-                    Intro Buyers: {introConversion?.introBuyers || 0}
+                    {introConversion?.uniqueIntroBuyers || 0} Unique Intro Buyers
                   </div>
                 </div>
                 <div className="flex items-center gap-2 pl-8">
                   <div 
                     className="flex-1 bg-green-500 h-10 rounded-md flex items-center justify-center text-white font-semibold"
                     style={{ 
-                      width: introConversion?.introBuyers 
-                        ? `${(Number(introConversion.converted) / Number(introConversion.introBuyers)) * 100}%`
+                      width: introConversion?.uniqueIntroBuyers 
+                        ? `${(Number(introConversion.converted) / Number(introConversion.uniqueIntroBuyers)) * 100}%`
                         : '0%' 
                     }}
                   >
-                    Converted: {introConversion?.converted || 0}
+                    {introConversion?.converted || 0} Converted ({introConversion?.conversionRate || 0}%)
                   </div>
                 </div>
               </div>

@@ -189,11 +189,12 @@ export function registerKPIRoutes(app: Express) {
       if (startDate) dateFilter.push(gte(revenue.transactionDate, startDate));
       if (endDate) dateFilter.push(lte(revenue.transactionDate, endDate));
 
-      // Count intro offer line items (not distinct students) - matching Mindbody report
-      // Filter out refunds (negative amounts) and exclude void/adjustment descriptions
+      // Count intro offer line items (total purchases) - matching Mindbody report
+      // Filter out refunds (negative amounts)
       const introPurchases = await db
         .select({
-          count: sql<number>`COUNT(*)::int`,
+          lineItems: sql<number>`COUNT(*)::int`,
+          uniqueBuyers: sql<number>`COUNT(DISTINCT ${revenue.studentId})::int`,
           total: sql<number>`SUM(${revenue.amount}::numeric)`,
         })
         .from(revenue)
@@ -206,7 +207,7 @@ export function registerKPIRoutes(app: Express) {
           )
         );
 
-      // Find students who bought intro AND later got membership
+      // Find unique students who bought intro AND later got membership
       // Don't require active status - count anyone who converted (even if they later churned)
       const conversions = await db.execute<{ count: number }>(sql`
         SELECT COUNT(DISTINCT s.id)::int as count
@@ -220,13 +221,15 @@ export function registerKPIRoutes(app: Express) {
           ${dateFilter.length > 0 && endDate ? sql`AND r.transaction_date <= ${endDate}` : sql``}
       `);
 
-      const introBuyers = Number(introPurchases[0]?.count || 0);
+      const introLineItems = Number(introPurchases[0]?.lineItems || 0);
+      const uniqueIntroBuyers = Number(introPurchases[0]?.uniqueBuyers || 0);
       const introRevenue = Number(introPurchases[0]?.total || 0);
-      const converted = Number(conversions[0]?.count || 0);
-      const conversionRate = introBuyers > 0 ? (converted / introBuyers) * 100 : 0;
+      const converted = Number(conversions.rows[0]?.count || 0);
+      const conversionRate = uniqueIntroBuyers > 0 ? (converted / uniqueIntroBuyers) * 100 : 0;
 
       res.json({
-        introBuyers,
+        introLineItems,
+        uniqueIntroBuyers,
         introRevenue,
         converted,
         conversionRate: conversionRate.toFixed(1),
