@@ -46,8 +46,16 @@ export default function Reports() {
     setDownloadingReport(reportName);
     try {
       const dateRange = dateRanges[reportType];
-      const startDate = dateRange.start.toISOString().split("T")[0];
-      const endDate = dateRange.end.toISOString().split("T")[0];
+      // Format dates as YYYY-MM-DD in local timezone (not UTC)
+      const formatDate = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+      
+      const startDate = formatDate(dateRange.start);
+      const endDate = formatDate(dateRange.end);
       
       const apiUrl = `${endpoint}?startDate=${startDate}&endDate=${endDate}`;
       

@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { storage } from "../storage";
 import { requireAuth } from "../auth";
 import type { User } from "@shared/schema";
+import { addDays } from "date-fns";
 
 export function registerReportRoutes(app: Express) {
   // Report Generation Endpoints
@@ -12,10 +13,35 @@ export function registerReportRoutes(app: Express) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
-      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+      let startDate: Date | undefined;
+      let endDate: Date | undefined;
+      let queryEndDate: Date | undefined;
 
-      const revenueData = await storage.getRevenue(organizationId, startDate, endDate);
+      if (req.query.startDate) {
+        startDate = new Date(req.query.startDate as string);
+        if (isNaN(startDate.getTime())) {
+          return res.status(400).json({ error: "Invalid startDate format" });
+        }
+      }
+
+      if (req.query.endDate) {
+        endDate = new Date(req.query.endDate as string);
+        if (isNaN(endDate.getTime())) {
+          return res.status(400).json({ error: "Invalid endDate format" });
+        }
+      }
+
+      // Validate date range before any modifications
+      if (startDate && endDate && startDate > endDate) {
+        return res.status(400).json({ error: "startDate must be before or equal to endDate" });
+      }
+
+      // Make end date inclusive by adding one day for query
+      if (endDate) {
+        queryEndDate = addDays(endDate, 1);
+      }
+
+      const revenueData = await storage.getRevenue(organizationId, startDate, queryEndDate);
 
       const csv = [
         "Date,Description,Amount,Type",
@@ -43,10 +69,35 @@ export function registerReportRoutes(app: Express) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
-      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+      let startDate: Date | undefined;
+      let endDate: Date | undefined;
+      let queryEndDate: Date | undefined;
 
-      const attendanceData = await storage.getAttendance(organizationId, startDate, endDate);
+      if (req.query.startDate) {
+        startDate = new Date(req.query.startDate as string);
+        if (isNaN(startDate.getTime())) {
+          return res.status(400).json({ error: "Invalid startDate format" });
+        }
+      }
+
+      if (req.query.endDate) {
+        endDate = new Date(req.query.endDate as string);
+        if (isNaN(endDate.getTime())) {
+          return res.status(400).json({ error: "Invalid endDate format" });
+        }
+      }
+
+      // Validate date range before any modifications
+      if (startDate && endDate && startDate > endDate) {
+        return res.status(400).json({ error: "startDate must be before or equal to endDate" });
+      }
+
+      // Make end date inclusive by adding one day for query
+      if (endDate) {
+        queryEndDate = addDays(endDate, 1);
+      }
+
+      const attendanceData = await storage.getAttendance(organizationId, startDate, queryEndDate);
       const studentsMap = new Map();
       const classesMap = new Map();
       const scheduleToClassMap = new Map();
@@ -87,11 +138,36 @@ export function registerReportRoutes(app: Express) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
-      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+      let startDate: Date | undefined;
+      let endDate: Date | undefined;
+      let queryEndDate: Date | undefined;
+
+      if (req.query.startDate) {
+        startDate = new Date(req.query.startDate as string);
+        if (isNaN(startDate.getTime())) {
+          return res.status(400).json({ error: "Invalid startDate format" });
+        }
+      }
+
+      if (req.query.endDate) {
+        endDate = new Date(req.query.endDate as string);
+        if (isNaN(endDate.getTime())) {
+          return res.status(400).json({ error: "Invalid endDate format" });
+        }
+      }
+
+      // Validate date range before any modifications
+      if (startDate && endDate && startDate > endDate) {
+        return res.status(400).json({ error: "startDate must be before or equal to endDate" });
+      }
+
+      // Make end date inclusive by adding one day for query
+      if (endDate) {
+        queryEndDate = addDays(endDate, 1);
+      }
 
       const classes = await storage.getClasses(organizationId);
-      const attendanceData = await storage.getAttendance(organizationId, startDate, endDate);
+      const attendanceData = await storage.getAttendance(organizationId, startDate, queryEndDate);
       const schedules = await storage.getClassSchedules(organizationId);
 
       const scheduleToClassMap = new Map();
@@ -145,18 +221,40 @@ export function registerReportRoutes(app: Express) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
-      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+      let startDate: Date | undefined;
+      let endDate: Date | undefined;
+
+      if (req.query.startDate) {
+        startDate = new Date(req.query.startDate as string);
+        if (isNaN(startDate.getTime())) {
+          return res.status(400).json({ error: "Invalid startDate format" });
+        }
+      }
+
+      if (req.query.endDate) {
+        endDate = new Date(req.query.endDate as string);
+        if (isNaN(endDate.getTime())) {
+          return res.status(400).json({ error: "Invalid endDate format" });
+        }
+      }
+
+      if (startDate && endDate && startDate > endDate) {
+        return res.status(400).json({ error: "startDate must be before or equal to endDate" });
+      }
 
       // Use provided dates or default to current month
       const now = new Date();
       const periodStart = startDate || new Date(now.getFullYear(), now.getMonth(), 1);
-      const periodEnd = endDate || now;
+      let periodEnd = endDate || now;
+      
+      // Make end date inclusive by adding one day for attendance queries
+      // Note: getRevenueStats already handles +1 day internally, so pass periodEnd directly
+      const queryEndDate = addDays(periodEnd, 1);
 
       const [studentCount, revenueStats, attendanceRecords, classes] = await Promise.all([
         storage.getStudentCount(organizationId),
         storage.getRevenueStats(organizationId, periodStart, periodEnd),
-        storage.getAttendance(organizationId, periodStart, periodEnd),
+        storage.getAttendance(organizationId, periodStart, queryEndDate),
         storage.getClasses(organizationId),
       ]);
 
