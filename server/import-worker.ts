@@ -478,6 +478,9 @@ export class ImportWorker {
       progress.visits = { current: 0, total: 0, imported: 0, completed: false };
     }
 
+    // MEMORY OPTIMIZATION: Load schedules once and reuse across all batches
+    let schedulesByTime: Map<string, any> | undefined = undefined;
+
     let batchResult;
     do {
       // Check if job has been cancelled before processing next batch
@@ -508,8 +511,14 @@ export class ImportWorker {
             'Update import progress (visits)'
           );
         },
-        progress.visits.current || 0
+        progress.visits.current || 0,
+        schedulesByTime // Pass cached schedules
       );
+
+      // Cache schedules for next batch (loaded on first iteration)
+      if (!schedulesByTime && batchResult.schedulesByTime) {
+        schedulesByTime = batchResult.schedulesByTime;
+      }
 
       progress.visits.imported += batchResult.imported;
       progress.visits.current = batchResult.nextStudentIndex;

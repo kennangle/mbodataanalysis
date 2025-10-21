@@ -520,8 +520,9 @@ export class MindbodyService {
     startDate: Date,
     endDate: Date,
     onProgress: (current: number, total: number) => Promise<void>,
-    startStudentIndex: number = 0
-  ): Promise<{ imported: number; nextStudentIndex: number; completed: boolean }> {
+    startStudentIndex: number = 0,
+    schedulesByTime?: Map<string, any> // Pass cached schedules to avoid reloading
+  ): Promise<{ imported: number; nextStudentIndex: number; completed: boolean; schedulesByTime?: Map<string, any> }> {
     const BATCH_SIZE = 100; // Process 100 students per batch
     const BATCH_DELAY = 250; // 250ms delay between batches
 
@@ -529,17 +530,20 @@ export class MindbodyService {
     const totalStudents = await storage.getStudentCount(organizationId);
 
     if (startStudentIndex >= totalStudents) {
-      return { imported: 0, nextStudentIndex: startStudentIndex, completed: true };
+      return { imported: 0, nextStudentIndex: startStudentIndex, completed: true, schedulesByTime };
     }
 
     // Load only the batch of students we need for this iteration (pagination)
     const studentBatch = await storage.getStudents(organizationId, BATCH_SIZE, startStudentIndex);
     const endIndex = startStudentIndex + studentBatch.length;
 
-    // Load schedules once for efficient lookup
+    // Load schedules once on first batch, reuse on subsequent batches
     // Match by StartDateTime since ClassId in visits != ClassScheduleId in schedules
-    const schedules = await storage.getClassSchedules(organizationId);
-    const schedulesByTime = new Map(schedules.map((s) => [s.startTime.toISOString(), s]));
+    if (!schedulesByTime) {
+      const schedules = await storage.getClassSchedules(organizationId);
+      schedulesByTime = new Map(schedules.map((s) => [s.startTime.toISOString(), s]));
+      console.log(`[Visits] Loaded ${schedules.length} schedules into memory (one-time load)`);
+    }
 
     // DEBUG: Log sample schedule times
     const sampleTimes = Array.from(schedulesByTime.keys()).slice(0, 5);
@@ -685,7 +689,7 @@ export class MindbodyService {
       await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY));
     }
 
-    return { imported, nextStudentIndex, completed };
+    return { imported, nextStudentIndex, completed, schedulesByTime };
   }
 
   async importSalesResumable(
