@@ -26,6 +26,60 @@ function safeJsonParse<T = any>(value: any, fallback: T = {} as T): T {
   }
 }
 
+// Helper to detect database connection errors
+function isDatabaseConnectionError(error: any): boolean {
+  if (!error) return false;
+  const errorStr = error.toString().toLowerCase();
+  const message = error.message?.toLowerCase() || '';
+  const code = error.code?.toLowerCase() || '';
+  
+  return (
+    // Neon connection termination
+    code === '57p01' ||
+    message.includes('terminating connection') ||
+    // General connection errors
+    message.includes('connection terminated') ||
+    message.includes('connection closed') ||
+    message.includes('connection lost') ||
+    message.includes('econnreset') ||
+    errorStr.includes('econnreset')
+  );
+}
+
+// Retry wrapper for database operations that may fail due to connection issues
+async function withDatabaseRetry<T>(
+  operation: () => Promise<T>,
+  context: string = 'Database operation',
+  maxRetries: number = 3
+): Promise<T> {
+  let lastError: any;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      
+      // Only retry on connection errors
+      if (!isDatabaseConnectionError(error)) {
+        throw error;
+      }
+      
+      if (attempt < maxRetries) {
+        const delay = Math.pow(2, attempt - 1) * 1000; // 1s, 2s, 4s
+        console.log(
+          `[DB Retry] ${context} failed (attempt ${attempt}/${maxRetries}): ${error}. Retrying in ${delay}ms...`
+        );
+        await new Promise(resolve => setTimeout(resolve, delay));
+      } else {
+        console.error(`[DB Retry] ${context} failed after ${maxRetries} attempts`);
+      }
+    }
+  }
+  
+  throw lastError;
+}
+
 // Module-level guard to prevent duplicate handler registration
 let shutdownHandlersRegistered = false;
 
@@ -48,12 +102,18 @@ export class ImportWorker {
       
       if (this.currentJobId) {
         try {
-          const job = await storage.getImportJob(this.currentJobId);
+          const job = await withDatabaseRetry(
+            () => storage.getImportJob(this.currentJobId!),
+            'Get import job during shutdown'
+          );
           if (job && job.status === "running") {
-            await storage.updateImportJob(this.currentJobId, {
-              status: "failed",
-              error: `Import interrupted due to server ${signal === 'SIGTERM' ? 'restart' : 'error'}. Resume to continue from checkpoint.`,
-            });
+            await withDatabaseRetry(
+              () => storage.updateImportJob(this.currentJobId!, {
+                status: "failed",
+                error: `Import interrupted due to server ${signal === 'SIGTERM' ? 'restart' : 'error'}. Resume to continue from checkpoint.`,
+              }),
+              'Mark job as interrupted during shutdown'
+            );
             console.log(`[ImportWorker] Job ${this.currentJobId} marked as interrupted`);
           }
         } catch (error) {
@@ -110,7 +170,10 @@ export class ImportWorker {
     logMemoryUsage(`Starting job ${jobId}`);
 
     try {
-      const job = await storage.getImportJob(jobId);
+      const job = await withDatabaseRetry(
+        () => storage.getImportJob(jobId),
+        'Get import job'
+      );
       if (!job) {
         console.error(`Job ${jobId} not found`);
         return;
@@ -142,10 +205,13 @@ export class ImportWorker {
       // Reset the API counter to track only this session's calls
       mindbodyService.resetApiCallCount();
 
-      await storage.updateImportJob(jobId, {
-        status: "running",
-        progress: JSON.stringify(progress),
-      });
+      await withDatabaseRetry(
+        () => storage.updateImportJob(jobId, {
+          status: "running",
+          progress: JSON.stringify(progress),
+        }),
+        'Set job status to running'
+      );
 
       // Process clients
       if (dataTypes.includes("clients") && !progress.clients?.completed) {
@@ -156,7 +222,10 @@ export class ImportWorker {
         // API call count is already updated within processClients
 
         // Check if job was cancelled during processing
-        const updatedJob = await storage.getImportJob(jobId);
+        const updatedJob = await withDatabaseRetry(
+          () => storage.getImportJob(jobId),
+          'Check job status after clients'
+        );
         if (updatedJob?.status === "paused" || updatedJob?.status === "cancelled") {
           return;
         }
@@ -171,7 +240,10 @@ export class ImportWorker {
         // API call count is already updated within processClasses
 
         // Check if job was cancelled during processing
-        const updatedJob = await storage.getImportJob(jobId);
+        const updatedJob = await withDatabaseRetry(
+          () => storage.getImportJob(jobId),
+          'Check job status after classes'
+        );
         if (updatedJob?.status === "paused" || updatedJob?.status === "cancelled") {
           return;
         }
@@ -186,7 +258,10 @@ export class ImportWorker {
         // API call count is already updated within processVisits
 
         // Check if job was cancelled during processing
-        const updatedJob = await storage.getImportJob(jobId);
+        const updatedJob = await withDatabaseRetry(
+          () => storage.getImportJob(jobId),
+          'Check job status after visits'
+        );
         if (updatedJob?.status === "paused" || updatedJob?.status === "cancelled") {
           return;
         }
@@ -201,17 +276,23 @@ export class ImportWorker {
         // API call count is already updated within processSales
 
         // Check if job was cancelled during processing
-        const updatedJob = await storage.getImportJob(jobId);
+        const updatedJob = await withDatabaseRetry(
+          () => storage.getImportJob(jobId),
+          'Check job status after sales'
+        );
         if (updatedJob?.status === "paused" || updatedJob?.status === "cancelled") {
           return;
         }
       }
 
       // Mark job as completed
-      await storage.updateImportJob(jobId, {
-        status: "completed",
-        progress: JSON.stringify(progress),
-      });
+      await withDatabaseRetry(
+        () => storage.updateImportJob(jobId, {
+          status: "completed",
+          progress: JSON.stringify(progress),
+        }),
+        'Mark job as completed'
+      );
 
       logMemoryUsage(`Job ${jobId} completed successfully`);
       console.log(`Import job ${jobId} completed successfully`);
@@ -222,8 +303,12 @@ export class ImportWorker {
       // Build a helpful error message with context
       let errorMessage = error instanceof Error ? error.message : "Unknown error";
       
-      // Get the job to see what was being processed
-      const failedJob = await storage.getImportJob(jobId);
+      // Get the job to see what was being processed (with retry)
+      const failedJob = await withDatabaseRetry(
+        () => storage.getImportJob(jobId),
+        'Get failed job details'
+      ).catch(() => null); // If we can't even get the job after retries, continue with basic error
+      
       if (failedJob?.currentDataType) {
         const dataTypeNames: Record<string, string> = {
           clients: "Students",
@@ -247,9 +332,15 @@ export class ImportWorker {
         errorMessage += " (Out of memory. Try importing smaller date ranges.)";
       }
       
-      await storage.updateImportJob(jobId, {
-        status: "failed",
-        error: errorMessage,
+      await withDatabaseRetry(
+        () => storage.updateImportJob(jobId, {
+          status: "failed",
+          error: errorMessage,
+        }),
+        'Mark job as failed'
+      ).catch((err) => {
+        // Last resort: log error if even the failure update fails
+        console.error(`Failed to mark job ${jobId} as failed:`, err);
       });
     } finally {
       this.isProcessing = false;
@@ -271,7 +362,10 @@ export class ImportWorker {
     let batchResult;
     do {
       // Check if job has been cancelled before processing next batch
-      const currentJob = await storage.getImportJob(job.id);
+      const currentJob = await withDatabaseRetry(
+        () => storage.getImportJob(job.id),
+        'Check job status before clients batch'
+      );
       if (currentJob?.status === "paused" || currentJob?.status === "cancelled") {
         return;
       }
@@ -285,11 +379,14 @@ export class ImportWorker {
           progress.clients.total = total;
           // Update API call count in progress callback
           progress.apiCallCount = baselineApiCallCount + mindbodyService.getApiCallCount();
-          await storage.updateImportJob(job.id, {
-            progress: JSON.stringify(progress),
-            currentDataType: "clients",
-            currentOffset: current,
-          });
+          await withDatabaseRetry(
+            () => storage.updateImportJob(job.id, {
+              progress: JSON.stringify(progress),
+              currentDataType: "clients",
+              currentOffset: current,
+            }),
+            'Update import progress (clients)'
+          );
         },
         progress.clients.current || 0
       );
@@ -302,9 +399,12 @@ export class ImportWorker {
       // Update API call count after batch
       progress.apiCallCount = baselineApiCallCount + mindbodyService.getApiCallCount();
 
-      await storage.updateImportJob(job.id, {
-        progress: JSON.stringify(progress),
-      });
+      await withDatabaseRetry(
+        () => storage.updateImportJob(job.id, {
+          progress: JSON.stringify(progress),
+        }),
+        'Update import progress after batch (clients)'
+      );
     } while (!batchResult.completed);
   }
 
@@ -322,7 +422,10 @@ export class ImportWorker {
     let batchResult;
     do {
       // Check if job has been cancelled before processing next batch
-      const currentJob = await storage.getImportJob(job.id);
+      const currentJob = await withDatabaseRetry(
+        () => storage.getImportJob(job.id),
+        'Check job status before classes batch'
+      );
       if (currentJob?.status === "paused" || currentJob?.status === "cancelled") {
         return;
       }
@@ -336,11 +439,14 @@ export class ImportWorker {
           progress.classes.total = total;
           // Update API call count in progress callback
           progress.apiCallCount = baselineApiCallCount + mindbodyService.getApiCallCount();
-          await storage.updateImportJob(job.id, {
-            progress: JSON.stringify(progress),
-            currentDataType: "classes",
-            currentOffset: current,
-          });
+          await withDatabaseRetry(
+            () => storage.updateImportJob(job.id, {
+              progress: JSON.stringify(progress),
+              currentDataType: "classes",
+              currentOffset: current,
+            }),
+            'Update import progress (classes)'
+          );
         },
         progress.classes.current || 0
       );
@@ -352,9 +458,12 @@ export class ImportWorker {
       // Update API call count after batch
       progress.apiCallCount = baselineApiCallCount + mindbodyService.getApiCallCount();
 
-      await storage.updateImportJob(job.id, {
-        progress: JSON.stringify(progress),
-      });
+      await withDatabaseRetry(
+        () => storage.updateImportJob(job.id, {
+          progress: JSON.stringify(progress),
+        }),
+        'Update import progress after batch (classes)'
+      );
     } while (!batchResult.completed);
   }
 
@@ -372,7 +481,10 @@ export class ImportWorker {
     let batchResult;
     do {
       // Check if job has been cancelled before processing next batch
-      const currentJob = await storage.getImportJob(job.id);
+      const currentJob = await withDatabaseRetry(
+        () => storage.getImportJob(job.id),
+        'Check job status before visits batch'
+      );
       if (currentJob?.status === "paused" || currentJob?.status === "cancelled") {
         console.log(`Job ${job.id} has been cancelled, stopping visits import`);
         return;
@@ -387,11 +499,14 @@ export class ImportWorker {
           progress.visits.total = total;
           // Update API call count in progress callback
           progress.apiCallCount = baselineApiCallCount + mindbodyService.getApiCallCount();
-          await storage.updateImportJob(job.id, {
-            progress: JSON.stringify(progress),
-            currentDataType: "visits",
-            currentOffset: current,
-          });
+          await withDatabaseRetry(
+            () => storage.updateImportJob(job.id, {
+              progress: JSON.stringify(progress),
+              currentDataType: "visits",
+              currentOffset: current,
+            }),
+            'Update import progress (visits)'
+          );
         },
         progress.visits.current || 0
       );
@@ -403,9 +518,12 @@ export class ImportWorker {
       // Update API call count after batch
       progress.apiCallCount = baselineApiCallCount + mindbodyService.getApiCallCount();
 
-      await storage.updateImportJob(job.id, {
-        progress: JSON.stringify(progress),
-      });
+      await withDatabaseRetry(
+        () => storage.updateImportJob(job.id, {
+          progress: JSON.stringify(progress),
+        }),
+        'Update import progress after batch (visits)'
+      );
 
       // Log memory usage after each batch to monitor for issues
       logMemoryUsage(`Visits batch completed: ${progress.visits.current}/${progress.visits.total} students`);
@@ -424,12 +542,18 @@ export class ImportWorker {
     }
 
     // OPTIMIZATION: Load all students once instead of per-batch
-    const allStudents = await storage.getStudents(job.organizationId, 100000);
+    const allStudents = await withDatabaseRetry(
+      () => storage.getStudents(job.organizationId, 100000),
+      'Load all students for sales import'
+    );
 
     let batchResult;
     do {
       // Check if job has been cancelled before processing next batch
-      const currentJob = await storage.getImportJob(job.id);
+      const currentJob = await withDatabaseRetry(
+        () => storage.getImportJob(job.id),
+        'Check job status before sales batch'
+      );
       if (currentJob?.status === "paused" || currentJob?.status === "cancelled") {
         console.log(`Job ${job.id} has been cancelled, stopping sales import`);
         return;
@@ -444,11 +568,14 @@ export class ImportWorker {
           progress.sales.total = total;
           // Update API call count in progress callback
           progress.apiCallCount = baselineApiCallCount + mindbodyService.getApiCallCount();
-          await storage.updateImportJob(job.id, {
-            progress: JSON.stringify(progress),
-            currentDataType: "sales",
-            currentOffset: current,
-          });
+          await withDatabaseRetry(
+            () => storage.updateImportJob(job.id, {
+              progress: JSON.stringify(progress),
+              currentDataType: "sales",
+              currentOffset: current,
+            }),
+            'Update import progress (sales)'
+          );
         },
         progress.sales.current || 0,
         allStudents // Pass cached students to avoid reloading
@@ -461,9 +588,12 @@ export class ImportWorker {
       // Update API call count after batch
       progress.apiCallCount = baselineApiCallCount + mindbodyService.getApiCallCount();
 
-      await storage.updateImportJob(job.id, {
-        progress: JSON.stringify(progress),
-      });
+      await withDatabaseRetry(
+        () => storage.updateImportJob(job.id, {
+          progress: JSON.stringify(progress),
+        }),
+        'Update import progress after batch (sales)'
+      );
     } while (!batchResult.completed);
   }
 

@@ -9,13 +9,12 @@ if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL must be set. Did you forget to provision a database?");
 }
 
-// Configure pool for long-running operations
+// Configure pool for long-running operations (e.g., data imports)
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 10, // Maximum number of clients in the pool
   idleTimeoutMillis: 30000, // Close idle clients after 30 seconds (increased from default 10s)
-  connectionTimeoutMillis: 10000, // Timeout for establishing connection
-  maxLifetimeSeconds: 3600, // Close connections after 1 hour to prevent stale connections
+  connectionTimeoutMillis: 10000, // Timeout for establishing new connection
 });
 
 export const db = drizzle({ client: pool, schema });
