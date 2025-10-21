@@ -74,29 +74,72 @@ export default function KPI() {
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
+  // Build query params for API calls
+  const buildKPIUrl = (endpoint: string) => {
+    const params = new URLSearchParams();
+    if (startDate) params.append("startDate", startDate.toISOString().split('T')[0]);
+    if (endDate) params.append("endDate", endDate.toISOString().split('T')[0]);
+    return params.toString() ? `${endpoint}?${params.toString()}` : endpoint;
+  };
+
   // Call all hooks before any conditional returns
   const { data: overview, isLoading: overviewLoading } = useQuery<KPIOverview>({
     queryKey: ["/api/kpi/overview", startDate?.toISOString(), endDate?.toISOString()],
-    enabled: !!user, // Only fetch when user is authenticated
+    queryFn: async () => {
+      const res = await fetch(buildKPIUrl("/api/kpi/overview"), {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+      return res.json();
+    },
+    enabled: !!user,
   });
 
   const { data: heatmap, isLoading: heatmapLoading } = useQuery<HeatmapData>({
     queryKey: ["/api/kpi/utilization-heatmap", startDate?.toISOString(), endDate?.toISOString()],
+    queryFn: async () => {
+      const res = await fetch(buildKPIUrl("/api/kpi/utilization-heatmap"), {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+      return res.json();
+    },
     enabled: !!user,
   });
 
   const { data: introConversion, isLoading: introLoading } = useQuery<IntroConversion>({
     queryKey: ["/api/kpi/intro-conversion", startDate?.toISOString(), endDate?.toISOString()],
+    queryFn: async () => {
+      const res = await fetch(buildKPIUrl("/api/kpi/intro-conversion"), {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+      return res.json();
+    },
     enabled: !!user,
   });
 
   const { data: classPerf, isLoading: classPerfLoading } = useQuery<ClassPerformanceData>({
     queryKey: ["/api/kpi/class-performance", startDate?.toISOString(), endDate?.toISOString()],
+    queryFn: async () => {
+      const res = await fetch(buildKPIUrl("/api/kpi/class-performance"), {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+      return res.json();
+    },
     enabled: !!user,
   });
 
   const { data: membershipTrends, isLoading: membershipLoading } = useQuery<MembershipTrends>({
     queryKey: ["/api/kpi/membership-trends", startDate?.toISOString(), endDate?.toISOString()],
+    queryFn: async () => {
+      const res = await fetch(buildKPIUrl("/api/kpi/membership-trends"), {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+      return res.json();
+    },
     enabled: !!user,
   });
 
