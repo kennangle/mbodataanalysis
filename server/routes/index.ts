@@ -11,6 +11,7 @@ import { registerAIRoutes } from "./ai";
 import { registerDashboardRoutes } from "./dashboard";
 import { registerReportRoutes } from "./reports";
 import { registerScheduledImportRoutes } from "./scheduled-imports";
+import { registerBackupRoutes } from "./backups";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Register all route modules
@@ -25,6 +26,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerDashboardRoutes(app);
   registerReportRoutes(app);
   registerScheduledImportRoutes(app);
+  registerBackupRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -9,11 +9,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { LogOut } from "lucide-react";
+import { LogOut, Download, Database, Code2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Settings() {
   const { user, isLoading, logout } = useAuth();
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const [isDownloadingDb, setIsDownloadingDb] = useState(false);
+  const [isDownloadingCode, setIsDownloadingCode] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -41,6 +45,94 @@ export default function Settings() {
   const handleLogout = async () => {
     await logout();
     setLocation("/login");
+  };
+
+  const handleDatabaseBackup = async () => {
+    setIsDownloadingDb(true);
+    try {
+      const response = await fetch("/api/backups/database-json", {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create database backup");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      
+      // Extract filename from Content-Disposition header or use default
+      const contentDisposition = response.headers.get("Content-Disposition");
+      const filenameMatch = contentDisposition?.match(/filename="(.+)"/);
+      const filename = filenameMatch ? filenameMatch[1] : `database-backup-${new Date().toISOString()}.json`;
+      
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Success",
+        description: "Database backup downloaded successfully",
+      });
+    } catch (error) {
+      console.error("Database backup error:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to create database backup",
+      });
+    } finally {
+      setIsDownloadingDb(false);
+    }
+  };
+
+  const handleCodebaseBackup = async () => {
+    setIsDownloadingCode(true);
+    try {
+      const response = await fetch("/api/backups/codebase", {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create codebase backup");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      
+      // Extract filename from Content-Disposition header or use default
+      const contentDisposition = response.headers.get("Content-Disposition");
+      const filenameMatch = contentDisposition?.match(/filename="(.+)"/);
+      const filename = filenameMatch ? filenameMatch[1] : `codebase-backup-${new Date().toISOString()}.zip`;
+      
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Success",
+        description: "Codebase backup downloaded successfully",
+      });
+    } catch (error) {
+      console.error("Codebase backup error:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to create codebase backup",
+      });
+    } finally {
+      setIsDownloadingCode(false);
+    }
   };
 
   return (
@@ -112,6 +204,61 @@ export default function Settings() {
                       disabled
                       data-testid="input-org-id"
                     />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Backup */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Backup</CardTitle>
+                  <CardDescription>Download backups of your database and codebase</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-md bg-primary/10">
+                        <Database className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium">Database Backup</p>
+                        <p className="text-sm text-muted-foreground">
+                          Download all your data as JSON (students, classes, attendance, revenue)
+                        </p>
+                      </div>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      onClick={handleDatabaseBackup}
+                      disabled={isDownloadingDb}
+                      data-testid="button-backup-database"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      {isDownloadingDb ? "Downloading..." : "Download"}
+                    </Button>
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-md bg-primary/10">
+                        <Code2 className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium">Codebase Backup</p>
+                        <p className="text-sm text-muted-foreground">
+                          Download complete source code as ZIP file
+                        </p>
+                      </div>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      onClick={handleCodebaseBackup}
+                      disabled={isDownloadingCode}
+                      data-testid="button-backup-codebase"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      {isDownloadingCode ? "Downloading..." : "Download"}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
