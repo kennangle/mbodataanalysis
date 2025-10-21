@@ -494,13 +494,14 @@ export default function KPI() {
                       </td>
                       {DAYS.map((_, dayIdx) => {
                         const utilization = heatmapGrid.get(`${dayIdx}-${hour}`);
+                        const utilizationNum = utilization ? Number(utilization) : undefined;
                         return (
                           <td 
                             key={dayIdx} 
-                            className={`border p-2 text-xs text-center ${getUtilizationColor(utilization)}`}
-                            title={utilization ? `${utilization.toFixed(1)}%` : 'No data'}
+                            className={`border p-2 text-xs text-center ${getUtilizationColor(utilizationNum)}`}
+                            title={utilizationNum ? `${utilizationNum.toFixed(1)}%` : 'No data'}
                           >
-                            {utilization ? `${utilization.toFixed(0)}%` : '-'}
+                            {utilizationNum ? `${utilizationNum.toFixed(0)}%` : '-'}
                           </td>
                         );
                       })}
