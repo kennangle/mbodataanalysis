@@ -42,6 +42,28 @@ export default function Reports() {
     }));
   };
 
+  const setQuickDateRange = (reportType: string, range: "week" | "month" | "year") => {
+    const end = new Date();
+    const start = new Date();
+    
+    switch (range) {
+      case "week":
+        start.setDate(start.getDate() - 7);
+        break;
+      case "month":
+        start.setMonth(start.getMonth() - 1);
+        break;
+      case "year":
+        start.setFullYear(start.getFullYear() - 1);
+        break;
+    }
+    
+    setDateRanges((prev) => ({
+      ...prev,
+      [reportType]: { start, end },
+    }));
+  };
+
   const downloadReport = async (endpoint: string, reportName: string, reportType: string) => {
     setDownloadingReport(reportName);
     try {
@@ -210,6 +232,37 @@ export default function Reports() {
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-4">
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">Quick select:</span>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setQuickDateRange(report.type, "week")}
+                                data-testid={`button-quick-week-${index}`}
+                              >
+                                Last Week
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setQuickDateRange(report.type, "month")}
+                                data-testid={`button-quick-month-${index}`}
+                              >
+                                Last Month
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setQuickDateRange(report.type, "year")}
+                                data-testid={`button-quick-year-${index}`}
+                              >
+                                Last Year
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-2">
                             <Label htmlFor={`start-date-${index}`} className="text-sm">
