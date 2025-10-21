@@ -24,6 +24,26 @@ export default function Dashboard() {
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
+  const setQuickDateRange = (range: "week" | "month" | "year") => {
+    const end = new Date();
+    const start = new Date();
+    
+    switch (range) {
+      case "week":
+        start.setDate(start.getDate() - 7);
+        break;
+      case "month":
+        start.setMonth(start.getMonth() - 1);
+        break;
+      case "year":
+        start.setFullYear(start.getFullYear() - 1);
+        break;
+    }
+    
+    setStartDate(start);
+    setEndDate(end);
+  };
+
   useEffect(() => {
     if (!isLoading && !user) {
       setLocation("/login");
@@ -98,7 +118,36 @@ export default function Dashboard() {
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Quick select:</span>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setQuickDateRange("week")}
+                        data-testid="button-quick-week"
+                      >
+                        Last Week
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setQuickDateRange("month")}
+                        data-testid="button-quick-month"
+                      >
+                        Last Month
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setQuickDateRange("year")}
+                        data-testid="button-quick-year"
+                      >
+                        Last Year
+                      </Button>
+                    </div>
+                  </div>
                   <div className="flex flex-wrap items-center gap-4">
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-muted-foreground whitespace-nowrap">
