@@ -6,8 +6,11 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { FileText, Download, TrendingUp, Users, DollarSign, Calendar, LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 export default function Reports() {
   const { user, isLoading, logout } = useAuth();
@@ -15,10 +18,40 @@ export default function Reports() {
   const { toast } = useToast();
   const [downloadingReport, setDownloadingReport] = useState<string | null>(null);
 
-  const downloadReport = async (endpoint: string, reportName: string) => {
+  // Default to last 30 days
+  const defaultEndDate = new Date();
+  const defaultStartDate = new Date();
+  defaultStartDate.setDate(defaultStartDate.getDate() - 30);
+
+  // Date ranges for each report type
+  const [dateRanges, setDateRanges] = useState<Record<string, { start: Date; end: Date }>>({
+    revenue: { start: defaultStartDate, end: defaultEndDate },
+    attendance: { start: defaultStartDate, end: defaultEndDate },
+    "class-performance": { start: defaultStartDate, end: defaultEndDate },
+    "monthly-summary": { start: defaultStartDate, end: defaultEndDate },
+  });
+
+  const updateDateRange = (reportType: string, field: "start" | "end", date: Date | null) => {
+    if (!date) return;
+    setDateRanges((prev) => ({
+      ...prev,
+      [reportType]: {
+        ...prev[reportType],
+        [field]: date,
+      },
+    }));
+  };
+
+  const downloadReport = async (endpoint: string, reportName: string, reportType: string) => {
     setDownloadingReport(reportName);
     try {
-      const response = await fetch(endpoint, {
+      const dateRange = dateRanges[reportType];
+      const startDate = dateRange.start.toISOString().split("T")[0];
+      const endDate = dateRange.end.toISOString().split("T")[0];
+      
+      const apiUrl = `${endpoint}?startDate=${startDate}&endDate=${endDate}`;
+      
+      const response = await fetch(apiUrl, {
         credentials: "include",
       });
 
@@ -82,6 +115,7 @@ export default function Reports() {
       color: "text-green-600 dark:text-green-400",
       endpoint: "/api/reports/revenue",
       filename: "revenue-report",
+      type: "revenue",
     },
     {
       title: "Attendance Report",
@@ -90,6 +124,7 @@ export default function Reports() {
       color: "text-blue-600 dark:text-blue-400",
       endpoint: "/api/reports/attendance",
       filename: "attendance-report",
+      type: "attendance",
     },
     {
       title: "Class Performance",
@@ -98,14 +133,16 @@ export default function Reports() {
       color: "text-purple-600 dark:text-purple-400",
       endpoint: "/api/reports/class-performance",
       filename: "class-performance",
+      type: "class-performance",
     },
     {
       title: "Monthly Summary",
-      description: "Comprehensive monthly overview of all key metrics",
+      description: "Comprehensive overview of all key metrics",
       icon: Calendar,
       color: "text-orange-600 dark:text-orange-400",
       endpoint: "/api/reports/monthly-summary",
       filename: "monthly-summary",
+      type: "monthly-summary",
     },
   ];
 
@@ -146,6 +183,7 @@ export default function Reports() {
               <div className="grid gap-6 md:grid-cols-2">
                 {reportTypes.map((report, index) => {
                   const Icon = report.icon;
+                  const dateRange = dateRanges[report.type];
                   return (
                     <Card key={index} data-testid={`card-report-${index}`}>
                       <CardHeader>
@@ -163,12 +201,51 @@ export default function Reports() {
                           </div>
                         </div>
                       </CardHeader>
-                      <CardContent>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-2">
+                            <Label htmlFor={`start-date-${index}`} className="text-sm">
+                              Start Date
+                            </Label>
+                            <DatePicker
+                              id={`start-date-${index}`}
+                              selected={dateRange.start}
+                              onChange={(date) => updateDateRange(report.type, "start", date)}
+                              selectsStart
+                              startDate={dateRange.start}
+                              endDate={dateRange.end}
+                              maxDate={dateRange.end}
+                              dateFormat="MMM d, yyyy"
+                              className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background hover-elevate"
+                              wrapperClassName="w-full"
+                              data-testid={`datepicker-start-${index}`}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor={`end-date-${index}`} className="text-sm">
+                              End Date
+                            </Label>
+                            <DatePicker
+                              id={`end-date-${index}`}
+                              selected={dateRange.end}
+                              onChange={(date) => updateDateRange(report.type, "end", date)}
+                              selectsEnd
+                              startDate={dateRange.start}
+                              endDate={dateRange.end}
+                              minDate={dateRange.start}
+                              maxDate={new Date()}
+                              dateFormat="MMM d, yyyy"
+                              className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background hover-elevate"
+                              wrapperClassName="w-full"
+                              data-testid={`datepicker-end-${index}`}
+                            />
+                          </div>
+                        </div>
                         <Button
                           variant="outline"
                           className="w-full gap-2"
                           data-testid={`button-generate-${index}`}
-                          onClick={() => downloadReport(report.endpoint, report.filename)}
+                          onClick={() => downloadReport(report.endpoint, report.filename, report.type)}
                           disabled={downloadingReport === report.filename}
                         >
                           <Download className="h-4 w-4" />
