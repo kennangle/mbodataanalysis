@@ -189,10 +189,11 @@ export function registerKPIRoutes(app: Express) {
       if (startDate) dateFilter.push(gte(revenue.transactionDate, startDate));
       if (endDate) dateFilter.push(lte(revenue.transactionDate, endDate));
 
-      // Count intro offer purchases (description contains 'Intro')
+      // Count intro offer line items (not distinct students) - matching Mindbody report
+      // Filter out refunds (negative amounts) and exclude void/adjustment descriptions
       const introPurchases = await db
         .select({
-          count: sql<number>`COUNT(DISTINCT ${revenue.studentId})`,
+          count: sql<number>`COUNT(*)::int`,
           total: sql<number>`SUM(${revenue.amount}::numeric)`,
         })
         .from(revenue)
@@ -200,20 +201,21 @@ export function registerKPIRoutes(app: Express) {
           and(
             eq(revenue.organizationId, organizationId),
             sql`${revenue.description} ILIKE '%Intro%'`,
+            sql`${revenue.amount} > 0`,
             dateFilter.length > 0 ? and(...dateFilter) : undefined
           )
         );
 
       // Find students who bought intro AND later got membership
-      // Using a subquery approach
+      // Don't require active status - count anyone who converted (even if they later churned)
       const conversions = await db.execute<{ count: number }>(sql`
         SELECT COUNT(DISTINCT s.id)::int as count
         FROM ${students} s
         INNER JOIN ${revenue} r ON r.student_id = s.id
         WHERE s.organization_id = ${organizationId}
           AND s.membership_type IS NOT NULL
-          AND s.status = 'active'
           AND r.description ILIKE '%Intro%'
+          AND r.amount > 0
           ${dateFilter.length > 0 && startDate ? sql`AND r.transaction_date >= ${startDate}` : sql``}
           ${dateFilter.length > 0 && endDate ? sql`AND r.transaction_date <= ${endDate}` : sql``}
       `);
