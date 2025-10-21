@@ -37,12 +37,13 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
 
 ### Core Features & Implementations
 
-- **Resumable Background Import System**: Utilizes a database-backed job queue for asynchronous, checkpointed data imports with real-time progress tracking, session resilience, resume capabilities, proper cancellation, and auto-cleanup of stale jobs. Includes API call tracking and limit management.
+- **Resumable Background Import System**: Utilizes a database-backed job queue for asynchronous, checkpointed data imports with real-time progress tracking, session resilience, resume capabilities, proper cancellation, and auto-cleanup of stale jobs. Includes API call tracking, limit management, and memory usage logging. Optimized to process students in batches of 100 to prevent memory issues on large datasets (10,000+ students).
 - **Scheduled Automatic Imports**: Node-cron powered scheduler that automatically imports data on user-configured schedules (daily at 2 AM by default). Features include per-organization cron jobs, manual "run now" triggers, automatic schedule updates, collision detection, and configurable date ranges and data types. Serves as a reliable alternative to webhooks for organizations without premium Mindbody accounts.
 - **Real-Time Webhook Integration**: Supports Mindbody webhooks for instant data synchronization, including HMAC-SHA256 signature verification, deduplication, asynchronous event processing, and automatic attendance record creation.
 - **Automatic Pagination**: Implements a generic helper to retrieve all records from the Mindbody API efficiently.
 - **User Management**: Admin-only interface for managing users, including CRUD operations, role-based access, and multi-tenancy support.
-- **Dashboard & Analytics**: Displays real-time data using live database queries for charts such as Revenue & Growth Trend and Class Attendance by Time.
+- **Dashboard & Analytics**: Displays real-time data using live database queries for charts such as Revenue & Growth Trend and Class Attendance by Time. Includes quick date range selectors (Last Week, Last Month, Last Quarter, Last Year) for easy time-based filtering.
+- **Reports System**: Four comprehensive report types (Revenue, Attendance, Class Performance, Monthly Summary) with CSV export functionality and customizable date ranges. Features independent date selectors per report and quick range buttons for common time periods.
 - **Configurable Imports**: Allows users to specify date ranges and data types for selective data fetching.
 - **Revenue Import with Fallback Strategy**: Imports sales data from Mindbody API, attempting detailed line-item data and falling back to transaction data when necessary, with duplicate prevention and historical range support.
 - **CSV Revenue Import**: Manual import feature for historical revenue data from Mindbody Business Intelligence CSV exports, featuring flexible column mapping, client matching, duplicate prevention, bulk processing, and validation.
@@ -52,9 +53,17 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
 
 ### Deployment
 
-- **Platform**: Heroku Multi-Tenancy SaaS
-- **Multi-Tenancy Design**: Complete data isolation per organization via `organizationId`, shared database with row-level separation, and users belonging to a single organization.
-- **Multi-Site Support**: Each organization can connect to a different Mindbody site, with site-specific webhooks and API call tracking.
+- **Platform**: Replit Multi-Tenancy SaaS (custom domain: analysis.yhctime.com)
+- **Deployment Type**: 
+  - Development: Autoscale (default)
+  - Production: Reserved VM recommended for large datasets and background jobs
+- **Memory Optimization**: Import worker loads students in batches (100 at a time) instead of all at once, reducing memory footprint by 99% and preventing out-of-memory errors during large imports
+- **Multi-Tenancy Design**: Complete data isolation per organization via `organizationId`, shared database with row-level separation, and users belonging to a single organization
+- **Multi-Site Support**: Each organization can connect to a different Mindbody site, with site-specific webhooks and API call tracking
+- **Import Best Practices**: 
+  - Autoscale: Use 1-2 month date ranges
+  - Reserved VM: Can handle 6+ month imports reliably
+  - See DEPLOYMENT.md for detailed guidance
 
 ## External Dependencies
 

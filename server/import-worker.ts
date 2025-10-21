@@ -406,6 +406,9 @@ export class ImportWorker {
       await storage.updateImportJob(job.id, {
         progress: JSON.stringify(progress),
       });
+
+      // Log memory usage after each batch to monitor for issues
+      logMemoryUsage(`Visits batch completed: ${progress.visits.current}/${progress.visits.total} students`);
     } while (!batchResult.completed);
   }
 

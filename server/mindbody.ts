@@ -509,17 +509,16 @@ export class MindbodyService {
     const BATCH_SIZE = 100; // Process 100 students per batch
     const BATCH_DELAY = 250; // 250ms delay between batches
 
-    // Load all students once
-    const allStudents = await storage.getStudents(organizationId, 100000);
-    const totalStudents = allStudents.length;
+    // Get total student count without loading all students
+    const totalStudents = await storage.getStudentCount(organizationId);
 
     if (startStudentIndex >= totalStudents) {
       return { imported: 0, nextStudentIndex: startStudentIndex, completed: true };
     }
 
-    // Get batch of students to process
-    const endIndex = Math.min(startStudentIndex + BATCH_SIZE, totalStudents);
-    const studentBatch = allStudents.slice(startStudentIndex, endIndex);
+    // Load only the batch of students we need for this iteration (pagination)
+    const studentBatch = await storage.getStudents(organizationId, BATCH_SIZE, startStudentIndex);
+    const endIndex = startStudentIndex + studentBatch.length;
 
     // Load schedules once for efficient lookup
     // Match by StartDateTime since ClassId in visits != ClassScheduleId in schedules
