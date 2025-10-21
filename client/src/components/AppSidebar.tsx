@@ -9,6 +9,7 @@ import {
   Bell,
   UserCog,
   LogOut,
+  TrendingUp,
 } from "lucide-react";
 import {
   Sidebar,
@@ -33,6 +34,7 @@ const menuItems = [
     items: [
       { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
       { title: "Analytics", url: "/analytics", icon: BarChart3 },
+      { title: "KPIs", url: "/kpi", icon: TrendingUp },
     ],
   },
   {

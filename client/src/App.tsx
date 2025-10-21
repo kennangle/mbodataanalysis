@@ -14,6 +14,7 @@ import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import Dashboard from "@/pages/Dashboard";
 import Analytics from "@/pages/Analytics";
+import KPI from "@/pages/KPI";
 import Import from "@/pages/Import";
 import Students from "@/pages/Students";
 import Settings from "@/pages/Settings";
@@ -32,6 +33,7 @@ function Router() {
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/analytics" component={Analytics} />
+      <Route path="/kpi" component={KPI} />
       <Route path="/students" component={Students} />
       <Route path="/classes" component={Classes} />
       <Route path="/users" component={Users} />
