@@ -74,12 +74,39 @@ export default function KPI() {
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
+  // Call all hooks before any conditional returns
+  const { data: overview, isLoading: overviewLoading } = useQuery<KPIOverview>({
+    queryKey: ["/api/kpi/overview", startDate?.toISOString(), endDate?.toISOString()],
+    enabled: !!user, // Only fetch when user is authenticated
+  });
+
+  const { data: heatmap, isLoading: heatmapLoading } = useQuery<HeatmapData>({
+    queryKey: ["/api/kpi/utilization-heatmap", startDate?.toISOString(), endDate?.toISOString()],
+    enabled: !!user,
+  });
+
+  const { data: introConversion, isLoading: introLoading } = useQuery<IntroConversion>({
+    queryKey: ["/api/kpi/intro-conversion", startDate?.toISOString(), endDate?.toISOString()],
+    enabled: !!user,
+  });
+
+  const { data: classPerf, isLoading: classPerfLoading } = useQuery<ClassPerformanceData>({
+    queryKey: ["/api/kpi/class-performance", startDate?.toISOString(), endDate?.toISOString()],
+    enabled: !!user,
+  });
+
+  const { data: membershipTrends, isLoading: membershipLoading } = useQuery<MembershipTrends>({
+    queryKey: ["/api/kpi/membership-trends", startDate?.toISOString(), endDate?.toISOString()],
+    enabled: !!user,
+  });
+
   useEffect(() => {
     if (!isLoading && !user) {
       setLocation("/login");
     }
   }, [user, isLoading, setLocation]);
 
+  // Conditional returns AFTER all hooks
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -114,30 +141,6 @@ export default function KPI() {
     setStartDate(start);
     setEndDate(end);
   };
-
-  const queryParams = new URLSearchParams();
-  if (startDate) queryParams.append("startDate", startDate.toISOString());
-  if (endDate) queryParams.append("endDate", endDate.toISOString());
-
-  const { data: overview, isLoading: overviewLoading } = useQuery<KPIOverview>({
-    queryKey: ["/api/kpi/overview", startDate?.toISOString(), endDate?.toISOString()],
-  });
-
-  const { data: heatmap, isLoading: heatmapLoading } = useQuery<HeatmapData>({
-    queryKey: ["/api/kpi/utilization-heatmap", startDate?.toISOString(), endDate?.toISOString()],
-  });
-
-  const { data: introConversion, isLoading: introLoading } = useQuery<IntroConversion>({
-    queryKey: ["/api/kpi/intro-conversion", startDate?.toISOString(), endDate?.toISOString()],
-  });
-
-  const { data: classPerf, isLoading: classPerfLoading } = useQuery<ClassPerformanceData>({
-    queryKey: ["/api/kpi/class-performance", startDate?.toISOString(), endDate?.toISOString()],
-  });
-
-  const { data: membershipTrends, isLoading: membershipLoading } = useQuery<MembershipTrends>({
-    queryKey: ["/api/kpi/membership-trends", startDate?.toISOString(), endDate?.toISOString()],
-  });
 
   // Build heatmap grid
   const heatmapGrid = new Map<string, number>();
