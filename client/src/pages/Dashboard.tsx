@@ -24,7 +24,7 @@ export default function Dashboard() {
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
-  const setQuickDateRange = (range: "week" | "month" | "year") => {
+  const setQuickDateRange = (range: "week" | "month" | "quarter" | "year") => {
     const end = new Date();
     const start = new Date();
     
@@ -34,6 +34,9 @@ export default function Dashboard() {
         break;
       case "month":
         start.setMonth(start.getMonth() - 1);
+        break;
+      case "quarter":
+        start.setMonth(start.getMonth() - 3);
         break;
       case "year":
         start.setFullYear(start.getFullYear() - 1);
@@ -137,6 +140,14 @@ export default function Dashboard() {
                         data-testid="button-quick-month"
                       >
                         Last Month
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setQuickDateRange("quarter")}
+                        data-testid="button-quick-quarter"
+                      >
+                        Last Quarter
                       </Button>
                       <Button
                         variant="outline"

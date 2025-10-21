@@ -42,7 +42,7 @@ export default function Reports() {
     }));
   };
 
-  const setQuickDateRange = (reportType: string, range: "week" | "month" | "year") => {
+  const setQuickDateRange = (reportType: string, range: "week" | "month" | "quarter" | "year") => {
     const end = new Date();
     const start = new Date();
     
@@ -52,6 +52,9 @@ export default function Reports() {
         break;
       case "month":
         start.setMonth(start.getMonth() - 1);
+        break;
+      case "quarter":
+        start.setMonth(start.getMonth() - 3);
         break;
       case "year":
         start.setFullYear(start.getFullYear() - 1);
@@ -251,6 +254,14 @@ export default function Reports() {
                                 data-testid={`button-quick-month-${index}`}
                               >
                                 Last Month
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setQuickDateRange(report.type, "quarter")}
+                                data-testid={`button-quick-quarter-${index}`}
+                              >
+                                Last Quarter
                               </Button>
                               <Button
                                 variant="outline"
