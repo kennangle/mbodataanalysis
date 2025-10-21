@@ -12,7 +12,10 @@ export function registerReportRoutes(app: Express) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const revenueData = await storage.getRevenue(organizationId);
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+
+      const revenueData = await storage.getRevenue(organizationId, startDate, endDate);
 
       const csv = [
         "Date,Description,Amount,Type",
@@ -40,7 +43,10 @@ export function registerReportRoutes(app: Express) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const attendanceData = await storage.getAttendance(organizationId);
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+
+      const attendanceData = await storage.getAttendance(organizationId, startDate, endDate);
       const studentsMap = new Map();
       const classesMap = new Map();
       const scheduleToClassMap = new Map();
@@ -81,8 +87,11 @@ export function registerReportRoutes(app: Express) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+
       const classes = await storage.getClasses(organizationId);
-      const attendanceData = await storage.getAttendance(organizationId);
+      const attendanceData = await storage.getAttendance(organizationId, startDate, endDate);
       const schedules = await storage.getClassSchedules(organizationId);
 
       const scheduleToClassMap = new Map();
@@ -136,13 +145,18 @@ export function registerReportRoutes(app: Express) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+
+      // Use provided dates or default to current month
       const now = new Date();
-      const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const periodStart = startDate || new Date(now.getFullYear(), now.getMonth(), 1);
+      const periodEnd = endDate || now;
 
       const [studentCount, revenueStats, attendanceRecords, classes] = await Promise.all([
         storage.getStudentCount(organizationId),
-        storage.getRevenueStats(organizationId, thisMonth, now),
-        storage.getAttendance(organizationId, thisMonth, now),
+        storage.getRevenueStats(organizationId, periodStart, periodEnd),
+        storage.getAttendance(organizationId, periodStart, periodEnd),
         storage.getClasses(organizationId),
       ]);
 
@@ -153,11 +167,11 @@ export function registerReportRoutes(app: Express) {
           ? ((attendedCount / attendanceRecords.length) * 100).toFixed(1)
           : "0";
 
-      const monthName = now.toLocaleString("default", { month: "long", year: "numeric" });
+      const periodName = `${periodStart.toLocaleDateString()} - ${periodEnd.toLocaleDateString()}`;
 
       const csv = [
         "Metric,Value",
-        `"Period","${monthName}"`,
+        `"Period","${periodName}"`,
         `"Total Students","${studentCount}"`,
         `"Total Classes","${classes.length}"`,
         `"Total Revenue","$${revenueStats.total.toFixed(2)}"`,
