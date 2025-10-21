@@ -1,15 +1,21 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Upload, CheckCircle, AlertCircle, Loader2, Database, Play } from "lucide-react";
+import { Upload, CheckCircle, AlertCircle, Loader2, Database, Play, History, ChevronDown, ChevronUp } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
+import { Badge } from "@/components/ui/badge";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface ImportConfig {
   startDate: string;
@@ -53,6 +59,7 @@ interface JobStatus {
   currentDataType: string | null;
   error: string | null;
   pausedAt?: string | null;
+  createdAt?: string;
   updatedAt?: string;
 }
 
@@ -81,8 +88,15 @@ export function DataImportCard() {
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
   const [isLoadingActiveJob, setIsLoadingActiveJob] = useState(true);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  // Fetch import history
+  const { data: importHistory = [] } = useQuery<JobStatus[]>({
+    queryKey: ["/api/mindbody/import/history"],
+    enabled: !currentJobId, // Only fetch when no active import
+  });
 
   // Track last progress snapshot to detect stalled imports
   const lastProgressRef = useRef<{ snapshot: string; timestamp: number } | null>(null);
@@ -1016,7 +1030,141 @@ export function DataImportCard() {
             </p>
           </div>
         )}
+
+        {/* Import History - Only show when no active import */}
+        {!currentJobId && importHistory.length > 0 && (
+          <Collapsible
+            open={isHistoryOpen}
+            onOpenChange={setIsHistoryOpen}
+            className="mt-6 pt-6 border-t"
+          >
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                className="w-full flex items-center justify-between p-2 hover-elevate"
+                data-testid="button-toggle-history"
+              >
+                <div className="flex items-center gap-2">
+                  <History className="h-4 w-4" />
+                  <span className="text-sm font-medium">Import History ({importHistory.length})</span>
+                </div>
+                {isHistoryOpen ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-3 space-y-3">
+              {importHistory.map((job) => {
+                const progress = calculateJobProgress(job.progress);
+                const statusColor = getStatusColor(job.status);
+                
+                return (
+                  <div
+                    key={job.id}
+                    className="p-3 rounded-lg border bg-card hover-elevate"
+                    data-testid={`history-item-${job.id}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant={statusColor} data-testid={`badge-status-${job.status}`}>
+                            {job.status}
+                          </Badge>
+                          {job.createdAt && (
+                            <span className="text-xs text-muted-foreground">
+                              {format(new Date(job.createdAt), "MMM d, yyyy 'at' h:mm a")}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {job.startDate && job.endDate && (
+                          <div className="text-sm">
+                            <span className="text-muted-foreground">
+                              {format(parseDateSafe(job.startDate.toString()), "MMM d, yyyy")} -{" "}
+                              {format(parseDateSafe(job.endDate.toString()), "MMM d, yyyy")}
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-2">
+                          <Progress value={progress} className="h-1.5 flex-1" />
+                          <span className="text-xs font-medium text-muted-foreground">
+                            {progress}%
+                          </span>
+                        </div>
+
+                        {job.error && (
+                          <p className="text-xs text-destructive mt-2 bg-destructive/10 p-2 rounded">
+                            {job.error}
+                          </p>
+                        )}
+
+                        {job.status === "completed" && job.progress && (
+                          <div className="text-xs text-muted-foreground space-y-0.5">
+                            {job.progress.clients && job.progress.clients.imported > 0 && (
+                              <p>• Students: {job.progress.clients.imported} new</p>
+                            )}
+                            {job.progress.visits && job.progress.visits.imported > 0 && (
+                              <p>• Visits: {job.progress.visits.imported} imported</p>
+                            )}
+                            {job.progress.sales && job.progress.sales.imported > 0 && (
+                              <p>• Sales: {job.progress.sales.imported} imported</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </CollapsibleContent>
+          </Collapsible>
+        )}
       </CardContent>
     </Card>
   );
+}
+
+// Helper function to calculate job progress
+function calculateJobProgress(progress: JobProgress): number {
+  const dataTypes = Object.keys(progress).filter(
+    (key) => key !== "apiCallCount" && key !== "importStartTime"
+  );
+  if (dataTypes.length === 0) return 0;
+
+  let totalProgress = 0;
+  let completedTypes = 0;
+
+  dataTypes.forEach((type) => {
+    const typeProgress = progress[type as keyof JobProgress];
+    if (typeProgress && typeof typeProgress === "object" && "completed" in typeProgress) {
+      if (typeProgress.completed) {
+        completedTypes++;
+      } else if (typeProgress.total > 0) {
+        totalProgress += (typeProgress.current / typeProgress.total) * 100;
+      }
+    }
+  });
+
+  const avgProgress =
+    dataTypes.length > 0 ? (completedTypes * 100 + totalProgress) / dataTypes.length : 0;
+
+  return Math.min(Math.round(avgProgress), 100);
+}
+
+// Helper function to get status badge color
+function getStatusColor(status: string): "default" | "secondary" | "destructive" | "outline" {
+  switch (status) {
+    case "completed":
+      return "default";
+    case "running":
+    case "pending":
+      return "secondary";
+    case "failed":
+      return "destructive";
+    default:
+      return "outline";
+  }
 }

@@ -181,10 +181,12 @@ export class MindbodyService {
   async makeAuthenticatedRequest(
     organizationId: string,
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    retryCount: number = 0
   ): Promise<any> {
     const apiKey = process.env.MINDBODY_API_KEY;
     const siteId = "133";
+    const MAX_RETRIES = 3;
 
     if (!apiKey) {
       throw new Error("MINDBODY_API_KEY not configured");
@@ -241,6 +243,20 @@ export class MindbodyService {
         this.apiCallCounter++;
 
         return await retryResponse.json();
+      }
+
+      // Retry on 500/503 errors with exponential backoff
+      if ((response.status === 500 || response.status === 503) && retryCount < MAX_RETRIES) {
+        const backoffMs = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+        console.log(
+          `Mindbody API ${response.status} error, retrying in ${backoffMs}ms (attempt ${retryCount + 1}/${MAX_RETRIES})...`
+        );
+
+        // Wait for backoff period
+        await new Promise((resolve) => setTimeout(resolve, backoffMs));
+
+        // Retry the request
+        return this.makeAuthenticatedRequest(organizationId, endpoint, options, retryCount + 1);
       }
 
       throw new Error(`Mindbody API error: ${response.statusText}`);
@@ -628,6 +644,24 @@ export class MindbodyService {
       // Update progress after each student to show real-time API count
       processedStudents++;
       await onProgress(startStudentIndex + processedStudents, totalStudents);
+    }
+
+    // Log memory usage and diagnostics after batch completion
+    const memUsage = process.memoryUsage();
+    console.log(`[Memory] Batch completed (students ${startStudentIndex}-${endIndex}/${totalStudents}):`);
+    console.log(
+      `  - Heap Used: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB / ${Math.round(memUsage.heapTotal / 1024 / 1024)}MB`
+    );
+    console.log(`  - RSS: ${Math.round(memUsage.rss / 1024 / 1024)}MB`);
+    console.log(`  - External: ${Math.round(memUsage.external / 1024 / 1024)}MB`);
+    console.log(`  - API Calls: ${this.getApiCallCount()}`);
+    console.log(`  - Visits Imported: ${imported}`);
+
+    // Force garbage collection hint
+    if (global.gc) {
+      global.gc();
+      const postGcMem = process.memoryUsage();
+      console.log(`[Memory] After GC: Heap ${Math.round(postGcMem.heapUsed / 1024 / 1024)}MB`);
     }
 
     // Log diagnostic information
