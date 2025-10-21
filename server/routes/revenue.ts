@@ -19,6 +19,115 @@ interface ImportProgress {
 const importProgressMap = new Map<string, ImportProgress>();
 
 export function registerRevenueRoutes(app: Express) {
+  // Check revenue data integrity (admin only)
+  app.get("/api/revenue/check-integrity", requireAuth, async (req, res) => {
+    try {
+      const currentUser = req.user as User;
+      const organizationId = currentUser?.organizationId;
+
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      // Admin only
+      if (currentUser.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      // Count total records first
+      const totalCount = await storage.getSalesCount(organizationId);
+
+      // Handle empty dataset
+      if (totalCount === 0) {
+        return res.json({
+          totalRecords: 0,
+          sampleSize: 0,
+          analysis: {
+            withBothIds: 0,
+            withSaleIdOnly: 0,
+            withItemIdOnly: 0,
+            withoutIds: 0,
+          },
+          conclusion: "safe",
+          message: "No existing revenue data. API import will start fresh without any duplicates.",
+          deduplicationInfo: "upsertRevenue deduplicates records with mindbodySaleId (with or without itemId). Records without saleId will create duplicates.",
+          sampleRecords: [],
+        });
+      }
+
+      // Get sample of revenue records (100 most recent, properly sorted)
+      const sampleSize = Math.min(100, totalCount);
+      const allRecords = await storage.getRevenue(organizationId, undefined, undefined);
+      
+      // Sort by transaction date descending and take most recent
+      const sample = allRecords
+        .sort((a, b) => new Date(b.transactionDate).getTime() - new Date(a.transactionDate).getTime())
+        .slice(0, sampleSize);
+
+      // Analyze all possible ID combinations
+      const withBothIds = sample.filter(r => r.mindbodySaleId && r.mindbodyItemId).length;
+      const withSaleIdOnly = sample.filter(r => r.mindbodySaleId && !r.mindbodyItemId).length;
+      const withItemIdOnly = sample.filter(r => !r.mindbodySaleId && r.mindbodyItemId).length;
+      const withoutIds = sample.filter(r => !r.mindbodySaleId && !r.mindbodyItemId).length;
+
+      // Verify totals match (sanity check)
+      const totalCategorized = withBothIds + withSaleIdOnly + withItemIdOnly + withoutIds;
+      if (totalCategorized !== sample.length) {
+        console.error(`Revenue integrity check: categorization mismatch! ${totalCategorized} != ${sample.length}`);
+      }
+
+      // upsertRevenue deduplication logic (from storage.ts):
+      // - Has mindbodySaleId (with or without itemId): Deduped via DB constraint or manual check
+      // - No mindbodySaleId: NOT deduped, will create duplicates
+      const withDedupeCapability = withBothIds + withSaleIdOnly;
+      const pctSafe = withDedupeCapability / sample.length;
+
+      // Determine conclusion based on actual upsertRevenue behavior
+      let conclusion: "safe" | "mixed" | "duplicate_risk";
+      let message: string;
+
+      if (pctSafe >= 0.95) {
+        // 95%+ have Sale ID (sufficient for deduplication)
+        conclusion = "safe";
+        message = `${Math.round(pctSafe * 100)}% of your revenue data has Mindbody Sale IDs. API import will update existing records instead of creating duplicates.`;
+      } else if (pctSafe > 0) {
+        // Mixed dataset - some with Sale IDs, some without
+        conclusion = "mixed";
+        const pctDuplicates = Math.round((1 - pctSafe) * 100);
+        message = `Only ${Math.round(pctSafe * 100)}% of your revenue data has Mindbody Sale IDs. API import will update ${Math.round(pctSafe * 100)}% of records but create duplicates for ${pctDuplicates}% without Sale IDs. Recommended: Delete existing revenue data and re-import via API only.`;
+      } else {
+        // No Sale IDs - will create all duplicates
+        conclusion = "duplicate_risk";
+        message = "Your revenue data is missing Mindbody Sale IDs (likely from CSV import without ID columns). API import will create duplicate records for all transactions. Recommended: Delete all existing revenue data before importing via Mindbody API.";
+      }
+
+      res.json({
+        totalRecords: totalCount,
+        sampleSize: sample.length,
+        analysis: {
+          withBothIds,
+          withSaleIdOnly,
+          withItemIdOnly,
+          withoutIds,
+        },
+        conclusion,
+        message,
+        deduplicationInfo: "upsertRevenue deduplicates records with mindbodySaleId (with or without itemId). Records without saleId will create duplicates.",
+        sampleRecords: sample.slice(0, 10).map(r => ({
+          id: r.id,
+          date: r.transactionDate,
+          amount: r.amount,
+          description: r.description,
+          hasSaleId: !!r.mindbodySaleId,
+          hasItemId: !!r.mindbodyItemId,
+        })),
+      });
+    } catch (error) {
+      console.error("Revenue integrity check error:", error);
+      res.status(500).json({ error: "Failed to check revenue data integrity" });
+    }
+  });
+
   // Get CSV import progress
   app.get("/api/revenue/import-progress", requireAuth, async (req, res) => {
     try {

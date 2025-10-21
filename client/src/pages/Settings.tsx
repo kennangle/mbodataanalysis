@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { LogOut, Download, Database, Code2 } from "lucide-react";
+import { LogOut, Download, Database, Code2, CheckCircle, AlertTriangle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function Settings() {
   const { user, isLoading, logout } = useAuth();
@@ -18,6 +19,8 @@ export default function Settings() {
   const { toast } = useToast();
   const [isDownloadingDb, setIsDownloadingDb] = useState(false);
   const [isDownloadingCode, setIsDownloadingCode] = useState(false);
+  const [integrityCheck, setIntegrityCheck] = useState<any>(null);
+  const [isCheckingIntegrity, setIsCheckingIntegrity] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -135,6 +138,37 @@ export default function Settings() {
     }
   };
 
+  const handleCheckIntegrity = async () => {
+    setIsCheckingIntegrity(true);
+    try {
+      const response = await fetch("/api/revenue/check-integrity", {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to check revenue integrity");
+      }
+
+      const data = await response.json();
+      setIntegrityCheck(data);
+
+      toast({
+        title: "Check Complete",
+        description: "Revenue data integrity checked successfully",
+      });
+    } catch (error) {
+      console.error("Integrity check error:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to check revenue data integrity",
+      });
+    } finally {
+      setIsCheckingIntegrity(false);
+    }
+  };
+
   return (
     <SidebarProvider style={style as React.CSSProperties}>
       <div className="flex h-screen w-full">
@@ -207,6 +241,127 @@ export default function Settings() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Revenue Data Check (Admin Only) */}
+              {user.role === "admin" && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Revenue Data Check</CardTitle>
+                    <CardDescription>
+                      Check if your revenue data will create duplicates when importing from Mindbody API
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Check Revenue Integrity</p>
+                        <p className="text-sm text-muted-foreground">
+                          Analyze your existing revenue records to detect potential duplicate issues
+                        </p>
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        onClick={handleCheckIntegrity}
+                        disabled={isCheckingIntegrity}
+                        data-testid="button-check-integrity"
+                      >
+                        {isCheckingIntegrity ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Checking...
+                          </>
+                        ) : (
+                          <>
+                            <Database className="h-4 w-4 mr-2" />
+                            Check Now
+                          </>
+                        )}
+                      </Button>
+                    </div>
+
+                    {integrityCheck && (
+                      <div className="space-y-3 pt-2">
+                        <Separator />
+                        <Alert 
+                          variant={
+                            integrityCheck.conclusion === "safe" 
+                              ? "default" 
+                              : integrityCheck.conclusion === "mixed"
+                                ? "default"
+                                : "destructive"
+                          }
+                        >
+                          {integrityCheck.conclusion === "safe" ? (
+                            <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                          ) : integrityCheck.conclusion === "mixed" ? (
+                            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                          ) : (
+                            <AlertTriangle className="h-4 w-4" />
+                          )}
+                          <AlertTitle>
+                            {integrityCheck.conclusion === "safe" 
+                              ? "✓ Safe to Import" 
+                              : integrityCheck.conclusion === "mixed"
+                                ? "⚠ Mixed Dataset - Partial Duplicates Expected"
+                                : "✗ Duplicate Risk"}
+                          </AlertTitle>
+                          <AlertDescription className="mt-2">{integrityCheck.message}</AlertDescription>
+                        </Alert>
+
+                        <div className="grid gap-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Total Revenue Records:</span>
+                            <span className="font-medium">{integrityCheck.totalRecords.toLocaleString()}</span>
+                          </div>
+                          {integrityCheck.sampleSize > 0 && (
+                            <>
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Sample Analyzed:</span>
+                                <span className="font-medium">{integrityCheck.sampleSize} records</span>
+                              </div>
+                              <Separator />
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Complete IDs (Sale + Item):</span>
+                                <span className="font-medium text-green-600 dark:text-green-400">
+                                  {integrityCheck.analysis?.withBothIds ?? integrityCheck.analysis?.withMindbodyIds ?? 0} / {integrityCheck.sampleSize}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Sale ID Only (Safe):</span>
+                                <span className="font-medium text-green-600 dark:text-green-400">
+                                  {integrityCheck.analysis?.withSaleIdOnly ?? 0} / {integrityCheck.sampleSize}
+                                </span>
+                              </div>
+                              {(integrityCheck.analysis?.withItemIdOnly ?? 0) > 0 && (
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Item ID Only (Duplicates):</span>
+                                  <span className="font-medium text-red-600 dark:text-red-400">
+                                    {integrityCheck.analysis.withItemIdOnly} / {integrityCheck.sampleSize}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">No IDs (Duplicates):</span>
+                                <span className={`font-medium ${(integrityCheck.analysis?.withoutIds ?? 0) > 0 ? 'text-red-600 dark:text-red-400' : ''}`}>
+                                  {integrityCheck.analysis?.withoutIds ?? 0} / {integrityCheck.sampleSize}
+                                </span>
+                              </div>
+                              {integrityCheck.deduplicationInfo && (
+                                <>
+                                  <Separator />
+                                  <p className="text-xs text-muted-foreground italic">
+                                    {integrityCheck.deduplicationInfo}
+                                  </p>
+                                </>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Backup */}
               <Card>
