@@ -795,16 +795,28 @@ export class MindbodyService {
           // Process this page immediately
           for (const transaction of transactions) {
           try {
-            // Find a valid date field (check all possible field names)
+            // Extract date from nested objects or flat strings
             const dateStr =
               transaction.SaleDateTime ||
               transaction.CreatedDateTime ||
               transaction.TransactionDate ||
               transaction.CompletedDate ||
+              transaction.SettlementDate ||
+              transaction.SettlementDateTime ||
+              // Handle nested date objects (e.g., {DateTime: "2025-10-22..."})
+              transaction.TransactionTime?.DateTime ||
               transaction.TransactionTime ||
+              transaction.AuthTime?.DateTime ||
               transaction.AuthTime;
 
             if (!dateStr) {
+              // Log first skipped transaction for debugging
+              if (skipped === 0) {
+                console.log(
+                  `[Sales Import] First skipped transaction structure:`,
+                  JSON.stringify(transaction, null, 2)
+                );
+              }
               console.log(
                 `[Sales Import] Transaction ${transaction.TransactionId || transaction.Id} has no valid date field, skipping`
               );
@@ -815,7 +827,7 @@ export class MindbodyService {
             const transactionDate = new Date(dateStr);
             if (isNaN(transactionDate.getTime())) {
               console.log(
-                `[Sales Import] Transaction ${transaction.Id} has invalid date "${dateStr}", skipping`
+                `[Sales Import] Transaction ${transaction.TransactionId || transaction.Id} has invalid date "${dateStr}", skipping`
               );
               skipped++;
               continue;
