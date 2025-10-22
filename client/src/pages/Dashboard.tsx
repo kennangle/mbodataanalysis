@@ -40,13 +40,22 @@ export default function Dashboard() {
         start.setDate(start.getDate() - 7);
         break;
       case "month":
+        // Last month: previous month's first day to previous month's last day
         start.setMonth(start.getMonth() - 1);
+        start.setDate(1); // First day of last month
+        end.setDate(0); // Last day of last month (0 = last day of previous month)
         break;
       case "quarter":
+        // Last quarter: 3 full months (e.g., Jul 1 - Sep 30)
         start.setMonth(start.getMonth() - 3);
+        start.setDate(1); // First day of the month 3 months ago
+        end.setMonth(end.getMonth()); // Current month
+        end.setDate(0); // Last day of previous month
         break;
       case "year":
+        // Last year: 12 full months ago
         start.setFullYear(start.getFullYear() - 1);
+        start.setDate(1);
         break;
       case "thisyear":
         start.setMonth(0); // January
