@@ -163,18 +163,18 @@ export default function Dashboard() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setQuickDateRange("thisyear")}
-                        data-testid="button-quick-thisyear"
-                      >
-                        This Year
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
                         onClick={() => setQuickDateRange("year")}
                         data-testid="button-quick-year"
                       >
                         Last Year
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setQuickDateRange("thisyear")}
+                        data-testid="button-quick-thisyear"
+                      >
+                        This Year
                       </Button>
                     </div>
                   </div>
