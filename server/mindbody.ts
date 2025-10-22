@@ -795,16 +795,18 @@ export class MindbodyService {
           // Process this page immediately
           for (const transaction of transactions) {
           try {
-            // Find a valid date field
+            // Find a valid date field (check all possible field names)
             const dateStr =
               transaction.SaleDateTime ||
               transaction.CreatedDateTime ||
               transaction.TransactionDate ||
-              transaction.CompletedDate;
+              transaction.CompletedDate ||
+              transaction.TransactionTime ||
+              transaction.AuthTime;
 
             if (!dateStr) {
               console.log(
-                `[Sales Import] Transaction ${transaction.Id} has no valid date field, skipping`
+                `[Sales Import] Transaction ${transaction.TransactionId || transaction.Id} has no valid date field, skipping`
               );
               skipped++;
               continue;
@@ -831,7 +833,7 @@ export class MindbodyService {
             await storage.upsertRevenue({
               organizationId,
               studentId: studentId || null,
-              mindbodySaleId: transaction.Id?.toString() || null,
+              mindbodySaleId: transaction.SaleId?.toString() || transaction.TransactionId?.toString() || null,
               mindbodyItemId: null, // Transactions don't have item-level detail
               amount: transaction.Amount?.toString() || "0",
               type: paymentMethod,
@@ -840,7 +842,7 @@ export class MindbodyService {
             });
             imported++;
           } catch (error) {
-            console.error(`Failed to import transaction ${transaction.Id}:`, error);
+            console.error(`Failed to import transaction ${transaction.TransactionId || transaction.Id}:`, error);
             skipped++;
           }
         }
