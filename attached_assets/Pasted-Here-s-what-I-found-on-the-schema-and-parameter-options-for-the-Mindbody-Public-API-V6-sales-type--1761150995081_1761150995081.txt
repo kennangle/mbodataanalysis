@@ -1,0 +1,89 @@
+Here’s what I found on the schema and parameter options for the Mindbody Public API V6 “sales”-type endpoints (and related endpoints) — along with key gaps where the documentation doesn’t clearly guarantee full historical coverage. Based on your situation (importing revenue from memberships, classes, etc into Replit), these are the strategic take-aways.
+
+---
+
+## ✅ What the documentation *does* specify
+
+### Endpoint: `GET /public/v6/sale/sales`
+
+According to the API reference (e.g., via Swagger / RubyDoc metadata) this endpoint exists: “SaleApi -> saleGetSales – Get sales completed at a site.” ([GitHub][1])
+The model definition for the “Sale” object includes fields such as:
+
+* `SaleDate` / `SaleDateTime` — the date/time the item was sold. ([RubyDoc][2])
+* `PurchasedItems` — details of the items in the sale (which suggests multiple item types, not just retail). ([RubyDoc][2])
+  Thus, you *can* obtain sales with timestamps, which is essential for historical extraction.
+
+### Endpoint: `GET /public/v6/client/clientcontracts`
+
+In the RubyDoc listing we saw “ClientApi -> clientGetClientContracts – Get contracts that a client has purchased.” ([GitHub][1])
+This suggests that membership/contract data (which likely ties into recurring or membership revenue) is accessible via its own endpoint.
+
+### Parameter support for date filtering
+
+In the RubyDoc metadata for other endpoints (e.g., `appointment_get_staff_appointments`) there are parameters like `request_start_date` and `request_end_date`. ([RubyDoc][3])
+And in a community discussion for the older API version, a caution about `StartDateTime`/`EndDateTime` usage is present. ([Stack Overflow][4])
+Thus, the pattern suggests the sales endpoint likely supports `StartDate` / `EndDate` parameters or equivalent, though explicit docs for that endpoint were harder to locate.
+
+### FAQ admits some limitations
+
+In the API FAQ, the statement: *“The API can be used to output live data from your Mindbody system.”* — implying the API is intended for retrieving ongoing operational data. ([Mindbody Developer Portal][5])
+This hints at potential limits for deep historical data — we’ll expand that below.
+
+---
+
+## ⚠️ What the documentation *does not clearly guarantee*
+
+* **Maximum look-back period**: I did *not* find a statement that says “You may retrieve all sales from date X (e.g., from system inception) to present.” I found a different API (the “Consumer Activity” API) where the docs explicitly state that the `startDate` cannot be older than 3 months. ([Mindbody Developer Portal][6]) While that’s a different domain (consumer purchases vs full studio sales), it raises the possibility that some endpoints have look-back limits.
+* **Membership/contract revenue captured in sales endpoint**: While there is a contract endpoint, it isn’t clearly stated that all recurring membership payments appear in `sale/sales`. You may need to combine data from `clientcontracts` or other endpoints.
+* **Date filter parameter names and behaviour for sales endpoint**: The exact parameter names (`StartDate`, `StartDateTime`, `SaleDateFrom`, etc) aren’t clearly documented in the publicly available summary I located. Also, the handling of very early dates or archived data isn’t clarified.
+* **Performance for large historical data loads**: Large date ranges may hit pagination limits, timeouts or data truncation. The release notes mention a fix for date‐range filtering for `GET Classes` (Nov 2024) that now “accurately filters results based on the business’s local time zone, ensuring responses match the requested date range.” ([Mindbody Developer Portal][7]) That suggests earlier versions had issues with filtering, which could affect historic data retrieval.
+
+---
+
+## 🎯 Strategic implications & recommended next steps for your integration
+
+Given your goal — importing revenue data (including retail, memberships, classes, courses) historically into Replit — here’s how to move forward with minimal risk and maximum coverage.
+
+1. **Experiment and profile the “sales” endpoint**
+
+   * Issue a request to `/public/v6/sale/sales` (or equivalent) with parameters like: `StartDate = YYYY-MM-DD` and `EndDate = YYYY-MM-DD`. If unspecified in docs, try ISO-8601 formats (`YYYY-MM-DDTHH:MM:SSZ`).
+   * Note the earliest date returned and compare counts/volume with your studio’s internal UI report for the same period.
+   * Check whether membership/contract revenue appears: examine items in `PurchasedItems` and `Payments` to see if memberships appear (or if they're missing).
+2. **Retrieve contracts/memberships separately**
+
+   * Use `GET /public/v6/client/clientcontracts` (or `saleGetContracts`) to capture contract purchases — this gives you membership/recurring revenue events.
+   * Determine how membership billing cycles are captured: does each billing event generate a sale record, or is only the initial purchase recorded and recurring billing tracked elsewhere?
+3. **Map revenue categories and item types**
+
+   * Use other endpoints (e.g., service listing `/public/v6/sale/services`, package listing `/public/v6/sale/packages`) to understand how items are categorized in your site (retail, membership, course, class). See the community sample for services filtering: e.g., `GET /public/v6/sale/services?classId=19115` etc. ([Stack Overflow][8])
+   * Capture the `PurchasedItems` type (product, service, contract, package) in the sales records so you can segment revenue properly.
+4. **Establish historical load strategy**
+
+   * Determine your look-back depth (e.g., last 3 years).
+   * Break the date range into manageable chunks (e.g., 90-day windows) and page through results so you avoid timeouts or truncation.
+   * Log the earliest date returned; if it’s more recent than your internal records suggest (e.g., you expect data from 2018 but API only gives from 2021), you’ll need to raise this with Mindbody support or supplement with UI exports.
+5. **Reconcile periodically**
+
+   * After initial import of historical data, validate for sample months: compare your imported dataset (sales + contract revenue) with the studio’s internal report (e.g., “Sales by Category” or “Revenue by Class”).
+   * Monitor divergences which may indicate missing data types (e.g., classes or course revenue not captured).
+6. **Build an incremental sync process**
+
+   * Once historical load is done, set up a regular sync (e.g., daily) to pick up new sales/contract events.
+   * Use `LastModifiedDate` or `SaleDateTime greater than last run` where available.
+7. **Plan for data retention / archival**
+
+   * Confirm with your studio’s Mindbody settings: are older records archived or purged? If yes, you might need to archive–extract as soon as possible.
+   * Ask your Mindbody rep: “Is there a maximum retrieval window via the public API for sales/contract events?”
+
+---
+
+If you like, I can pull a *live snippet* of the `/sale/sales` endpoint JSON specification (with all query parameters) from the Swagger UI for the V6 API (the link I found: `https://api.mindbodyonline.com/public/v6/swagger/index`). Would you like me to extract that for you?
+
+[1]: https://github.com/noahott/Mindbody-PHP-API?utm_source=chatgpt.com "noahott/Mindbody-PHP-API: Location of the API code examples"
+[2]: https://www.rubydoc.info/gems/mindbody-api-v6/SwaggerClient/Sale?utm_source=chatgpt.com "Class: SwaggerClient::Sale – Documentation for mindbody-api-v6 ..."
+[3]: https://www.rubydoc.info/gems/mindbody-api-v6/1.0.0/SwaggerClient%2FAppointmentApi%3Aappointment_get_staff_appointments?utm_source=chatgpt.com "Method: SwaggerClient::AppointmentApi ... - RubyDoc.info"
+[4]: https://stackoverflow.com/questions/37115507/mindbody-api-returning-invalid-startdates-and-enddates?utm_source=chatgpt.com "Mindbody API Returning Invalid StartDates And EndDates"
+[5]: https://developers.mindbodyonline.com/resources/faqs?utm_source=chatgpt.com "FAQs - Mindbody Developer"
+[6]: https://developers.mindbodyonline.com/ConsumerDocumentation?utm_source=chatgpt.com "Consumer Activity API Documentation - Mindbody Developer"
+[7]: https://developers.mindbodyonline.com/Resources/ApiReleaseNotes?utm_source=chatgpt.com "API Release Notes - Mindbody Developer"
+[8]: https://stackoverflow.com/questions/76722389/mindbody-public-api-get-the-valid-services-for-enrollments?utm_source=chatgpt.com "MindBody Public API: Get the valid services for enrollments"
