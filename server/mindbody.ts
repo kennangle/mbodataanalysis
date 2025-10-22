@@ -727,36 +727,13 @@ export class MindbodyService {
         JSON.stringify(testData.PaginationResponse)
       );
 
-      // Check if API returned correct date range (detect if date params are ignored)
-      let dateRangeRespected = true;
-      if (testData.Sales && testData.Sales.length > 0) {
-        const firstSaleDate = new Date(
-          testData.Sales[0].SaleDateTime || testData.Sales[0].SaleDate
-        );
-        const requestedStartDate = new Date(dateFormat);
-
-        // If the API returned sales more than 7 days after our requested start date,
-        // it's ignoring the date parameters
-        const daysDifference =
-          (firstSaleDate.getTime() - requestedStartDate.getTime()) / (1000 * 60 * 60 * 24);
-        if (Math.abs(daysDifference) > 7) {
-          console.log(
-            `[Sales Import] WARNING: /sale/sales ignoring date parameters! Requested ${dateFormat}, got ${firstSaleDate.toISOString()}`
-          );
-          console.log(`[Sales Import] Falling back to /sale/transactions for historical data`);
-          dateRangeRespected = false;
-        }
-      }
-
       const totalResults = testData.PaginationResponse?.TotalResults || 0;
 
-      // If /sale/sales returns no results OR ignores date parameters, fall back to /sale/transactions
-      if (totalResults === 0 || !dateRangeRespected) {
-        if (totalResults === 0) {
-          console.log(
-            `[Sales Import] /sale/sales returned 0 results, falling back to /sale/transactions`
-          );
-        }
+      // If /sale/sales returns no results, try /sale/transactions as fallback
+      if (totalResults === 0) {
+        console.log(
+          `[Sales Import] /sale/sales returned 0 results, falling back to /sale/transactions`
+        );
 
         // Use ISO datetime format with timezone for transactions endpoint
         const startDateTime = startDate.toISOString(); // e.g., 2024-01-01T00:00:00.000Z
@@ -968,6 +945,7 @@ export class MindbodyService {
       let salesOffset = 0;
       let hasMoreSales = true;
       let totalProcessed = 0;
+      let totalFilteredOut = 0; // Track sales filtered by date
 
       console.log(`[Sales Import] Processing sales page-by-page from /sale/sales`);
 
@@ -993,11 +971,25 @@ export class MindbodyService {
         }
 
         // Process this page immediately
+        let filteredOutThisPage = 0;
+        
         for (const sale of sales) {
         try {
           // Skip if missing sale date/time
           if (!sale.SaleDateTime) {
             console.log(`Sale ${sale.Id} missing SaleDateTime, skipping`);
+            continue;
+          }
+
+          // Client-side date filtering (in case API ignores date parameters)
+          // Use lenient comparison: sale must be >= startDate and < (endDate + 1 day)
+          const saleDate = new Date(sale.SaleDateTime);
+          const nextDay = new Date(endDate);
+          nextDay.setDate(nextDay.getDate() + 1);
+          
+          if (saleDate < startDate || saleDate >= nextDay) {
+            // Sale is outside our requested date range, skip it
+            filteredOutThisPage++;
             continue;
           }
 
@@ -1065,6 +1057,9 @@ export class MindbodyService {
         }
       }
 
+        // Accumulate filtering stats
+        totalFilteredOut += filteredOutThisPage;
+        
         // Move to next page
         salesOffset += sales.length;
         totalProcessed += sales.length;
@@ -1079,6 +1074,11 @@ export class MindbodyService {
       console.log(
         `[Sales Import] Completed - imported ${imported} revenue records from ${totalProcessed} sales`
       );
+      if (totalFilteredOut > 0) {
+        console.log(
+          `[Sales Import] Filtered out ${totalFilteredOut} sales outside date range (${dateFormat} to ${endDateFormat})`
+        );
+      }
       console.log(
         `[Sales Import] Client matching: ${matchedClients} matched, ${unmatchedClients} unmatched (linked to null studentId)`
       );
