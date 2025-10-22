@@ -450,6 +450,7 @@ export class DbStorage implements IStorage {
             eq(attendance.organizationId, attendanceData.organizationId),
             eq(attendance.studentId, attendanceData.studentId),
             eq(attendance.scheduleId, attendanceData.scheduleId),
+            eq(attendance.status, 'attended'), // Match the partial index predicate
             sql`${attendance.attendedAt}::date = ${attendanceData.attendedAt}::date`
           )
         )

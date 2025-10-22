@@ -9,6 +9,7 @@ import {
   index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -141,6 +142,13 @@ export const attendance = pgTable(
     studentIdx: index("attendance_student_idx").on(table.studentId),
     scheduleIdx: index("attendance_schedule_idx").on(table.scheduleId),
     timeIdx: index("attendance_time_idx").on(table.attendedAt),
+    // Unique index to prevent duplicate attendance records for the same student/schedule/date
+    uniqueAttendance: uniqueIndex("attendance_unique_student_schedule_date_idx").on(
+      table.organizationId,
+      table.studentId,
+      table.scheduleId,
+      sql`(${table.attendedAt}::date)`
+    ).where(sql`${table.status} = 'attended'`),
   })
 );
 

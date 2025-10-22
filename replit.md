@@ -21,7 +21,7 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
 - **Backend**: Node.js, Express, TypeScript
 - **Database**: PostgreSQL (Neon), Drizzle ORM
 - **Authentication**: Passport.js with session management
-- **External APIs**: OpenAI (GPT-4), Mindbody Public API
+- **External APIs**: OpenAI (GPT-4 via Function Calling), Mindbody Public API
 
 ### Backend Architecture
 
@@ -35,6 +35,10 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
 - Dark mode support with theme toggle
 - Responsive mobile-first design
 
+### Data Quality & Integrity
+
+- **Attendance Deduplication** (Oct 2025): Fixed critical data quality issue where 137,012 duplicate attendance records were inflating analytics across 4,224 students. Implemented unique constraint on (organizationId, studentId, scheduleId, attendedAt::date) with partial index for status='attended'. Updated storage.createAttendance() to use ON CONFLICT DO NOTHING, preventing future duplicates during imports. All AI queries now return accurate counts matching Mindbody source data.
+
 ### Core Features & Implementations
 
 - **Resumable Background Import System**: Utilizes a database-backed job queue for asynchronous, checkpointed data imports with real-time progress tracking, session resilience, resume capabilities, proper cancellation, and auto-cleanup of stale jobs. Includes API call tracking, limit management, and memory usage logging. Optimized to process students in batches of 100 to prevent memory issues on large datasets (10,000+ students). Features automatic retry logic with exponential backoff (3 attempts: 1s, 2s, 4s) for transient Mindbody API 500/503 errors, and comprehensive import history tracking showing last 10 imports with status, date ranges, progress percentages, and error details. **Database Connection Resilience**: All database operations wrapped with automatic retry logic (`withDatabaseRetry`) to handle Neon connection terminations (error 57P01) during long-running imports. Includes connection pool optimization (30s idle timeout), exponential backoff retry strategy (1s, 2s, 4s), and comprehensive coverage of all read/write operations including shutdown handlers. Detects connection errors (57P01, ECONNRESET, connection terminated/closed/lost) and only retries connection-related failures while failing fast on other errors. **Critical Memory Optimization** (Oct 2025): Visit imports now cache 92,331 class schedules once per import run (loaded on first batch, reused for all subsequent batches) instead of reloading per batch, reducing memory allocations from ~5GB cumulative to ~50MB one-time load, enabling multi-month imports on Autoscale without crashes.
@@ -43,6 +47,7 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
 - **Automatic Pagination**: Implements a generic helper to retrieve all records from the Mindbody API efficiently.
 - **User Management**: Admin-only interface for managing users, including CRUD operations, role-based access, and multi-tenancy support.
 - **Dashboard & Analytics**: Displays real-time data using live database queries for charts such as Revenue & Growth Trend and Class Attendance by Time. Includes quick date range selectors (Last Week, Last Month, Last Quarter, Last Year) for easy time-based filtering.
+- **AI-Powered Natural Language Queries**: OpenAI GPT-4o-mini with Function Calling integration enables natural language questions about students, attendance, revenue, and classes. AI dynamically queries the database using 6 specialized functions (get_student_attendance, get_top_students_by_attendance, get_revenue_by_period, get_class_statistics, get_student_revenue, execute_custom_query), providing data-driven insights with accurate metrics.
 - **KPI Dashboard**: Comprehensive key performance indicators tracking studio performance with six specialized endpoints and visualizations. Features include: (1) KPI Overview with total revenue, active members, avg class attendance, and total classes; (2) Class Utilization Heatmap showing 7-day x 24-hour grid with color-coded utilization percentages and 80% target threshold highlighting underperforming time slots; (3) Intro-to-Membership Conversion funnel tracking intro class attendees and conversion rates; (4) Churn & Retention Metrics displaying active/inactive member counts and monthly new member trends; (5) Class Performance Analysis identifying underperforming classes below 80% capacity; (6) Membership Trends with visual bar charts. All KPIs support dynamic date range filtering via quick selectors (Last Week/Month/Quarter/Year) or custom date pickers, with proper query parameter handling through custom queryFn implementations to ensure backend filtering accuracy.
 - **Reports System**: Four comprehensive report types (Revenue, Attendance, Class Performance, Monthly Summary) with CSV export functionality and customizable date ranges. Features independent date selectors per report and quick range buttons for common time periods.
 - **Configurable Imports**: Allows users to specify date ranges and data types for selective data fetching.
