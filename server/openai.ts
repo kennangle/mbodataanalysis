@@ -1,5 +1,8 @@
 import OpenAI from "openai";
 import { storage } from "./storage";
+import { db } from "./db";
+import { students, attendance, revenue, classes } from "@shared/schema";
+import { eq, and, gte, lte, sql, desc } from "drizzle-orm";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || "",
@@ -8,7 +11,269 @@ const openai = new OpenAI({
 const MAX_TOKENS_PER_QUERY = 2000;
 const MONTHLY_QUERY_LIMIT = 1000;
 
+// Define functions the AI can call to query the database
+const QUERY_FUNCTIONS = [
+  {
+    name: "get_student_attendance",
+    description: "Get attendance records for a specific student by name. Returns total classes attended and attendance history.",
+    parameters: {
+      type: "object",
+      properties: {
+        student_name: {
+          type: "string",
+          description: "The full or partial name of the student (e.g., 'Ameet Srivastava' or 'Ameet')"
+        },
+        date_range: {
+          type: "string",
+          enum: ["all_time", "past_year", "past_month"],
+          description: "Time range for attendance records"
+        }
+      },
+      required: ["student_name"]
+    }
+  },
+  {
+    name: "get_top_students_by_attendance",
+    description: "Get the top N students ranked by number of classes attended",
+    parameters: {
+      type: "object",
+      properties: {
+        limit: {
+          type: "number",
+          description: "Number of top students to return (default 10)"
+        },
+        date_range: {
+          type: "string",
+          enum: ["all_time", "past_year", "past_month"],
+          description: "Time range for counting attendance"
+        }
+      },
+      required: []
+    }
+  },
+  {
+    name: "get_revenue_by_period",
+    description: "Get revenue statistics for a specific time period with breakdown",
+    parameters: {
+      type: "object",
+      properties: {
+        period: {
+          type: "string",
+          enum: ["this_month", "last_month", "this_quarter", "last_quarter", "this_year", "last_year"],
+          description: "The time period to analyze"
+        },
+        breakdown_by: {
+          type: "string",
+          enum: ["day", "month", "type"],
+          description: "How to break down the revenue data"
+        }
+      },
+      required: ["period"]
+    }
+  },
+  {
+    name: "get_class_statistics",
+    description: "Get statistics about classes including attendance rates, popular times, and performance",
+    parameters: {
+      type: "object",
+      properties: {
+        metric: {
+          type: "string",
+          enum: ["most_popular", "attendance_rate", "by_time_of_day", "underperforming"],
+          description: "What class metric to analyze"
+        }
+      },
+      required: ["metric"]
+    }
+  },
+  {
+    name: "get_student_revenue",
+    description: "Get revenue/purchase information for a specific student or all students",
+    parameters: {
+      type: "object",
+      properties: {
+        student_name: {
+          type: "string",
+          description: "The student's name (optional - if omitted, returns top spenders)"
+        },
+        limit: {
+          type: "number",
+          description: "If getting top spenders, how many to return"
+        }
+      },
+      required: []
+    }
+  },
+  {
+    name: "execute_custom_query",
+    description: "Execute a custom aggregation or complex query on the database. Use when other functions don't fit the question.",
+    parameters: {
+      type: "object",
+      properties: {
+        query_type: {
+          type: "string",
+          description: "Description of what data to retrieve (e.g., 'inactive students', 'revenue per class type', 'attendance trends')"
+        }
+      },
+      required: ["query_type"]
+    }
+  }
+];
+
 export class OpenAIService {
+  // Execute database query functions called by AI
+  private async executeFunctionCall(
+    functionName: string,
+    args: any,
+    organizationId: string
+  ): Promise<string> {
+    const now = new Date();
+    const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+    const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+
+    try {
+      switch (functionName) {
+        case "get_student_attendance": {
+          const { student_name, date_range = "all_time" } = args;
+          
+          // Search for student by name (case-insensitive partial match)
+          const allStudents = await db
+            .select()
+            .from(students)
+            .where(eq(students.organizationId, organizationId));
+          
+          const nameLower = student_name.toLowerCase();
+          const matchingStudents = allStudents.filter(s => 
+            `${s.firstName} ${s.lastName}`.toLowerCase().includes(nameLower)
+          );
+          
+          if (matchingStudents.length === 0) {
+            return JSON.stringify({ error: `No student found matching "${student_name}"` });
+          }
+          
+          const student = matchingStudents[0];
+          
+          // Get attendance records with date filtering
+          let attendanceRecords = await db
+            .select()
+            .from(attendance)
+            .where(
+              and(
+                eq(attendance.organizationId, organizationId),
+                eq(attendance.studentId, student.id),
+                eq(attendance.status, "attended")
+              )
+            )
+            .orderBy(desc(attendance.attendedAt));
+          
+          // Filter by date range
+          if (date_range === "past_year") {
+            attendanceRecords = attendanceRecords.filter(a => new Date(a.attendedAt) >= oneYearAgo);
+          } else if (date_range === "past_month") {
+            attendanceRecords = attendanceRecords.filter(a => new Date(a.attendedAt) >= oneMonthAgo);
+          }
+          
+          return JSON.stringify({
+            student: `${student.firstName} ${student.lastName}`,
+            total_classes: attendanceRecords.length,
+            date_range,
+            most_recent: attendanceRecords[0]?.attendedAt || null
+          });
+        }
+        
+        case "get_top_students_by_attendance": {
+          const { limit = 10, date_range = "all_time" } = args;
+          
+          // Get all students and their attendance counts
+          const result = await db
+            .select({
+              studentId: attendance.studentId,
+              firstName: students.firstName,
+              lastName: students.lastName,
+              count: sql<number>`count(*)::int`
+            })
+            .from(attendance)
+            .innerJoin(students, eq(attendance.studentId, students.id))
+            .where(
+              and(
+                eq(attendance.organizationId, organizationId),
+                eq(attendance.status, "attended"),
+                date_range === "past_year" ? gte(attendance.attendedAt, oneYearAgo) :
+                date_range === "past_month" ? gte(attendance.attendedAt, oneMonthAgo) :
+                sql`true`
+              )
+            )
+            .groupBy(attendance.studentId, students.firstName, students.lastName)
+            .orderBy(desc(sql`count(*)`))
+            .limit(limit);
+          
+          return JSON.stringify({
+            date_range,
+            top_students: result.map((r, i) => ({
+              rank: i + 1,
+              name: `${r.firstName} ${r.lastName}`,
+              classes_attended: r.count
+            }))
+          });
+        }
+        
+        case "get_revenue_by_period": {
+          const { period, breakdown_by } = args;
+          
+          // Calculate date range based on period
+          let startDate: Date, endDate: Date = now;
+          
+          if (period === "this_month") {
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          } else if (period === "last_month") {
+            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+          } else if (period === "this_year") {
+            startDate = new Date(now.getFullYear(), 0, 1);
+          } else if (period === "last_year") {
+            startDate = new Date(now.getFullYear() - 1, 0, 1);
+            endDate = new Date(now.getFullYear() - 1, 11, 31);
+          } else {
+            startDate = oneMonthAgo;
+          }
+          
+          const revenueData = await db
+            .select({
+              total: sql<number>`sum(cast(${revenue.amount} as numeric))`,
+              count: sql<number>`count(*)::int`,
+              type: breakdown_by === "type" ? revenue.type : sql`'all'`
+            })
+            .from(revenue)
+            .where(
+              and(
+                eq(revenue.organizationId, organizationId),
+                gte(revenue.transactionDate, startDate),
+                lte(revenue.transactionDate, endDate)
+              )
+            )
+            .groupBy(breakdown_by === "type" ? revenue.type : sql`'all'`);
+          
+          return JSON.stringify({
+            period,
+            total_revenue: revenueData.reduce((sum, r) => sum + Number(r.total || 0), 0),
+            transaction_count: revenueData.reduce((sum, r) => sum + r.count, 0),
+            breakdown: breakdown_by === "type" ? revenueData.map(r => ({
+              type: r.type,
+              revenue: Number(r.total || 0),
+              count: r.count
+            })) : null
+          });
+        }
+        
+        default:
+          return JSON.stringify({ error: `Function ${functionName} not implemented yet. Please ask a different question or try rephrasing.` });
+      }
+    } catch (error) {
+      console.error(`Error executing function ${functionName}:`, error);
+      return JSON.stringify({ error: `Failed to execute query: ${error instanceof Error ? error.message : 'Unknown error'}` });
+    }
+  }
+
   async generateInsight(
     organizationId: string,
     userId: string,
@@ -29,127 +294,84 @@ export class OpenAIService {
       );
     }
 
-    // Fetch all students with their attendance data
-    const [students, totalStudentCount, activeStudentCount, classes, allAttendance, revenue] = await Promise.all(
-      [
-        storage.getStudents(organizationId),
-        storage.getStudentCount(organizationId),
-        storage.getActiveStudentCount(organizationId),
-        storage.getClasses(organizationId),
-        storage.getAttendance(organizationId),
-        storage.getRevenue(organizationId),
-      ]
-    );
-
-    const now = new Date();
-    const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const revenueStats = await storage.getRevenueStats(organizationId, lastMonth, now);
-
-    const inactiveStudentCount = totalStudentCount - activeStudentCount;
-
-    // Build complete student attendance map
-    const studentAttendanceCounts = new Map<string, { name: string; totalClasses: number; pastYearClasses: number; studentId: string }>();
-    
-    allAttendance.forEach(record => {
-      const student = students.find(s => s.id === record.studentId);
-      if (student && record.status === "attended") {
-        const key = student.id;
-        const fullName = `${student.firstName} ${student.lastName}`;
-        const attendedDate = new Date(record.attendedAt);
-        const isPastYear = attendedDate >= oneYearAgo;
-        
-        const existing = studentAttendanceCounts.get(key);
-        if (existing) {
-          existing.totalClasses++;
-          if (isPastYear) existing.pastYearClasses++;
-        } else {
-          studentAttendanceCounts.set(key, {
-            name: fullName,
-            totalClasses: 1,
-            pastYearClasses: isPastYear ? 1 : 0,
-            studentId: student.id
-          });
-        }
+    // Use function calling to let AI query the database
+    const messages: any[] = [
+      {
+        role: "system",
+        content: `You are an AI assistant for analyzing Mindbody studio data (students, classes, attendance, revenue). 
+You have access to database query functions. Call the appropriate functions to get real data, then provide insights based on the results.
+Be specific, data-driven, and actionable in your responses.`
+      },
+      {
+        role: "user",
+        content: query
       }
-    });
+    ];
 
-    // Try to detect if query mentions a specific student name
-    const queryLower = query.toLowerCase();
-    let specificStudentData = '';
-    
-    // Search for any student name mentioned in the query
-    for (const [studentId, data] of Array.from(studentAttendanceCounts.entries())) {
-      const nameLower = data.name.toLowerCase();
-      const nameParts = nameLower.split(' ');
-      
-      // Check if full name or individual name parts appear in query
-      if (queryLower.includes(nameLower) || 
-          nameParts.some((part: string) => part.length > 2 && queryLower.includes(part))) {
-        specificStudentData += `\n\nSPECIFIC STUDENT FOUND IN QUERY:\n`;
-        specificStudentData += `- Name: ${data.name}\n`;
-        specificStudentData += `- Total classes attended (all time): ${data.totalClasses}\n`;
-        specificStudentData += `- Classes attended (past year): ${data.pastYearClasses}\n`;
-        break; // Only include the first match
+    let totalTokensUsed = 0;
+    let finalResponse = "";
+    let iterationCount = 0;
+    const maxIterations = 3; // Prevent infinite loops
+
+    while (iterationCount < maxIterations) {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages,
+        functions: QUERY_FUNCTIONS as any,
+        function_call: "auto",
+        max_tokens: MAX_TOKENS_PER_QUERY,
+        temperature: 0.7,
+      });
+
+      totalTokensUsed += completion.usage?.total_tokens || 0;
+      const message = completion.choices[0]?.message;
+
+      if (!message) {
+        throw new Error("No response from AI");
+      }
+
+      messages.push(message);
+
+      // Check if AI wants to call a function
+      if (message.function_call) {
+        const functionName = message.function_call.name;
+        const functionArgs = JSON.parse(message.function_call.arguments || "{}");
+
+        console.log(`[AI Query] Calling function: ${functionName}`, functionArgs);
+
+        // Execute the function and get results
+        const functionResult = await this.executeFunctionCall(functionName, functionArgs, organizationId);
+
+        console.log(`[AI Query] Function result:`, functionResult);
+
+        // Add function result to conversation
+        messages.push({
+          role: "function",
+          name: functionName,
+          content: functionResult
+        });
+
+        iterationCount++;
+      } else {
+        // AI has final answer
+        finalResponse = message.content || "No response generated";
+        break;
       }
     }
 
-    const dataContext = `
-You are an AI assistant helping analyze fitness and wellness business data for a Mindbody studio.
-
-You have access to the complete attendance database with ${studentAttendanceCounts.size} students who have attended classes.
-${specificStudentData}
-
-OVERALL STATISTICS:
-- Total Students: ${totalStudentCount}
-- Active Students (attended recently): ${activeStudentCount}
-- Inactive Students: ${inactiveStudentCount}
-- Classes Available: ${classes.length} different types
-- Total Attendance Records: ${allAttendance.length}
-- Past Year Attendance: ${allAttendance.filter(a => new Date(a.attendedAt) >= oneYearAgo).length} classes
-- Average Attendance Rate: ${allAttendance.length > 0 ? ((allAttendance.filter((a) => a.status === "attended").length / allAttendance.length) * 100).toFixed(1) : 0}%
-
-REVENUE (Last 30 days):
-- Total: $${revenueStats.total.toLocaleString()}
-- Transactions: ${revenueStats.count}
-
-When answering questions about specific students:
-- I have searched the database for any student names mentioned in the query
-- If found, their attendance data is shown above under "SPECIFIC STUDENT FOUND IN QUERY"
-- Use that data to answer specifically and accurately
-- If no student was found in the query above, state that the student either doesn't exist in the database or hasn't attended any classes
-
-Provide specific, data-driven answers based on the actual attendance records.
-`;
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: dataContext,
-        },
-        {
-          role: "user",
-          content: query,
-        },
-      ],
-      max_tokens: MAX_TOKENS_PER_QUERY,
-      temperature: 0.7,
-    });
-
-    const response = completion.choices[0]?.message?.content || "No response generated";
-    const tokensUsed = completion.usage?.total_tokens || 0;
+    if (!finalResponse) {
+      finalResponse = "Unable to complete the query. Please try rephrasing your question.";
+    }
 
     await storage.createAIQuery({
       organizationId,
       userId,
       query,
-      response,
-      tokensUsed,
+      response: finalResponse,
+      tokensUsed: totalTokensUsed,
     });
 
-    return { response, tokensUsed };
+    return { response: finalResponse, tokensUsed: totalTokensUsed };
   }
 
   async getUsageStats(organizationId: string): Promise<{
