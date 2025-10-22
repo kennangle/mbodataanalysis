@@ -29,8 +29,10 @@ export class OpenAIService {
       );
     }
 
-    const [totalStudentCount, activeStudentCount, classes, attendance, revenue] = await Promise.all(
+    // Fetch all students with their attendance data
+    const [students, totalStudentCount, activeStudentCount, classes, allAttendance, revenue] = await Promise.all(
       [
+        storage.getStudents(organizationId),
         storage.getStudentCount(organizationId),
         storage.getActiveStudentCount(organizationId),
         storage.getClasses(organizationId),
@@ -40,28 +42,69 @@ export class OpenAIService {
     );
 
     const now = new Date();
+    const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
     const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const revenueStats = await storage.getRevenueStats(organizationId, lastMonth, now);
 
     const inactiveStudentCount = totalStudentCount - activeStudentCount;
 
+    // Build student attendance summary (limit to top 100 most active to save tokens)
+    const studentAttendanceCounts = new Map<string, { name: string; count: number; studentId: string }>();
+    
+    allAttendance.forEach(record => {
+      const student = students.find(s => s.id === record.studentId);
+      if (student && record.status === "attended") {
+        const key = student.id;
+        const fullName = `${student.firstName} ${student.lastName}`;
+        const existing = studentAttendanceCounts.get(key);
+        if (existing) {
+          existing.count++;
+        } else {
+          studentAttendanceCounts.set(key, {
+            name: fullName,
+            count: 1,
+            studentId: student.id
+          });
+        }
+      }
+    });
+
+    // Sort by attendance count and take top 100
+    const topStudents = Array.from(studentAttendanceCounts.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 100);
+
+    // Filter attendance for past year
+    const pastYearAttendance = allAttendance.filter(a => new Date(a.attendedAt) >= oneYearAgo);
+
     const dataContext = `
-You are an AI assistant helping analyze fitness and wellness business data. Here's the current data summary:
+You are an AI assistant helping analyze fitness and wellness business data for a Mindbody studio.
 
-Students: ${totalStudentCount} total
-- Active: ${activeStudentCount}
-- Inactive: ${inactiveStudentCount}
+IMPORTANT: You have access to detailed student attendance data. When asked about specific students, search the student list below.
 
-Classes: ${classes.length} different class types
+STUDENTS WITH ATTENDANCE (Top 100 most active):
+${topStudents.map(s => `- ${s.name}: ${s.count} total classes attended`).join('\n')}
 
-Attendance: ${attendance.length} records
-- Average attendance rate: ${attendance.length > 0 ? ((attendance.filter((a) => a.status === "attended").length / attendance.length) * 100).toFixed(1) : 0}%
+OVERALL STATISTICS:
+- Total Students: ${totalStudentCount}
+- Active Students: ${activeStudentCount}
+- Inactive Students: ${inactiveStudentCount}
+- Classes Available: ${classes.length} different types
+- Total Attendance Records: ${allAttendance.length}
+- Past Year Attendance: ${pastYearAttendance.length} classes
+- Average Attendance Rate: ${allAttendance.length > 0 ? ((allAttendance.filter((a) => a.status === "attended").length / allAttendance.length) * 100).toFixed(1) : 0}%
 
-Revenue (Last 30 days):
+REVENUE (Last 30 days):
 - Total: $${revenueStats.total.toLocaleString()}
-- Number of transactions: ${revenueStats.count}
+- Transactions: ${revenueStats.count}
 
-Based on this data, please answer the following question thoughtfully and provide actionable insights:
+When answering questions about specific students:
+1. Search the student list above (case-insensitive)
+2. Provide their total attendance count
+3. If they're not in the top 100, note they have fewer classes than the 100th student
+4. Be specific and data-driven in your response
+
+Provide thoughtful, actionable insights based on this data.
 `;
 
     const completion = await openai.chat.completions.create({
