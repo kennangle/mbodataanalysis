@@ -48,50 +48,65 @@ export class OpenAIService {
 
     const inactiveStudentCount = totalStudentCount - activeStudentCount;
 
-    // Build student attendance summary (limit to top 100 most active to save tokens)
-    const studentAttendanceCounts = new Map<string, { name: string; count: number; studentId: string }>();
+    // Build complete student attendance map
+    const studentAttendanceCounts = new Map<string, { name: string; totalClasses: number; pastYearClasses: number; studentId: string }>();
     
     allAttendance.forEach(record => {
       const student = students.find(s => s.id === record.studentId);
       if (student && record.status === "attended") {
         const key = student.id;
         const fullName = `${student.firstName} ${student.lastName}`;
+        const attendedDate = new Date(record.attendedAt);
+        const isPastYear = attendedDate >= oneYearAgo;
+        
         const existing = studentAttendanceCounts.get(key);
         if (existing) {
-          existing.count++;
+          existing.totalClasses++;
+          if (isPastYear) existing.pastYearClasses++;
         } else {
           studentAttendanceCounts.set(key, {
             name: fullName,
-            count: 1,
+            totalClasses: 1,
+            pastYearClasses: isPastYear ? 1 : 0,
             studentId: student.id
           });
         }
       }
     });
 
-    // Sort by attendance count and take top 100
-    const topStudents = Array.from(studentAttendanceCounts.values())
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 100);
-
-    // Filter attendance for past year
-    const pastYearAttendance = allAttendance.filter(a => new Date(a.attendedAt) >= oneYearAgo);
+    // Try to detect if query mentions a specific student name
+    const queryLower = query.toLowerCase();
+    let specificStudentData = '';
+    
+    // Search for any student name mentioned in the query
+    for (const [studentId, data] of Array.from(studentAttendanceCounts.entries())) {
+      const nameLower = data.name.toLowerCase();
+      const nameParts = nameLower.split(' ');
+      
+      // Check if full name or individual name parts appear in query
+      if (queryLower.includes(nameLower) || 
+          nameParts.some((part: string) => part.length > 2 && queryLower.includes(part))) {
+        specificStudentData += `\n\nSPECIFIC STUDENT FOUND IN QUERY:\n`;
+        specificStudentData += `- Name: ${data.name}\n`;
+        specificStudentData += `- Total classes attended (all time): ${data.totalClasses}\n`;
+        specificStudentData += `- Classes attended (past year): ${data.pastYearClasses}\n`;
+        break; // Only include the first match
+      }
+    }
 
     const dataContext = `
 You are an AI assistant helping analyze fitness and wellness business data for a Mindbody studio.
 
-IMPORTANT: You have access to detailed student attendance data. When asked about specific students, search the student list below.
-
-STUDENTS WITH ATTENDANCE (Top 100 most active):
-${topStudents.map(s => `- ${s.name}: ${s.count} total classes attended`).join('\n')}
+You have access to the complete attendance database with ${studentAttendanceCounts.size} students who have attended classes.
+${specificStudentData}
 
 OVERALL STATISTICS:
 - Total Students: ${totalStudentCount}
-- Active Students: ${activeStudentCount}
+- Active Students (attended recently): ${activeStudentCount}
 - Inactive Students: ${inactiveStudentCount}
 - Classes Available: ${classes.length} different types
 - Total Attendance Records: ${allAttendance.length}
-- Past Year Attendance: ${pastYearAttendance.length} classes
+- Past Year Attendance: ${allAttendance.filter(a => new Date(a.attendedAt) >= oneYearAgo).length} classes
 - Average Attendance Rate: ${allAttendance.length > 0 ? ((allAttendance.filter((a) => a.status === "attended").length / allAttendance.length) * 100).toFixed(1) : 0}%
 
 REVENUE (Last 30 days):
@@ -99,12 +114,12 @@ REVENUE (Last 30 days):
 - Transactions: ${revenueStats.count}
 
 When answering questions about specific students:
-1. Search the student list above (case-insensitive)
-2. Provide their total attendance count
-3. If they're not in the top 100, note they have fewer classes than the 100th student
-4. Be specific and data-driven in your response
+- I have searched the database for any student names mentioned in the query
+- If found, their attendance data is shown above under "SPECIFIC STUDENT FOUND IN QUERY"
+- Use that data to answer specifically and accurately
+- If no student was found in the query above, state that the student either doesn't exist in the database or hasn't attended any classes
 
-Provide thoughtful, actionable insights based on this data.
+Provide specific, data-driven answers based on the actual attendance records.
 `;
 
     const completion = await openai.chat.completions.create({
