@@ -58,12 +58,18 @@ export function RevenueChart({ startDate, endDate }: RevenueChartProps) {
 
   // Generate description based on date range
   const getDescription = () => {
+    // Determine if it's daily or monthly based on range
+    const daysDiff = startDate && endDate 
+      ? Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+      : 365;
+    const granularity = daysDiff <= 45 ? "Daily" : "Monthly";
+
     if (startDate && endDate) {
-      return `Monthly revenue from ${startDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} to ${endDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+      return `${granularity} revenue from ${startDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} to ${endDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
     } else if (startDate) {
-      return `Monthly revenue from ${startDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} to present`;
+      return `${granularity} revenue from ${startDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} to present`;
     } else if (endDate) {
-      return `Monthly revenue through ${endDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+      return `${granularity} revenue through ${endDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
     }
     return "Monthly revenue and student enrollment over the past year";
   };

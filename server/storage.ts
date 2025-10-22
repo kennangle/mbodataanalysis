@@ -591,27 +591,17 @@ export class DbStorage implements IStorage {
     const effectiveEndDate = endDate || now;
 
     // Make end date inclusive by adding one day and using < comparison
-    // This ensures all revenue on the selected end date is included
     const nextDay = addDays(effectiveEndDate, 1);
+
+    // Calculate the number of days in the range
+    const daysDiff = Math.floor((effectiveEndDate.getTime() - effectiveStartDate.getTime()) / (1000 * 60 * 60 * 24));
+    const useDaily = daysDiff <= 45; // Use daily for ranges 45 days or less
 
     const whereConditions = [
       eq(revenue.organizationId, organizationId),
       gte(revenue.transactionDate, effectiveStartDate),
       lt(revenue.transactionDate, nextDay),
     ];
-
-    const revenueByMonth = await db
-      .select({
-        monthNum: sql<number>`extract(month from ${revenue.transactionDate})`,
-        yearNum: sql<number>`extract(year from ${revenue.transactionDate})`,
-        total: sql<number>`sum(CAST(${revenue.amount} AS NUMERIC))`,
-      })
-      .from(revenue)
-      .where(and(...whereConditions))
-      .groupBy(
-        sql`extract(month from ${revenue.transactionDate})`,
-        sql`extract(year from ${revenue.transactionDate})`
-      );
 
     const studentCount = await db
       .select({
@@ -621,54 +611,106 @@ export class DbStorage implements IStorage {
       .where(eq(students.organizationId, organizationId));
 
     const totalStudents = Number(studentCount[0]?.count || 0);
-    const revenueMap = new Map(
-      revenueByMonth.map((r) => [`${r.yearNum}-${r.monthNum}`, Number(r.total || 0)])
-    );
 
-    // Calculate months to show based on date range
-    const monthsData = [];
-    const startMonth = new Date(effectiveStartDate.getFullYear(), effectiveStartDate.getMonth(), 1);
-    const endMonth = new Date(effectiveEndDate.getFullYear(), effectiveEndDate.getMonth(), 1);
+    if (useDaily) {
+      // Daily aggregation for short date ranges
+      const revenueByDay = await db
+        .select({
+          day: sql<string>`to_char(${revenue.transactionDate}, 'YYYY-MM-DD')`,
+          total: sql<number>`sum(CAST(${revenue.amount} AS NUMERIC))`,
+        })
+        .from(revenue)
+        .where(and(...whereConditions))
+        .groupBy(sql`to_char(${revenue.transactionDate}, 'YYYY-MM-DD')`);
 
-    // If no custom range, show last 12 months
-    if (!startDate && !endDate) {
-      for (let i = 11; i >= 0; i--) {
-        const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const year = monthDate.getFullYear();
-        const month = monthDate.getMonth() + 1;
-        const key = `${year}-${month}`;
+      const revenueMap = new Map(
+        revenueByDay.map((r) => [r.day, Number(r.total || 0)])
+      );
 
-        const monthName = monthDate.toLocaleString("en-US", { month: "short" });
-        const displayMonth = `${monthName} ${year}`;
+      // Generate daily data points
+      const dailyData = [];
+      let currentDate = new Date(effectiveStartDate);
+      
+      while (currentDate <= effectiveEndDate) {
+        const dateKey = currentDate.toISOString().split('T')[0];
+        const displayDate = currentDate.toLocaleDateString("en-US", { 
+          month: "short", 
+          day: "numeric" 
+        });
 
-        monthsData.push({
-          month: displayMonth,
-          revenue: revenueMap.get(key) || 0,
+        dailyData.push({
+          month: displayDate, // Reusing "month" field for consistency with frontend
+          revenue: revenueMap.get(dateKey) || 0,
           students: totalStudents,
         });
+
+        currentDate = addDays(currentDate, 1);
       }
+
+      return dailyData;
     } else {
-      // Show months within the date range
-      let currentMonth = new Date(startMonth);
-      while (currentMonth <= endMonth) {
-        const year = currentMonth.getFullYear();
-        const month = currentMonth.getMonth() + 1;
-        const key = `${year}-${month}`;
+      // Monthly aggregation for longer date ranges (existing logic)
+      const revenueByMonth = await db
+        .select({
+          monthNum: sql<number>`extract(month from ${revenue.transactionDate})`,
+          yearNum: sql<number>`extract(year from ${revenue.transactionDate})`,
+          total: sql<number>`sum(CAST(${revenue.amount} AS NUMERIC))`,
+        })
+        .from(revenue)
+        .where(and(...whereConditions))
+        .groupBy(
+          sql`extract(month from ${revenue.transactionDate})`,
+          sql`extract(year from ${revenue.transactionDate})`
+        );
 
-        const monthName = currentMonth.toLocaleString("en-US", { month: "short" });
-        const displayMonth = `${monthName} ${year}`;
+      const revenueMap = new Map(
+        revenueByMonth.map((r) => [`${r.yearNum}-${r.monthNum}`, Number(r.total || 0)])
+      );
 
-        monthsData.push({
-          month: displayMonth,
-          revenue: revenueMap.get(key) || 0,
-          students: totalStudents,
-        });
+      const monthsData = [];
+      const startMonth = new Date(effectiveStartDate.getFullYear(), effectiveStartDate.getMonth(), 1);
+      const endMonth = new Date(effectiveEndDate.getFullYear(), effectiveEndDate.getMonth(), 1);
 
-        currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1);
+      // If no custom range, show last 12 months
+      if (!startDate && !endDate) {
+        for (let i = 11; i >= 0; i--) {
+          const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          const year = monthDate.getFullYear();
+          const month = monthDate.getMonth() + 1;
+          const key = `${year}-${month}`;
+
+          const monthName = monthDate.toLocaleString("en-US", { month: "short" });
+          const displayMonth = `${monthName} ${year}`;
+
+          monthsData.push({
+            month: displayMonth,
+            revenue: revenueMap.get(key) || 0,
+            students: totalStudents,
+          });
+        }
+      } else {
+        // Show months within the date range
+        let currentMonth = new Date(startMonth);
+        while (currentMonth <= endMonth) {
+          const year = currentMonth.getFullYear();
+          const month = currentMonth.getMonth() + 1;
+          const key = `${year}-${month}`;
+
+          const monthName = currentMonth.toLocaleString("en-US", { month: "short" });
+          const displayMonth = `${monthName} ${year}`;
+
+          monthsData.push({
+            month: displayMonth,
+            revenue: revenueMap.get(key) || 0,
+            students: totalStudents,
+          });
+
+          currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1);
+        }
       }
-    }
 
-    return monthsData;
+      return monthsData;
+    }
   }
 
   async getAttendanceByTimeSlot(
