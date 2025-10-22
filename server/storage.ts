@@ -433,7 +433,30 @@ export class DbStorage implements IStorage {
   }
 
   async createAttendance(attendanceData: InsertAttendance): Promise<Attendance> {
-    const result = await db.insert(attendance).values(attendanceData).returning();
+    // Use ON CONFLICT with the unique index we created to prevent duplicates
+    const result = await db
+      .insert(attendance)
+      .values(attendanceData)
+      .onConflictDoNothing()
+      .returning();
+    
+    // If conflict occurred and nothing was inserted, fetch the existing record
+    if (result.length === 0) {
+      const existing = await db
+        .select()
+        .from(attendance)
+        .where(
+          and(
+            eq(attendance.organizationId, attendanceData.organizationId),
+            eq(attendance.studentId, attendanceData.studentId),
+            eq(attendance.scheduleId, attendanceData.scheduleId),
+            sql`${attendance.attendedAt}::date = ${attendanceData.attendedAt}::date`
+          )
+        )
+        .limit(1);
+      return existing[0];
+    }
+    
     return result[0];
   }
 
