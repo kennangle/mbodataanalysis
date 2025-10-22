@@ -603,15 +603,6 @@ export class DbStorage implements IStorage {
       lt(revenue.transactionDate, nextDay),
     ];
 
-    const studentCount = await db
-      .select({
-        count: sql<number>`count(distinct ${students.id})`,
-      })
-      .from(students)
-      .where(eq(students.organizationId, organizationId));
-
-    const totalStudents = Number(studentCount[0]?.count || 0);
-
     if (useDaily) {
       // Daily aggregation for short date ranges
       const revenueByDay = await db
@@ -623,8 +614,27 @@ export class DbStorage implements IStorage {
         .where(and(...whereConditions))
         .groupBy(sql`to_char(${revenue.transactionDate}, 'YYYY-MM-DD')`);
 
+      // Get active students per day (students who attended class that day)
+      const activeStudentsByDay = await db
+        .select({
+          day: sql<string>`to_char(${attendance.attendedAt}, 'YYYY-MM-DD')`,
+          count: sql<number>`count(distinct ${attendance.studentId})`,
+        })
+        .from(attendance)
+        .where(
+          and(
+            eq(attendance.organizationId, organizationId),
+            gte(attendance.attendedAt, effectiveStartDate),
+            lt(attendance.attendedAt, nextDay)
+          )
+        )
+        .groupBy(sql`to_char(${attendance.attendedAt}, 'YYYY-MM-DD')`);
+
       const revenueMap = new Map(
         revenueByDay.map((r) => [r.day, Number(r.total || 0)])
+      );
+      const studentsMap = new Map(
+        activeStudentsByDay.map((s) => [s.day, Number(s.count || 0)])
       );
 
       // Generate daily data points
@@ -641,7 +651,7 @@ export class DbStorage implements IStorage {
         dailyData.push({
           month: displayDate, // Reusing "month" field for consistency with frontend
           revenue: revenueMap.get(dateKey) || 0,
-          students: totalStudents,
+          students: studentsMap.get(dateKey) || 0,
         });
 
         currentDate = addDays(currentDate, 1);
@@ -649,7 +659,7 @@ export class DbStorage implements IStorage {
 
       return dailyData;
     } else {
-      // Monthly aggregation for longer date ranges (existing logic)
+      // Monthly aggregation for longer date ranges
       const revenueByMonth = await db
         .select({
           monthNum: sql<number>`extract(month from ${revenue.transactionDate})`,
@@ -663,8 +673,31 @@ export class DbStorage implements IStorage {
           sql`extract(year from ${revenue.transactionDate})`
         );
 
+      // Get active students per month (students who attended class that month)
+      const activeStudentsByMonth = await db
+        .select({
+          monthNum: sql<number>`extract(month from ${attendance.attendedAt})`,
+          yearNum: sql<number>`extract(year from ${attendance.attendedAt})`,
+          count: sql<number>`count(distinct ${attendance.studentId})`,
+        })
+        .from(attendance)
+        .where(
+          and(
+            eq(attendance.organizationId, organizationId),
+            gte(attendance.attendedAt, effectiveStartDate),
+            lt(attendance.attendedAt, nextDay)
+          )
+        )
+        .groupBy(
+          sql`extract(month from ${attendance.attendedAt})`,
+          sql`extract(year from ${attendance.attendedAt})`
+        );
+
       const revenueMap = new Map(
         revenueByMonth.map((r) => [`${r.yearNum}-${r.monthNum}`, Number(r.total || 0)])
+      );
+      const studentsMap = new Map(
+        activeStudentsByMonth.map((s) => [`${s.yearNum}-${s.monthNum}`, Number(s.count || 0)])
       );
 
       const monthsData = [];
@@ -685,7 +718,7 @@ export class DbStorage implements IStorage {
           monthsData.push({
             month: displayMonth,
             revenue: revenueMap.get(key) || 0,
-            students: totalStudents,
+            students: studentsMap.get(key) || 0,
           });
         }
       } else {
@@ -702,7 +735,7 @@ export class DbStorage implements IStorage {
           monthsData.push({
             month: displayMonth,
             revenue: revenueMap.get(key) || 0,
-            students: totalStudents,
+            students: studentsMap.get(key) || 0,
           });
 
           currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1);

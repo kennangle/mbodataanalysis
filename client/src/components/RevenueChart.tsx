@@ -119,6 +119,7 @@ export function RevenueChart({ startDate, endDate }: RevenueChartProps) {
                 <Line
                   type="monotone"
                   dataKey="students"
+                  name="active students"
                   stroke="hsl(var(--chart-2))"
                   strokeWidth={2}
                   dot={{ fill: "hsl(var(--chart-2))", r: 4 }}
