@@ -53,9 +53,12 @@ export default function Dashboard() {
         end.setDate(0); // Last day of previous month
         break;
       case "year":
-        // Last year: 12 full months ago
+        // Last year: 12 complete months (e.g., Oct 2024 - Sep 2025)
         start.setFullYear(start.getFullYear() - 1);
-        start.setDate(1);
+        start.setMonth(start.getMonth());
+        start.setDate(1); // First day of month 12 months ago
+        end.setMonth(end.getMonth()); // Current month
+        end.setDate(0); // Last day of previous month
         break;
       case "thisyear":
         start.setMonth(0); // January
