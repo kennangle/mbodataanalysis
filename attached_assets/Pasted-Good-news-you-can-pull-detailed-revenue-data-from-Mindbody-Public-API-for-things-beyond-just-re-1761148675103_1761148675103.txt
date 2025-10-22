@@ -1,0 +1,103 @@
+Good news — you *can* pull detailed revenue data from Mindbody Public API (for things beyond just retail product sales), but you’ll need to be intentional about which endpoints you use and how you filter your data. Here’s a summary of what I found and what to look out for — we can then dig into how to adapt this for your Replit integration if you like.
+
+---
+
+## ✅ What the Mindbody API *supports*
+
+1. **Sales & transactions endpoint**
+
+   * There’s a `GET Sales` endpoint (Public API V6) that “is used to retrieve sales data” with more detailed properties added in recent releases. ([Mindbody Developer Portal][1])
+   * There’s also `GET Transactions` which “retrieves the payment transaction data associated with a sale”. ([Mindbody Developer Portal][1])
+   * Additionally, there is a `GET Categories` endpoint that returns the revenue and product revenue categories configured for the site. ([Mindbody Developer Portal][1])
+     These three together form a capability: you can get sale/transaction records, and you can map them to revenue categories which can include services, memberships, classes etc.
+
+2. **Revenue categories / classification**
+
+   * The support documentation refers to “Revenue categories … groups you use to classify your revenue streams and to separate your sales on the Sales by Category report”. ([support.mindbodyonline.com][2])
+   * There are reports for “Revenue by Class” (classes) and “Sales by Category” (which suggests segmentation beyond retail) in the GUI. ([support.mindbodyonline.com][3])
+   * So the system supports distinguishing *types* of revenue (classes vs products vs services).
+
+3. **Memberships / contracts / services**
+
+   * There’s an endpoint `GET ActiveClientMemberships` for retrieving memberships linked to clients. ([Mindbody Developer Portal][1])
+   * The `GET ClientServices` endpoint is referenced (services meaning e.g., packages, class memberships, etc) in the release notes. ([Mindbody Developer Portal][1])
+   * The existence of a “PurchaseContract” endpoint (for memberships/contracts) is also noted. ([Mindbody Developer Portal][1])
+     All of this indicates that **non-retail** revenue is modelled in the API: services, memberships, contracts.
+
+4. **Reporting support**
+
+   * On the support site: “The Sales report generates a list of every sale … and tracks sales by employee, service category, and location.” ([support.mindbodyonline.com][4])
+   * “The Sales by Category report tells you how much revenue is being generated for each product category and service revenue category.” ([support.mindbodyonline.com][5])
+   * These reports reflect that revenue from classes and services (not just retail) are tracked in the system — which suggests that if you can access them via API you should be able to get those data.
+
+---
+
+## ⚠️ What to check / what might be causing your “only retail sales” issue
+
+Given you’re only seeing *retail sales*, here are some strategic checks and probable causes (and recommendations for your Replit import):
+
+| Issue to check                                  | Why it matters                                                                                                                                                                                          | What to do                                                                                                                                                                                          |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Endpoint used**                               | If you’re only calling `GET Products` or sales for *retail products*, you may miss service/membership revenue. The `GET Sales` or `GET Transactions` endpoints may include both.                        | Ensure you’re using `GET Sales` (or appropriate) and not only product-sales endpoints.                                                                                                              |
+| **Filters or parameters**                       | If your query is limited (e.g., by category = Products, or sale type = product) you’ll exclude classes, memberships.                                                                                    | Inspect the query parameters: are you filtering by category/RevenueCategory, only product type etc? Remove such filters or include service categories.                                              |
+| **Revenue category mapping**                    | The API returns revenue categories. If membership/class sales are mapped to a category you’re not capturing, your import will drop them.                                                                | Pull the list of revenue categories via `GET Categories`, identify which categories are “Memberships”, “Services”, “Classes” (or your studio’s equivalents). Then query sales for those categories. |
+| **Membership/contract payments being excluded** | Payments for memberships might be recorded under “contracts” rather than “sales” (depending on how your studio is set up) and you might need to use `GetClientContracts` or similar instead of `Sales`. | Check if membership payments show up in the Studio’s GUI sales reports. Determine how they’re tracked in Mindbody: product sale vs contract auto‐pay. Then use corresponding API endpoint.          |
+| **API version / permissions**                   | If you’re on an older version or missing permission scopes, some endpoints might not return service/contract items.                                                                                     | Verify you’re using Public API V6 (or whatever current version). Ensure your API key/staff token has full access to sales/services.                                                                 |
+| **Business logic / site setup**                 | The way your Mindbody site is configured may treat memberships differently (e.g., as “service” vs “product”) or your Replit import logic might implicitly treat only retail.                            | Within Mindbody UI: review how memberships, classes, courses are configured (as service vs product vs contract). Then align your import logic accordingly.                                          |
+
+---
+
+## 🔍 What I *didn’t* find / what’s not obvious
+
+* While the API supports `GET Sales` and `GET Transactions`, I did *not* find a documentation snippet that explicitly says “Here is the endpoint to get *all revenue types including memberships, classes, courses, etc.*” in one go. So you may need to stitch together multiple endpoints (Sales + Contracts + ClientServices) to get the full revenue picture.
+
+* It is not entirely clear whether revenue on memberships (which often are recurring) is recorded as a “sale” each billing cycle or if it’s recorded as an “autopay event” under `ClientContracts`. If the latter, you might not see those in the Sales endpoint by default.
+
+* The term “courses” may map to “enrollments” or “programs” in Mindbody, and might be treated differently or require a different endpoint.
+
+---
+
+## 📌 Recommendations — what you should do in your Replit integration
+
+Since you’re working as an IT/strategy consultant and want to get this data into Replit reliably, here’s a strategic step-by-step plan:
+
+1. **Inventory revenue categories**
+
+   * Use `GET Categories` to get the list of revenue categories configured on your site. Understand which categories correspond to: Retail Products, Memberships/Contracts, Classes, Courses.
+   * Map those category IDs.
+
+2. **Query sales data for all relevant categories**
+
+   * Use `GET Sales` (or equivalent) with filters for the date range you need. Include parameter for revenue category (or service type) so you capture membership & class revenue.
+   * For example, include categories that correspond to “Membership”, “Service”, “Class” not just “Product”.
+
+3. **Check contract/membership payments**
+
+   * If membership revenue is handled via contracts, use `GET ClientContracts` (or endpoint for contract payments) to capture recurring revenue.
+   * Combine this with the Sales data to get full revenue.
+
+4. **Combine & reconcile**
+
+   * Bring together the data: sales (one-time purchases), contract payments (recurring), service revenue (classes, courses).
+   * Generate your total revenue view (retail + memberships + classes + courses) in Replit (or store in a database and ingest into Replit).
+
+5. **Validate against Mindbody GUI reports**
+
+   * In the Mindbody UI (Studio side) run the “Sales by Category” or “Revenue by Class” reports for the same period and compare numbers. This will confirm you captured the right data and will help you identify any missing categories.
+   * Example: “Revenue by Class report” shows classes over date range. ([support.mindbodyonline.com][3])
+   * Example: “Sales by Category” shows by revenue category. ([support.mindbodyonline.com][5])
+
+6. **Monitor and maintain**
+
+   * Periodically re‐pull categories, as your studio may add new revenue categories (e.g., “Online Course”, “Virtual Membership”) and your import logic must dynamically adapt.
+   * Handle pagination, rate limits, date filters. The release notes note improved performance for `GET Sales` in recent versions. ([Mindbody Developer Portal][1])
+
+---
+
+If you like, I can **pull the exact API schemas** for the endpoints (`GET Sales`, `GET ClientContracts`, `GET Categories`) from the Mindbody Developer documentation, and highlight exactly which JSON fields you’ll want to capture (e.g., CategoryID, ServiceID, ProductID, etc.). Would that be useful?
+
+[1]: https://developers.mindbodyonline.com/Resources/ApiReleaseNotes?utm_source=chatgpt.com "Mindbody API Release Notes"
+[2]: https://support.mindbodyonline.com/s/article/203253583-Managing-Revenue-Categories?language=fr&utm_source=chatgpt.com "Revenue categories and secondary ..."
+[3]: https://support.mindbodyonline.com/s/article/203257203-Revenue-by-Class-report?utm_source=chatgpt.com "Revenue by Class report"
+[4]: https://support.mindbodyonline.com/s/article/203257193-Sales-Report?utm_source=chatgpt.com "Sales report"
+[5]: https://support.mindbodyonline.com/s/article/203257233-Sales-by-Category-report?utm_source=chatgpt.com "Sales by Category report"
