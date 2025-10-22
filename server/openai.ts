@@ -11,111 +11,129 @@ const openai = new OpenAI({
 const MAX_TOKENS_PER_QUERY = 2000;
 const MONTHLY_QUERY_LIMIT = 1000;
 
-// Define functions the AI can call to query the database
-const QUERY_FUNCTIONS = [
+// Define tools the AI can call to query the database (using new tools format)
+const QUERY_TOOLS = [
   {
-    name: "get_student_attendance",
-    description: "Get attendance records for a specific student by name. Returns total classes attended and attendance history.",
-    parameters: {
-      type: "object",
-      properties: {
-        student_name: {
-          type: "string",
-          description: "The full or partial name of the student (e.g., 'Ameet Srivastava' or 'Ameet')"
+    type: "function",
+    function: {
+      name: "get_student_attendance",
+      description: "Get attendance records for a specific student by name. Returns total classes attended and attendance history.",
+      parameters: {
+        type: "object",
+        properties: {
+          student_name: {
+            type: "string",
+            description: "The full or partial name of the student (e.g., 'Ameet Srivastava' or 'Ameet')"
+          },
+          date_range: {
+            type: "string",
+            enum: ["all_time", "past_year", "past_month"],
+            description: "Time range for attendance records"
+          }
         },
-        date_range: {
-          type: "string",
-          enum: ["all_time", "past_year", "past_month"],
-          description: "Time range for attendance records"
-        }
-      },
-      required: ["student_name"]
+        required: ["student_name"]
+      }
     }
   },
   {
-    name: "get_top_students_by_attendance",
-    description: "Get the top N students ranked by number of classes attended",
-    parameters: {
-      type: "object",
-      properties: {
-        limit: {
-          type: "number",
-          description: "Number of top students to return (default 10)"
+    type: "function",
+    function: {
+      name: "get_top_students_by_attendance",
+      description: "Get the top N students ranked by number of classes attended",
+      parameters: {
+        type: "object",
+        properties: {
+          limit: {
+            type: "number",
+            description: "Number of top students to return (default 10)"
+          },
+          date_range: {
+            type: "string",
+            enum: ["all_time", "past_year", "past_month"],
+            description: "Time range for counting attendance"
+          }
         },
-        date_range: {
-          type: "string",
-          enum: ["all_time", "past_year", "past_month"],
-          description: "Time range for counting attendance"
-        }
-      },
-      required: []
+        required: []
+      }
     }
   },
   {
-    name: "get_revenue_by_period",
-    description: "Get revenue statistics for a specific time period with breakdown",
-    parameters: {
-      type: "object",
-      properties: {
-        period: {
-          type: "string",
-          enum: ["this_month", "last_month", "this_quarter", "last_quarter", "this_year", "last_year"],
-          description: "The time period to analyze"
+    type: "function",
+    function: {
+      name: "get_revenue_by_period",
+      description: "Get revenue statistics for a specific time period with breakdown",
+      parameters: {
+        type: "object",
+        properties: {
+          period: {
+            type: "string",
+            enum: ["this_month", "last_month", "this_quarter", "last_quarter", "this_year", "last_year"],
+            description: "The time period to analyze"
+          },
+          breakdown_by: {
+            type: "string",
+            enum: ["day", "month", "type"],
+            description: "How to break down the revenue data"
+          }
         },
-        breakdown_by: {
-          type: "string",
-          enum: ["day", "month", "type"],
-          description: "How to break down the revenue data"
-        }
-      },
-      required: ["period"]
+        required: ["period"]
+      }
     }
   },
   {
-    name: "get_class_statistics",
-    description: "Get statistics about classes including attendance rates, popular times, and performance",
-    parameters: {
-      type: "object",
-      properties: {
-        metric: {
-          type: "string",
-          enum: ["most_popular", "attendance_rate", "by_time_of_day", "underperforming"],
-          description: "What class metric to analyze"
-        }
-      },
-      required: ["metric"]
-    }
-  },
-  {
-    name: "get_student_revenue",
-    description: "Get revenue/purchase information for a specific student or all students",
-    parameters: {
-      type: "object",
-      properties: {
-        student_name: {
-          type: "string",
-          description: "The student's name (optional - if omitted, returns top spenders)"
+    type: "function",
+    function: {
+      name: "get_class_statistics",
+      description: "Get statistics about classes including attendance rates, popular times, and performance",
+      parameters: {
+        type: "object",
+        properties: {
+          metric: {
+            type: "string",
+            enum: ["most_popular", "attendance_rate", "by_time_of_day", "underperforming"],
+            description: "What class metric to analyze"
+          }
         },
-        limit: {
-          type: "number",
-          description: "If getting top spenders, how many to return"
-        }
-      },
-      required: []
+        required: ["metric"]
+      }
     }
   },
   {
-    name: "execute_custom_query",
-    description: "Execute a custom aggregation or complex query on the database. Use when other functions don't fit the question.",
-    parameters: {
-      type: "object",
-      properties: {
-        query_type: {
-          type: "string",
-          description: "Description of what data to retrieve (e.g., 'inactive students', 'revenue per class type', 'attendance trends')"
-        }
-      },
-      required: ["query_type"]
+    type: "function",
+    function: {
+      name: "get_student_revenue",
+      description: "Get revenue/purchase information for a specific student or all students",
+      parameters: {
+        type: "object",
+        properties: {
+          student_name: {
+            type: "string",
+            description: "The student's name (optional - if omitted, returns top spenders)"
+          },
+          limit: {
+            type: "number",
+            description: "If getting top spenders, how many to return"
+          }
+        },
+        required: []
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "execute_custom_query",
+      description: "Execute a custom aggregation or complex query on the database. Use when other functions don't fit the question.",
+      parameters: {
+        type: "object",
+        properties: {
+          query_type: {
+            type: "string",
+            description: "Description of what data to retrieve (e.g., 'inactive students', 'revenue per class type', 'attendance trends')"
+          }
+        },
+        required: ["query_type"]
+      }
     }
   }
 ];
@@ -294,12 +312,12 @@ export class OpenAIService {
       );
     }
 
-    // Use function calling to let AI query the database
+    // Use tool calling to let AI query the database
     const messages: any[] = [
       {
         role: "system",
         content: `You are an AI assistant for analyzing Mindbody studio data (students, classes, attendance, revenue). 
-You have access to database query functions. Call the appropriate functions to get real data, then provide insights based on the results.
+You have access to database query tools. Call the appropriate tools to get real data, then provide insights based on the results.
 Be specific, data-driven, and actionable in your responses.`
       },
       {
@@ -311,14 +329,14 @@ Be specific, data-driven, and actionable in your responses.`
     let totalTokensUsed = 0;
     let finalResponse = "";
     let iterationCount = 0;
-    const maxIterations = 3; // Prevent infinite loops
+    const maxIterations = 5; // Allow multiple tool calls if needed
 
     while (iterationCount < maxIterations) {
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages,
-        functions: QUERY_FUNCTIONS as any,
-        function_call: "auto",
+        tools: QUERY_TOOLS as any,
+        tool_choice: "auto",
         max_tokens: MAX_TOKENS_PER_QUERY,
         temperature: 0.7,
       });
@@ -332,24 +350,29 @@ Be specific, data-driven, and actionable in your responses.`
 
       messages.push(message);
 
-      // Check if AI wants to call a function
-      if (message.function_call) {
-        const functionName = message.function_call.name;
-        const functionArgs = JSON.parse(message.function_call.arguments || "{}");
+      // Check if AI wants to call tools
+      if (message.tool_calls && message.tool_calls.length > 0) {
+        // Process all tool calls
+        for (const toolCall of message.tool_calls) {
+          if (toolCall.type === 'function') {
+            const functionName = toolCall.function.name;
+            const functionArgs = JSON.parse(toolCall.function.arguments || "{}");
 
-        console.log(`[AI Query] Calling function: ${functionName}`, functionArgs);
+            console.log(`[AI Query] Calling tool: ${functionName}`, functionArgs);
 
-        // Execute the function and get results
-        const functionResult = await this.executeFunctionCall(functionName, functionArgs, organizationId);
+            // Execute the function and get results
+            const functionResult = await this.executeFunctionCall(functionName, functionArgs, organizationId);
 
-        console.log(`[AI Query] Function result:`, functionResult);
+            console.log(`[AI Query] Tool result:`, functionResult);
 
-        // Add function result to conversation
-        messages.push({
-          role: "function",
-          name: functionName,
-          content: functionResult
-        });
+            // Add tool result to conversation
+            messages.push({
+              role: "tool",
+              tool_call_id: toolCall.id,
+              content: functionResult
+            });
+          }
+        }
 
         iterationCount++;
       } else {
