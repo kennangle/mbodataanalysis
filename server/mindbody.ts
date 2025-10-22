@@ -835,24 +835,104 @@ export class MindbodyService {
 
             // Get student ID from ClientId
             const studentId = studentMap.get(transaction.ClientId?.toString());
+            const saleId = transaction.SaleId?.toString();
 
-            // Build description from payment info
-            const paymentMethod = transaction.Method || "Unknown";
-            const lastFour = transaction.LastFour || "N/A";
-            const status = transaction.Status || "Unknown";
-            const description = `${paymentMethod} payment ending in ${lastFour} (${status})`;
+            // If we have a SaleId, fetch the actual sale details to get line items
+            if (saleId) {
+              try {
+                const saleEndpoint = `/sale/sales/${saleId}`;
+                const saleData = await this.makeAuthenticatedRequest(organizationId, saleEndpoint);
+                
+                if (saleData && saleData.Sale) {
+                  const sale = saleData.Sale;
+                  
+                  // Handle both array and single object for PurchasedItems
+                  const purchasedItems = Array.isArray(sale.PurchasedItems)
+                    ? sale.PurchasedItems
+                    : sale.PurchasedItems
+                      ? [sale.PurchasedItems]
+                      : [];
 
-            await storage.upsertRevenue({
-              organizationId,
-              studentId: studentId || null,
-              mindbodySaleId: transaction.SaleId?.toString() || transaction.TransactionId?.toString() || null,
-              mindbodyItemId: null, // Transactions don't have item-level detail
-              amount: transaction.Amount?.toString() || "0",
-              type: paymentMethod,
-              description,
-              transactionDate,
-            });
-            imported++;
+                  if (purchasedItems.length > 0) {
+                    // Create a revenue record for each purchased item
+                    for (const item of purchasedItems) {
+                      const itemAmount = 
+                        item.Amount ?? 
+                        (item.UnitPrice && item.Quantity ? item.UnitPrice * item.Quantity : null);
+
+                      // Skip items with no amount
+                      if (!itemAmount && itemAmount !== 0) continue;
+                      if (itemAmount === 0) continue;
+
+                      // Build description: Item name + quantity (if > 1)
+                      let itemDescription = item.Name || item.Description || "Unknown item";
+                      if (item.Quantity && item.Quantity > 1) {
+                        itemDescription = `${itemDescription} (Qty: ${item.Quantity})`;
+                      }
+
+                      await storage.upsertRevenue({
+                        organizationId,
+                        studentId: studentId || null,
+                        mindbodySaleId: saleId,
+                        mindbodyItemId: item.Id?.toString() || item.SaleDetailId?.toString() || null,
+                        amount: itemAmount.toString(),
+                        type: item.IsService ? "Service" : (item.Type || "Product"),
+                        description: itemDescription,
+                        transactionDate,
+                      });
+                      imported++;
+                    }
+                  } else {
+                    // No line items, fall back to payment transaction record
+                    throw new Error("No purchased items in sale");
+                  }
+                } else {
+                  throw new Error("Sale data not found");
+                }
+              } catch (saleError) {
+                // If fetching sale details fails, fall back to basic transaction record
+                console.log(`[Sales Import] Could not fetch sale details for ${saleId}, using transaction data`);
+                
+                const paymentMethod = transaction.Method || transaction.CardType || "Payment";
+                const lastFour = transaction.CCLastFour || transaction.LastFour || "";
+                const status = transaction.Status || "Completed";
+                const description = lastFour 
+                  ? `${paymentMethod} ending in ${lastFour} (${status})`
+                  : `${paymentMethod} (${status})`;
+
+                await storage.upsertRevenue({
+                  organizationId,
+                  studentId: studentId || null,
+                  mindbodySaleId: saleId || transaction.TransactionId?.toString() || null,
+                  mindbodyItemId: null,
+                  amount: transaction.Amount?.toString() || "0",
+                  type: paymentMethod,
+                  description,
+                  transactionDate,
+                });
+                imported++;
+              }
+            } else {
+              // No SaleId, just use basic transaction data
+              const paymentMethod = transaction.Method || transaction.CardType || "Payment";
+              const lastFour = transaction.CCLastFour || transaction.LastFour || "";
+              const status = transaction.Status || "Completed";
+              const description = lastFour 
+                ? `${paymentMethod} ending in ${lastFour} (${status})`
+                : `${paymentMethod} (${status})`;
+
+              await storage.upsertRevenue({
+                organizationId,
+                studentId: studentId || null,
+                mindbodySaleId: transaction.TransactionId?.toString() || null,
+                mindbodyItemId: null,
+                amount: transaction.Amount?.toString() || "0",
+                type: paymentMethod,
+                description,
+                transactionDate,
+              });
+              imported++;
+            }
           } catch (error) {
             console.error(`Failed to import transaction ${transaction.TransactionId || transaction.Id}:`, error);
             skipped++;
