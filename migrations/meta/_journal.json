@@ -8,6 +8,13 @@
       "when": 1759697952093,
       "tag": "0000_bumpy_moondragon",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1761172831455,
+      "tag": "0001_bitter_the_hood",
+      "breakpoints": true
     }
   ]
 }
