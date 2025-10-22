@@ -108,7 +108,7 @@ export default function Dashboard() {
           </header>
           <main className="flex-1 overflow-y-auto p-6">
             <div className="max-w-screen-2xl mx-auto space-y-6">
-              <DashboardStats startDate={startDate} endDate={endDate} />
+              <DashboardStats />
 
               {/* Centralized Date Range Picker */}
               <Card>

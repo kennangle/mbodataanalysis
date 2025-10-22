@@ -15,25 +15,10 @@ interface DashboardStatsData {
   classChange: string;
 }
 
-interface DashboardStatsProps {
-  startDate?: Date;
-  endDate?: Date;
-}
-
-export function DashboardStats({ startDate, endDate }: DashboardStatsProps) {
-  const queryParams = new URLSearchParams();
-  if (startDate) {
-    queryParams.append("startDate", startDate.toISOString());
-  }
-  if (endDate) {
-    queryParams.append("endDate", endDate.toISOString());
-  }
-
-  const queryString = queryParams.toString();
-  const queryKey = queryString ? `/api/dashboard/stats?${queryString}` : "/api/dashboard/stats";
-
+export function DashboardStats() {
+  // Always query current month vs last month (no date params)
   const { data, isLoading } = useQuery<DashboardStatsData>({
-    queryKey: [queryKey],
+    queryKey: ["/api/dashboard/stats"],
   });
 
   if (isLoading) {
