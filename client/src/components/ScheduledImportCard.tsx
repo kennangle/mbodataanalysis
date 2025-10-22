@@ -36,7 +36,12 @@ export function ScheduledImportCard() {
       setEnabled(config.enabled);
       setDaysToImport(config.daysToImport.toString());
       if (config.dataTypes) {
-        setDataTypes(config.dataTypes.split(",").map((t) => t.trim()));
+        // Handle both string and array formats
+        if (typeof config.dataTypes === 'string') {
+          setDataTypes(config.dataTypes.split(",").map((t) => t.trim()));
+        } else if (Array.isArray(config.dataTypes)) {
+          setDataTypes(config.dataTypes);
+        }
       }
     }
   }, [config]);
