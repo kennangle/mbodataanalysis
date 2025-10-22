@@ -1,6 +1,5 @@
 import cron from "node-cron";
 import { storage } from "./storage";
-import { mindbodyService } from "./mindbody";
 import { subDays } from "date-fns";
 
 interface ScheduledJobInfo {
@@ -74,7 +73,7 @@ class ImportScheduler {
       }
 
       // Remove jobs for organizations that are no longer enabled
-      for (const [orgId, jobInfo] of this.scheduledJobs.entries()) {
+      for (const [orgId, jobInfo] of Array.from(this.scheduledJobs.entries())) {
         if (!activeOrgs.has(orgId)) {
           jobInfo.task.stop();
           this.scheduledJobs.delete(orgId);
@@ -127,17 +126,23 @@ class ImportScheduler {
       const endDate = new Date();
       const startDate = subDays(endDate, scheduledImport.daysToImport);
 
-      // Parse data types
-      const dataTypes = scheduledImport.dataTypes.split(",").map((t) => t.trim());
+      // Parse data types - ensure it's a valid string before splitting
+      const dataTypesString = scheduledImport.dataTypes || "students,classes,visits,sales";
+      const dataTypes = dataTypesString.split(",").map((t) => t.trim()).filter(t => t.length > 0);
+
+      // Validate we have at least one data type
+      if (dataTypes.length === 0) {
+        throw new Error("No data types configured for scheduled import");
+      }
 
       // Create import job
       const importJob = await storage.createImportJob({
         organizationId,
         status: "pending",
-        dataTypes: scheduledImport.dataTypes,
+        dataTypes, // Pass the array, not the string
         startDate,
         endDate,
-        progress: 0,
+        progress: "{}",
       });
 
       // Run the import in the background
@@ -164,73 +169,68 @@ class ImportScheduler {
     endDate: Date
   ) {
     try {
-      let totalProgress = 0;
-      const progressPerType = 100 / dataTypes.length;
+      // Delegate to the import worker which handles all the complex logic
+      const { importWorker } = await import("./import-worker");
+      await importWorker.processJob(jobId);
 
-      for (const dataType of dataTypes) {
-        const job = await storage.getImportJob(jobId);
-        if (!job || job.status === "cancelled") {
-          break;
+      // Poll for job completion since processJob returns immediately after queuing
+      let finalJob = await storage.getImportJob(jobId);
+      const maxWaitTime = 4 * 60 * 60 * 1000; // 4 hours max (reasonable for large imports)
+      const pollInterval = 10000; // Check every 10 seconds
+      const startTime = Date.now();
+
+      while (finalJob && finalJob.status !== "completed" && finalJob.status !== "failed" && finalJob.status !== "cancelled") {
+        // Check if we've exceeded max wait time
+        if (Date.now() - startTime > maxWaitTime) {
+          const errorMsg = `Import exceeded ${maxWaitTime / 3600000} hour timeout. The job may still be running in the background.`;
+          console.error(`[Scheduler] ${errorMsg}`);
+          
+          // Mark as failed due to timeout
+          await storage.updateScheduledImport(organizationId, {
+            lastRunStatus: "failed",
+            lastRunError: errorMsg,
+          });
+          return;
         }
 
-        await storage.updateImportJob(jobId, {
-          status: "running",
-          currentStep: dataType,
-        });
-
-        switch (dataType) {
-          case "students":
-            await mindbodyService.importClients(organizationId, startDate, endDate, async (current, total) => {
-              const stepProgress = (current / total) * progressPerType;
-              await storage.updateImportJob(jobId, {
-                progress: totalProgress + stepProgress,
-              });
-            });
-            break;
-
-          case "classes":
-            await mindbodyService.importClasses(organizationId, startDate, endDate, async (current, total) => {
-              const stepProgress = (current / total) * progressPerType;
-              await storage.updateImportJob(jobId, {
-                progress: totalProgress + stepProgress,
-              });
-            });
-            break;
-
-          case "visits":
-            await mindbodyService.importClassVisits(organizationId, startDate, endDate, async (current, total) => {
-              const stepProgress = (current / total) * progressPerType;
-              await storage.updateImportJob(jobId, {
-                progress: totalProgress + stepProgress,
-              });
-            });
-            break;
-
-          case "sales":
-            await mindbodyService.importSales(organizationId, startDate, endDate, async (current, total) => {
-              const stepProgress = (current / total) * progressPerType;
-              await storage.updateImportJob(jobId, {
-                progress: totalProgress + stepProgress,
-              });
-            });
-            break;
-        }
-
-        totalProgress += progressPerType;
+        // Wait before checking again
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+        finalJob = await storage.getImportJob(jobId);
       }
 
-      await storage.updateImportJob(jobId, {
-        status: "completed",
-        progress: 100,
-        completedAt: new Date(),
-      });
-
-      await storage.updateScheduledImport(organizationId, {
-        lastRunStatus: "success",
-        lastRunError: null,
-      });
-
-      console.log(`[Scheduler] Scheduled import completed for org ${organizationId}`);
+      // Handle case where job disappears (null)
+      if (!finalJob) {
+        await storage.updateScheduledImport(organizationId, {
+          lastRunStatus: "failed",
+          lastRunError: "Import job disappeared from database",
+        });
+        return;
+      }
+      
+      // Update scheduled import based on final status
+      if (finalJob.status === "completed") {
+        await storage.updateScheduledImport(organizationId, {
+          lastRunStatus: "success",
+          lastRunError: null,
+        });
+        console.log(`[Scheduler] Scheduled import completed for org ${organizationId}`);
+      } else if (finalJob.status === "failed") {
+        await storage.updateScheduledImport(organizationId, {
+          lastRunStatus: "failed",
+          lastRunError: finalJob.error || "Import failed",
+        });
+      } else if (finalJob.status === "cancelled") {
+        await storage.updateScheduledImport(organizationId, {
+          lastRunStatus: "failed",
+          lastRunError: "Import was cancelled",
+        });
+      } else {
+        // Catch any other unexpected states
+        await storage.updateScheduledImport(organizationId, {
+          lastRunStatus: "failed",
+          lastRunError: `Unexpected job status: ${finalJob.status}`,
+        });
+      }
     } catch (error) {
       console.error(`[Scheduler] Error in background import:`, error);
 
