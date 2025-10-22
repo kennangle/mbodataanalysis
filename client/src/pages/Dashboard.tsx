@@ -20,11 +20,18 @@ export default function Dashboard() {
   const { user, isLoading, logout } = useAuth();
   const [, setLocation] = useLocation();
 
-  // Shared date range state - default to all-time (no dates selected)
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  // Shared date range state - default to current month (first day of month to today)
+  const getDefaultDates = () => {
+    const now = new Date();
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    return { start: firstDayOfMonth, end: now };
+  };
 
-  const setQuickDateRange = (range: "week" | "month" | "quarter" | "year") => {
+  const defaultDates = getDefaultDates();
+  const [startDate, setStartDate] = useState<Date | undefined>(defaultDates.start);
+  const [endDate, setEndDate] = useState<Date | undefined>(defaultDates.end);
+
+  const setQuickDateRange = (range: "week" | "month" | "quarter" | "year" | "thisyear") => {
     const end = new Date();
     const start = new Date();
     
@@ -40,6 +47,10 @@ export default function Dashboard() {
         break;
       case "year":
         start.setFullYear(start.getFullYear() - 1);
+        break;
+      case "thisyear":
+        start.setMonth(0); // January
+        start.setDate(1); // First day
         break;
     }
     
@@ -111,20 +122,20 @@ export default function Dashboard() {
                       variant="ghost"
                       size="sm"
                       onClick={() => {
-                        setStartDate(undefined);
-                        setEndDate(undefined);
+                        const defaults = getDefaultDates();
+                        setStartDate(defaults.start);
+                        setEndDate(defaults.end);
                       }}
-                      disabled={!startDate && !endDate}
-                      data-testid="button-clear-dates"
+                      data-testid="button-reset-dates"
                     >
-                      Clear
+                      Reset to Month
                     </Button>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Quick select:</span>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <Button
                         variant="outline"
                         size="sm"
@@ -152,6 +163,14 @@ export default function Dashboard() {
                       <Button
                         variant="outline"
                         size="sm"
+                        onClick={() => setQuickDateRange("thisyear")}
+                        data-testid="button-quick-thisyear"
+                      >
+                        This Year
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => setQuickDateRange("year")}
                         data-testid="button-quick-year"
                       >
@@ -167,7 +186,7 @@ export default function Dashboard() {
                       <DatePicker
                         value={startDate}
                         onChange={setStartDate}
-                        placeholder="All time"
+                        placeholder="Start date"
                         data-testid="datepicker-start"
                       />
                     </div>
@@ -176,7 +195,7 @@ export default function Dashboard() {
                       <DatePicker
                         value={endDate}
                         onChange={setEndDate}
-                        placeholder="All time"
+                        placeholder="End date"
                         data-testid="datepicker-end"
                       />
                     </div>

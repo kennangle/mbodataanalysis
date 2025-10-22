@@ -4,6 +4,32 @@ import { requireAuth } from "../auth";
 import type { User } from "@shared/schema";
 import { db } from "../db";
 
+// Helper to safely subtract months/years while clamping to valid days
+function subtractPeriod(date: Date, months: number): Date {
+  const targetYear = date.getUTCFullYear();
+  const targetMonth = date.getUTCMonth() - months;
+  const targetDay = date.getUTCDate();
+  
+  // Create date with target month (may overflow into next month)
+  const candidate = new Date(Date.UTC(targetYear, targetMonth, 1));
+  
+  // Get last day of target month
+  const lastDayOfMonth = new Date(Date.UTC(
+    candidate.getUTCFullYear(),
+    candidate.getUTCMonth() + 1,
+    0
+  )).getUTCDate();
+  
+  // Clamp to valid day (e.g., Feb 31 → Feb 28/29)
+  const clampedDay = Math.min(targetDay, lastDayOfMonth);
+  
+  return new Date(Date.UTC(
+    candidate.getUTCFullYear(),
+    candidate.getUTCMonth(),
+    clampedDay
+  ));
+}
+
 export function registerDashboardRoutes(app: Express) {
   app.get("/api/dashboard/stats", requireAuth, async (req, res) => {
     try {
@@ -12,45 +38,68 @@ export function registerDashboardRoutes(app: Express) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      // Parse optional date range from query params
-      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
-      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
-
+      // Parse and normalize date range to UTC (strip time components)
       const now = new Date();
-      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const defaultStart = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
+      const defaultEnd = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
 
-      // Determine which revenue stats to use based on date range
-      let revenueStats;
-      if (startDate || endDate) {
-        // Use provided dates, defaulting to earliest/latest available
-        const effectiveStartDate = startDate || new Date(0); // Beginning of time
-        const effectiveEndDate = endDate || now; // Now
-        revenueStats = await storage.getRevenueStats(
-          organizationId,
-          effectiveStartDate,
-          effectiveEndDate
-        );
+      let startDate: Date;
+      let endDate: Date;
+
+      if (req.query.startDate) {
+        const dateStr = req.query.startDate as string;
+        const parsed = new Date(dateStr);
+        startDate = new Date(Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate()));
       } else {
-        // No date range - use all-time
-        revenueStats = await storage.getAllTimeRevenueStats(organizationId);
+        startDate = defaultStart;
       }
 
+      if (req.query.endDate) {
+        const dateStr = req.query.endDate as string;
+        const parsed = new Date(dateStr);
+        endDate = new Date(Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate()));
+      } else {
+        endDate = defaultEnd;
+      }
+
+      // Validate and swap if end is before start
+      if (endDate < startDate) {
+        [startDate, endDate] = [endDate, startDate];
+      }
+
+      // Determine if this is a year-to-date comparison (starts on Jan 1)
+      const isYearToDate = startDate.getUTCMonth() === 0 && startDate.getUTCDate() === 1;
+      
+      // Calculate previous equivalent period (calendar-aligned with safe month handling)
+      let prevStartDate: Date;
+      let prevEndDate: Date;
+      
+      if (isYearToDate) {
+        // Year-to-date: compare to same dates last year (subtract 12 months)
+        prevStartDate = subtractPeriod(startDate, 12);
+        prevEndDate = subtractPeriod(endDate, 12);
+      } else {
+        // Month-based: compare to same dates previous month (subtract 1 month)
+        prevStartDate = subtractPeriod(startDate, 1);
+        prevEndDate = subtractPeriod(endDate, 1);
+      }
+
+      // Fetch current period and previous period revenue
       const [
         totalStudentCount,
         activeStudentCount,
-        thisMonthRevenueStats,
-        lastMonthRevenueStats,
+        currentPeriodRevenue,
+        previousPeriodRevenue,
         attendanceRecords,
-        lastMonthAttendanceRecords,
+        previousAttendanceRecords,
         classes,
       ] = await Promise.all([
         storage.getStudentCount(organizationId),
         storage.getActiveStudentCount(organizationId),
-        storage.getRevenueStats(organizationId, thisMonth, now),
-        storage.getRevenueStats(organizationId, lastMonth, thisMonth),
-        storage.getAttendance(organizationId), // Get ALL attendance records
-        storage.getAttendance(organizationId, lastMonth, thisMonth),
+        storage.getRevenueStats(organizationId, startDate, endDate),
+        storage.getRevenueStats(organizationId, prevStartDate, prevEndDate),
+        storage.getAttendance(organizationId, startDate, endDate),
+        storage.getAttendance(organizationId, prevStartDate, prevEndDate),
         storage.getClasses(organizationId),
       ]);
 
@@ -61,22 +110,22 @@ export function registerDashboardRoutes(app: Express) {
             100
           : 0;
 
-      const lastMonthAttendanceRate =
-        lastMonthAttendanceRecords.length > 0
-          ? (lastMonthAttendanceRecords.filter((a) => a.status === "attended").length /
-              lastMonthAttendanceRecords.length) *
+      const previousAttendanceRate =
+        previousAttendanceRecords.length > 0
+          ? (previousAttendanceRecords.filter((a) => a.status === "attended").length /
+              previousAttendanceRecords.length) *
             100
           : 0;
 
       const revenueChange =
-        lastMonthRevenueStats.total > 0
-          ? ((thisMonthRevenueStats.total - lastMonthRevenueStats.total) /
-              lastMonthRevenueStats.total) *
+        previousPeriodRevenue.total > 0
+          ? ((currentPeriodRevenue.total - previousPeriodRevenue.total) /
+              previousPeriodRevenue.total) *
             100
           : 0;
 
       const attendanceChange =
-        lastMonthAttendanceRate > 0 ? attendanceRate - lastMonthAttendanceRate : 0;
+        previousAttendanceRate > 0 ? attendanceRate - previousAttendanceRate : 0;
 
       // Prevent browser caching to ensure fresh attendance data
       res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
@@ -86,7 +135,7 @@ export function registerDashboardRoutes(app: Express) {
       console.log(`[Dashboard Stats] Attendance records count: ${attendanceRecords.length}`);
 
       res.json({
-        totalRevenue: revenueStats.total,
+        totalRevenue: currentPeriodRevenue.total,
         revenueChange: revenueChange.toFixed(1),
         activeStudents: activeStudentCount,
         totalStudents: totalStudentCount,
