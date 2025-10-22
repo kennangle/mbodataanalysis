@@ -1,0 +1,1371 @@
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: No tab with id: 1223233909.
+ 📤 Sending <NmShowUnlock> message to native core <3598602806>
+ 📥 Received message <Nothing> from native core <3598602806>. Duration: 6.8ms
+ Performance diagnostic: "Ask the desktop app to show its lock screen" took 7ms to execute.
+ Received <LockStateChanged> from the native core
+ 📤 Sending <NmRequestAccounts> message to native core <88853578>
+ 📥 Received message <NmRequestAccounts> from native core <88853578>. Duration: 9ms
+ Hooray!; Unlocked account TX4AUFZGB5ADFM3PVUKUTAEEZQ with MUK; 🎉
+ We successfully unlocked 1 account(s) from a Desktop app with 1 unlocked and 0 locked account(s).
+ 📤 Sending <NmRequestDelegatedSession> message to native core <1769917155>
+ [LM] Started Desktop Lock Monitor at 1761159823439 (Connected to desktop app).
+ URL for frame 2914 tab 1223233469
+(anonymous) @ background.js:80
+ URL for frame 2914 tab 1223233469
+(anonymous) @ background.js:80
+ URL for frame 2914 tab 1223233469
+(anonymous) @ background.js:80
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ Received <ClientCreated> from the native core
+ 📥 Received message <NmRequestDelegatedSession> from native core <1769917155>. Duration: 1236.2ms
+ 📤 Sending <NmLockState> message to native core <4185888912>
+ 📥 Received message <NmLockState> from native core <4185888912>. Duration: 3.8ms
+ 📤 Sending <NmOfflineStatus> message to native core <1504110791>
+ 📥 Received message <NmOfflineStatus> from native core <1504110791>. Duration: 2.8ms
+ 📤 Sending <NmRequestAccounts> message to native core <2585658303>
+ 📥 Received message <NmRequestAccounts> from native core <2585658303>. Duration: 9.3ms
+ 📤 Sending <NmRequestDelegatedSession> message to native core <3672724159>
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ 📥 Received message <NmRequestDelegatedSession> from native core <3672724159>. Duration: 178.8ms
+ 📤 Sending <NmOfflineStatus> message to native core <400016242>
+ 📥 Received message <NmOfflineStatus> from native core <400016242>. Duration: 2.2ms
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ 📥 Sync started for account TX4AUFZGB5ADFM3PVUKUTAEEZQ - syncing all
+ Managed Apps - Feature flag is NOT enabled
+ ✅ Sync completed for account TX4AUFZGB5ADFM3PVUKUTAEEZQ - took 495ms
+ 📤 Sending <NmOfflineStatus> message to native core <4022489111>
+ 📥 Received message <NmOfflineStatus> from native core <4022489111>. Duration: 2.4ms
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ URL for frame 2914 tab 1223233469
+(anonymous) @ background.js:80
+ 📤 Sending <NmLockState> message to native core <2244680708>
+ 📥 Received message <NmLockState> from native core <2244680708>. Duration: 4.1ms
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ 📤 Sending <NmOfflineStatus> message to native core <1576418551>
+ 📥 Received message <NmOfflineStatus> from native core <1576418551>. Duration: 2.1ms
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ URL for frame 2919 tab 1223233469
+(anonymous) @ background.js:80
+ URL for frame 2919 tab 1223233469
+(anonymous) @ background.js:80
+ URL for frame 2919 tab 1223233469
+(anonymous) @ background.js:80
+ 📤 Sending <NmLockState> message to native core <2792237768>
+ 📥 Received message <NmLockState> from native core <2792237768>. Duration: 2ms
+ 📤 Sending <NmLockState> message to native core <2377510631>
+ 📥 Received message <NmLockState> from native core <2377510631>. Duration: 4.1ms
+ 📤 Sending <NmLockState> message to native core <2527822132>
+ 📥 Received message <NmLockState> from native core <2527822132>. Duration: 3.4ms
+ 📤 Sending <NmLockState> message to native core <1652138246>
+ 📥 Received message <NmLockState> from native core <1652138246>. Duration: 5ms
+ 📤 Sending <NmLockState> message to native core <1291304846>
+ 📥 Received message <NmLockState> from native core <1291304846>. Duration: 3.3ms
+ 📤 Sending <NmLockState> message to native core <172814359>
+ 📥 Received message <NmLockState> from native core <172814359>. Duration: 3.2ms
+ 📤 Sending <NmLockState> message to native core <251724938>
+ 📥 Received message <NmLockState> from native core <251724938>. Duration: 3.5ms
+ 📤 Sending <NmLockState> message to native core <3464190242>
+ 📥 Received message <NmLockState> from native core <3464190242>. Duration: 2.6ms
+ 📤 Sending <NmLockState> message to native core <2165833490>
+ 📥 Received message <NmLockState> from native core <2165833490>. Duration: 6ms
+ 📤 Sending <NmLockState> message to native core <3791258841>
+ 📥 Received message <NmLockState> from native core <3791258841>. Duration: 3.3ms
+ 📤 Sending <NmLockState> message to native core <1386076965>
+ 📥 Received message <NmLockState> from native core <1386076965>. Duration: 3.1ms
+ 📤 Sending <NmLockState> message to native core <3399566181>
+ 📥 Received message <NmLockState> from native core <3399566181>. Duration: 4.8ms
+ 📤 Sending <NmLockState> message to native core <581061665>
+ 📥 Received message <NmLockState> from native core <581061665>. Duration: 3.4ms
+ 📤 Sending <NmLockState> message to native core <1533971341>
+ 📥 Received message <NmLockState> from native core <1533971341>. Duration: 2.4ms
+ 📤 Sending <NmLockState> message to native core <1595540708>
+ 📥 Received message <NmLockState> from native core <1595540708>. Duration: 2.5ms
+ 📤 Sending <NmLockState> message to native core <3165892546>
+ 📥 Received message <NmLockState> from native core <3165892546>. Duration: 2.1ms
+ 📤 Sending <NmLockState> message to native core <2375798349>
+ 📥 Received message <NmLockState> from native core <2375798349>. Duration: 3.1ms
+ 📤 Sending <NmLockState> message to native core <2236613734>
+ 📥 Received message <NmLockState> from native core <2236613734>. Duration: 3.2ms
+ 📤 Sending <NmLockState> message to native core <1629727863>
+ 📥 Received message <NmLockState> from native core <1629727863>. Duration: 4.5ms
+ 📤 Sending <NmLockState> message to native core <682727870>
+ 📥 Received message <NmLockState> from native core <682727870>. Duration: 6.3ms
+ 📤 Sending <NmLockState> message to native core <234403161>
+ 📥 Received message <NmLockState> from native core <234403161>. Duration: 4.2ms
+ 📤 Sending <NmLockState> message to native core <433735204>
+ 📥 Received message <NmLockState> from native core <433735204>. Duration: 3.2ms
+ 📤 Sending <NmLockState> message to native core <3750701116>
+ 📥 Received message <NmLockState> from native core <3750701116>. Duration: 2.8ms
+ 📤 Sending <NmLockState> message to native core <2197907999>
+ 📥 Received message <NmLockState> from native core <2197907999>. Duration: 3ms
+ 📤 Sending <NmLockState> message to native core <2759997267>
+ 📥 Received message <NmLockState> from native core <2759997267>. Duration: 4.6ms
+ 📤 Sending <NmLockState> message to native core <730225501>
+ 📥 Received message <NmLockState> from native core <730225501>. Duration: 5.1ms
+ 📤 Sending <NmLockState> message to native core <2174275398>
+ 📥 Received message <NmLockState> from native core <2174275398>. Duration: 5.2ms
+ 📤 Sending <NmLockState> message to native core <3854612808>
+ 📥 Received message <NmLockState> from native core <3854612808>. Duration: 3.6ms
+ 📤 Sending <NmLockState> message to native core <3364892277>
+ 📥 Received message <NmLockState> from native core <3364892277>. Duration: 1.7ms
+ 📤 Sending <NmLockState> message to native core <1851490393>
+ 📥 Received message <NmLockState> from native core <1851490393>. Duration: 5.5ms
+ 📤 Sending <NmLockState> message to native core <13708481>
+ 📥 Received message <NmLockState> from native core <13708481>. Duration: 1.9ms
+ DeviceTrust: access denied: [ missing backoffice permission, missing admin permission ] - aborting
+(anonymous) @ background.js:80
+ Unable to inject for a URL (redacted)
+(anonymous) @ background.js:80
+ DeviceTrust: access denied: [ missing backoffice permission, missing admin permission ] - aborting
+(anonymous) @ background.js:80
+ DeviceTrust: access denied: [ missing backoffice permission, missing admin permission ] - aborting
+(anonymous) @ background.js:80
+ DeviceTrust: access denied: [ missing backoffice permission, missing admin permission ] - aborting
+(anonymous) @ background.js:80
+ DeviceTrust: access denied: [ missing backoffice permission, missing admin permission ] - aborting
+(anonymous) @ background.js:80
+ 📤 Sending <NmLockState> message to native core <2460478448>
+ 📥 Received message <NmLockState> from native core <2460478448>. Duration: 1.8ms
+ 📤 Sending <NmLockState> message to native core <2232255104>
+ 📥 Received message <NmLockState> from native core <2232255104>. Duration: 3.2ms
+ 📤 Sending <NmLockState> message to native core <2926755006>
+ 📥 Received message <NmLockState> from native core <2926755006>. Duration: 3.8ms
+ 📤 Sending <NmLockState> message to native core <2536656928>
+ 📥 Received message <NmLockState> from native core <2536656928>. Duration: 3.4ms
+ 📤 Sending <NmLockState> message to native core <2243350469>
+ 📥 Received message <NmLockState> from native core <2243350469>. Duration: 4.4ms
+ 📤 Sending <NmLockState> message to native core <2488548067>
+ 📥 Received message <NmLockState> from native core <2488548067>. Duration: 4.8ms
+ 📤 Sending <NmLockState> message to native core <3438492004>
+ 📥 Received message <NmLockState> from native core <3438492004>. Duration: 4ms
+ 📤 Sending <NmLockState> message to native core <2569767060>
+ 📥 Received message <NmLockState> from native core <2569767060>. Duration: 3.3ms
+ 📤 Sending <NmLockState> message to native core <1856484702>
+ 📥 Received message <NmLockState> from native core <1856484702>. Duration: 7ms
+ 📤 Sending <NmLockState> message to native core <162681135>
+ 📥 Received message <NmLockState> from native core <162681135>. Duration: 1.9ms
+ 📤 Sending <NmLockState> message to native core <2040382687>
+ 📥 Received message <NmLockState> from native core <2040382687>. Duration: 3.6ms
+ 📤 Sending <NmLockState> message to native core <3603535525>
+ 📥 Received message <NmLockState> from native core <3603535525>. Duration: 3.7ms
+ 📤 Sending <NmLockState> message to native core <161690486>
+ 📥 Received message <NmLockState> from native core <161690486>. Duration: 3.9ms
+ 📤 Sending <NmLockState> message to native core <2769234699>
+ 📥 Received message <NmLockState> from native core <2769234699>. Duration: 4ms
+ 📤 Sending <NmLockState> message to native core <4096289794>
+ 📥 Received message <NmLockState> from native core <4096289794>. Duration: 3.9ms
+ 📤 Sending <NmLockState> message to native core <1600139547>
+ 📥 Received message <NmLockState> from native core <1600139547>. Duration: 4.7ms
+ 📤 Sending <NmLockState> message to native core <3673762107>
+ 📥 Received message <NmLockState> from native core <3673762107>. Duration: 3.9ms
+ 📤 Sending <NmLockState> message to native core <3853966023>
+ 📥 Received message <NmLockState> from native core <3853966023>. Duration: 2.7ms
+ 📤 Sending <NmLockState> message to native core <1056517322>
+ 📥 Received message <NmLockState> from native core <1056517322>. Duration: 5ms
+ 📤 Sending <NmLockState> message to native core <4156708957>
+ 📥 Received message <NmLockState> from native core <4156708957>. Duration: 2.6ms
+ 📤 Sending <NmLockState> message to native core <2039352924>
+ 📥 Received message <NmLockState> from native core <2039352924>. Duration: 4.5ms
+ 📤 Sending <NmLockState> message to native core <414115277>
+ 📥 Received message <NmLockState> from native core <414115277>. Duration: 2.9ms
+ 📤 Sending <NmLockState> message to native core <595794478>
+ 📥 Received message <NmLockState> from native core <595794478>. Duration: 5.4ms
+ Received <LockStateChanged> from the native core
+ Received <LockStateChanged> from the native core
+ [OP] Locked at Wed Oct 22 2025 12:14:53 GMT-0700 (Pacific Daylight Time)
+ [OP] Locked at Wed Oct 22 2025 12:14:53 GMT-0700 (Pacific Daylight Time)
+ [LM] Lock monitor alarm cleared
+ [LM] Stopped.
+ [LM] Lock monitor stopped, without clearing alarm. 🚨
+(anonymous) @ background.js:80
+ [LM] Stopped.
+ Received <LockStateChanged> from the native core
+ [OP] Locked at Wed Oct 22 2025 12:15:02 GMT-0700 (Pacific Daylight Time)
+ Received <LockStateChanged> from the native core
+ [OP] Locked at Wed Oct 22 2025 12:15:02 GMT-0700 (Pacific Daylight Time)
+ Received <LockStateChanged> from the native core
+ [OP] Locked at Wed Oct 22 2025 12:15:22 GMT-0700 (Pacific Daylight Time)
+ Received <LockStateChanged> from the native core
+ [OP] Locked at Wed Oct 22 2025 12:15:26 GMT-0700 (Pacific Daylight Time)
+ Failed to refresh keysets <redacted>
+(anonymous) @ background.js:80
+ Failed to refresh keysets <redacted>
+(anonymous) @ background.js:80
+ Failed to refresh keysets <redacted>
+(anonymous) @ background.js:80
+ Failed to refresh keysets <redacted>
+(anonymous) @ background.js:80
+ Failed to refresh keysets <redacted>
+(anonymous) @ background.js:80
+ Failed to refresh keysets <redacted>
+(anonymous) @ background.js:80
+ Failed to refresh keysets <redacted>
+(anonymous) @ background.js:80
+ Received <LockStateChanged> from the native core
+ [OP] Locked at Wed Oct 22 2025 14:23:23 GMT-0700 (Pacific Daylight Time)
+ Received <LockStateChanged> from the native core
+ [OP] Locked at Wed Oct 22 2025 14:23:37 GMT-0700 (Pacific Daylight Time)
+ Received <LockStateChanged> from the native core
+ [OP] Locked at Wed Oct 22 2025 14:23:37 GMT-0700 (Pacific Daylight Time)
+ The item cache has not been initialized yet.
+(anonymous) @ background.js:80
+ The item cache has not been initialized yet.
+(anonymous) @ background.js:80
+ URL for frame 2957 tab 1223233469
+(anonymous) @ background.js:80
+ URL for frame 2957 tab 1223233469
+(anonymous) @ background.js:80
+ 📤 Sending <NmShowUnlock> message to native core <1908778059>
+ 📥 Received message <Nothing> from native core <1908778059>. Duration: 7ms
+ Performance diagnostic: "Ask the desktop app to show its lock screen" took 7.5ms to execute.
+ Received <LockStateChanged> from the native core
+ 📤 Sending <NmRequestAccounts> message to native core <2822324949>
+ 📥 Received message <NmRequestAccounts> from native core <2822324949>. Duration: 6.5ms
+ Hooray!; Unlocked account TX4AUFZGB5ADFM3PVUKUTAEEZQ with MUK; 🎉
+ We successfully unlocked 1 account(s) from a Desktop app with 1 unlocked and 0 locked account(s).
+ 📤 Sending <NmRequestDelegatedSession> message to native core <1604839868>
+ [LM] Started Desktop Lock Monitor at 1761168607073 (Connected to desktop app).
+ URL for frame 2957 tab 1223233469
+(anonymous) @ background.js:80
+ URL for frame 2957 tab 1223233469
+(anonymous) @ background.js:80
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ URL for frame 2957 tab 1223233469
+(anonymous) @ background.js:80
+ Received <ClientCreated> from the native core
+ 📥 Received message <NmRequestDelegatedSession> from native core <1604839868>. Duration: 1286.9ms
+ 📤 Sending <NmLockState> message to native core <3764598096>
+ 📥 Received message <NmLockState> from native core <3764598096>. Duration: 4.6ms
+ 📤 Sending <NmOfflineStatus> message to native core <986776216>
+ 📥 Received message <NmOfflineStatus> from native core <986776216>. Duration: 2.3ms
+ 📤 Sending <NmRequestAccounts> message to native core <1398572674>
+ 📥 Received message <NmRequestAccounts> from native core <1398572674>. Duration: 3.1ms
+ 📤 Sending <NmRequestDelegatedSession> message to native core <1489933806>
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ 📥 Received message <NmRequestDelegatedSession> from native core <1489933806>. Duration: 163.5ms
+ 📤 Sending <NmOfflineStatus> message to native core <3458860356>
+ 📥 Received message <NmOfflineStatus> from native core <3458860356>. Duration: 2.1ms
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ 📥 Sync started for account TX4AUFZGB5ADFM3PVUKUTAEEZQ - syncing all
+ Managed Apps - Feature flag is NOT enabled
+ ✅ Sync completed for account TX4AUFZGB5ADFM3PVUKUTAEEZQ - took 538ms
+ 📤 Sending <NmOfflineStatus> message to native core <2685734561>
+ 📥 Received message <NmOfflineStatus> from native core <2685734561>. Duration: 1.6ms
+ 📤 Sending <NmLockState> message to native core <2484813726>
+ 📥 Received message <NmLockState> from native core <2484813726>. Duration: 7ms
+ 📤 Sending <NmLockState> message to native core <2397810699>
+ 📥 Received message <NmLockState> from native core <2397810699>. Duration: 3.5ms
+ 📤 Sending <NmLockState> message to native core <2869412949>
+ 📥 Received message <NmLockState> from native core <2869412949>. Duration: 5.3ms
+ Received <LockStateChanged> from the native core
+ Received <LockStateChanged> from the native core
+ [OP] Locked at Wed Oct 22 2025 14:30:52 GMT-0700 (Pacific Daylight Time)
+ [OP] Locked at Wed Oct 22 2025 14:30:52 GMT-0700 (Pacific Daylight Time)
+ [LM] Lock monitor alarm cleared
+ [LM] Stopped.
+ [LM] Lock monitor stopped, without clearing alarm. 🚨
+(anonymous) @ background.js:80
+ [LM] Stopped.
+ DeviceTrust: access denied: [ missing backoffice permission, missing admin permission ] - aborting
+(anonymous) @ background.js:80
+ Unable to inject for a URL (redacted)
+(anonymous) @ background.js:80
+ DeviceTrust: access denied: [ missing backoffice permission, missing admin permission ] - aborting
+(anonymous) @ background.js:80
+ DeviceTrust: access denied: [ missing backoffice permission, missing admin permission ] - aborting
+(anonymous) @ background.js:80
+ DeviceTrust: access denied: [ missing backoffice permission, missing admin permission ] - aborting
+(anonymous) @ background.js:80
+ The item cache has not been initialized yet.
+(anonymous) @ background.js:80
+ The item cache has not been initialized yet.
+(anonymous) @ background.js:80
+ URL for frame 2965 tab 1223233469
+(anonymous) @ background.js:80
+ URL for frame 2965 tab 1223233469
+(anonymous) @ background.js:80
+ 📤 Sending <NmShowUnlock> message to native core <3721555577>
+ 📥 Received message <Nothing> from native core <3721555577>. Duration: 4.2ms
+ Performance diagnostic: "Ask the desktop app to show its lock screen" took 4.5ms to execute.
+ Received <LockStateChanged> from the native core
+ 📤 Sending <NmRequestAccounts> message to native core <1870067595>
+ 📥 Received message <NmRequestAccounts> from native core <1870067595>. Duration: 2.2ms
+ Hooray!; Unlocked account TX4AUFZGB5ADFM3PVUKUTAEEZQ with MUK; 🎉
+ We successfully unlocked 1 account(s) from a Desktop app with 1 unlocked and 0 locked account(s).
+ 📤 Sending <NmRequestDelegatedSession> message to native core <2160635398>
+ [LM] Started Desktop Lock Monitor at 1761168832438 (Connected to desktop app).
+ URL for frame 2965 tab 1223233469
+(anonymous) @ background.js:80
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ URL for frame 2965 tab 1223233469
+(anonymous) @ background.js:80
+ URL for frame 2965 tab 1223233469
+(anonymous) @ background.js:80
+ Received <ClientCreated> from the native core
+ 📥 Received message <NmRequestDelegatedSession> from native core <2160635398>. Duration: 1239.2ms
+ 📤 Sending <NmLockState> message to native core <3245069896>
+ 📥 Received message <NmLockState> from native core <3245069896>. Duration: 5.9ms
+ 📤 Sending <NmOfflineStatus> message to native core <3861405936>
+ 📥 Received message <NmOfflineStatus> from native core <3861405936>. Duration: 4.3ms
+ 📤 Sending <NmRequestAccounts> message to native core <66122981>
+ 📥 Received message <NmRequestAccounts> from native core <66122981>. Duration: 9.1ms
+ 📤 Sending <NmRequestDelegatedSession> message to native core <1451421690>
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ 📥 Received message <NmRequestDelegatedSession> from native core <1451421690>. Duration: 176.1ms
+ 📤 Sending <NmOfflineStatus> message to native core <2725587779>
+ 📥 Received message <NmOfflineStatus> from native core <2725587779>. Duration: 5.2ms
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ 📥 Sync started for account TX4AUFZGB5ADFM3PVUKUTAEEZQ - syncing all
+ Managed Apps - Feature flag is NOT enabled
+ ✅ Sync completed for account TX4AUFZGB5ADFM3PVUKUTAEEZQ - took 551ms
+ 📤 Sending <NmOfflineStatus> message to native core <124577528>
+ 📥 Received message <NmOfflineStatus> from native core <124577528>. Duration: 3.9ms
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ 📤 Sending <NmLockState> message to native core <3803014229>
+ 📥 Received message <NmLockState> from native core <3803014229>. Duration: 3.3ms
+ 📤 Sending <NmLockState> message to native core <3439625197>
+ 📥 Received message <NmLockState> from native core <3439625197>. Duration: 5ms
+ 📤 Sending <NmLockState> message to native core <153135300>
+ 📥 Received message <NmLockState> from native core <153135300>. Duration: 4.3ms
+ 📤 Sending <NmLockState> message to native core <2747931522>
+ 📥 Received message <NmLockState> from native core <2747931522>. Duration: 4.7ms
+ 📤 Sending <NmLockState> message to native core <4154795243>
+ 📥 Received message <NmLockState> from native core <4154795243>. Duration: 4.4ms
+ 📤 Sending <NmLockState> message to native core <1342561812>
+ 📥 Received message <NmLockState> from native core <1342561812>. Duration: 3.7ms
+ 📤 Sending <NmLockState> message to native core <3792736677>
+ 📥 Received message <NmLockState> from native core <3792736677>. Duration: 5.6ms
+ 📤 Sending <NmLockState> message to native core <205244520>
+ 📥 Received message <NmLockState> from native core <205244520>. Duration: 3.2ms
+ 📤 Sending <NmLockState> message to native core <322609612>
+ 📥 Received message <NmLockState> from native core <322609612>. Duration: 4.3ms
+ 📤 Sending <NmLockState> message to native core <1844360028>
+ 📥 Received message <NmLockState> from native core <1844360028>. Duration: 4.8ms
+ 📤 Sending <NmLockState> message to native core <3641029534>
+ 📥 Received message <NmLockState> from native core <3641029534>. Duration: 3.9ms
+ 📤 Sending <NmLockState> message to native core <1837575269>
+ 📥 Received message <NmLockState> from native core <1837575269>. Duration: 4.1ms
+ 📤 Sending <NmLockState> message to native core <4131124783>
+ 📥 Received message <NmLockState> from native core <4131124783>. Duration: 4.6ms
+ 📤 Sending <NmLockState> message to native core <2627683805>
+ 📥 Received message <NmLockState> from native core <2627683805>. Duration: 2.8ms
+ 📤 Sending <NmLockState> message to native core <3662638879>
+ 📥 Received message <NmLockState> from native core <3662638879>. Duration: 4.9ms
+ 📤 Sending <NmLockState> message to native core <2264252354>
+ 📥 Received message <NmLockState> from native core <2264252354>. Duration: 3.8ms
+ 📤 Sending <NmLockState> message to native core <3455743459>
+ 📥 Received message <NmLockState> from native core <3455743459>. Duration: 4ms
+ 📤 Sending <NmLockState> message to native core <2471359043>
+ 📥 Received message <NmLockState> from native core <2471359043>. Duration: 4.1ms
+ 📤 Sending <NmLockState> message to native core <1265428264>
+ 📥 Received message <NmLockState> from native core <1265428264>. Duration: 4.4ms
+ 📤 Sending <NmLockState> message to native core <1657935586>
+ 📥 Received message <NmLockState> from native core <1657935586>. Duration: 2.7ms
+ 📤 Sending <NmLockState> message to native core <4272933879>
+ 📥 Received message <NmLockState> from native core <4272933879>. Duration: 3ms
+ 📤 Sending <NmLockState> message to native core <3873447425>
+ 📥 Received message <NmLockState> from native core <3873447425>. Duration: 4.2ms
+ 📤 Sending <NmLockState> message to native core <3058617901>
+ 📥 Received message <NmLockState> from native core <3058617901>. Duration: 5.5ms
+ 📤 Sending <NmLockState> message to native core <3726050714>
+ 📥 Received message <NmLockState> from native core <3726050714>. Duration: 4ms
+ 📤 Sending <NmLockState> message to native core <168965142>
+ 📥 Received message <NmLockState> from native core <168965142>. Duration: 4.2ms
+ 📤 Sending <NmLockState> message to native core <1888415670>
+ 📥 Received message <NmLockState> from native core <1888415670>. Duration: 4.2ms
+ 📤 Sending <NmLockState> message to native core <206578730>
+ 📥 Received message <NmLockState> from native core <206578730>. Duration: 3.8ms
+ 📤 Sending <NmLockState> message to native core <3260250286>
+ 📥 Received message <NmLockState> from native core <3260250286>. Duration: 2.3ms
+ 📤 Sending <NmLockState> message to native core <2308294384>
+ 📥 Received message <NmLockState> from native core <2308294384>. Duration: 4.5ms
+ 📤 Sending <NmLockState> message to native core <4138402821>
+ 📥 Received message <NmLockState> from native core <4138402821>. Duration: 5ms
+ 📤 Sending <NmLockState> message to native core <2803666859>
+ 📥 Received message <NmLockState> from native core <2803666859>. Duration: 4.7ms
+ 📤 Sending <NmLockState> message to native core <3386064437>
+ 📥 Received message <NmLockState> from native core <3386064437>. Duration: 3.6ms
+ 📤 Sending <NmLockState> message to native core <854512016>
+ 📥 Received message <NmLockState> from native core <854512016>. Duration: 4.8ms
+ 📤 Sending <NmLockState> message to native core <1031071944>
+ 📥 Received message <NmLockState> from native core <1031071944>. Duration: 4.7ms
+ 📤 Sending <NmLockState> message to native core <3861329243>
+ 📥 Received message <NmLockState> from native core <3861329243>. Duration: 3.5ms
+ 📤 Sending <NmLockState> message to native core <268064495>
+ 📥 Received message <NmLockState> from native core <268064495>. Duration: 3.7ms
+ 📤 Sending <NmLockState> message to native core <4127120417>
+ 📥 Received message <NmLockState> from native core <4127120417>. Duration: 4.2ms
+ 📤 Sending <NmLockState> message to native core <320750077>
+ 📥 Received message <NmLockState> from native core <320750077>. Duration: 4.6ms
+ 📤 Sending <NmLockState> message to native core <1501304560>
+ 📥 Received message <NmLockState> from native core <1501304560>. Duration: 2.2ms
+ 📤 Sending <NmLockState> message to native core <2254039005>
+ 📥 Received message <NmLockState> from native core <2254039005>. Duration: 3.1ms
+ 📤 Sending <NmLockState> message to native core <4129807048>
+ 📥 Received message <NmLockState> from native core <4129807048>. Duration: 3ms
+ 📤 Sending <NmLockState> message to native core <3630279428>
+ 📥 Received message <NmLockState> from native core <3630279428>. Duration: 3.3ms
+ 📤 Sending <NmLockState> message to native core <898725364>
+ 📥 Received message <NmLockState> from native core <898725364>. Duration: 4.7ms
+ 📤 Sending <NmLockState> message to native core <3691293559>
+ 📥 Received message <NmLockState> from native core <3691293559>. Duration: 5.2ms
+ 📤 Sending <NmLockState> message to native core <1677547750>
+ 📥 Received message <NmLockState> from native core <1677547750>. Duration: 3.9ms
+ 📤 Sending <NmLockState> message to native core <34609218>
+ 📥 Received message <NmLockState> from native core <34609218>. Duration: 8.4ms
+ 📤 Sending <NmLockState> message to native core <2951185442>
+ 📥 Received message <NmLockState> from native core <2951185442>. Duration: 2.2ms
+ 📤 Sending <NmLockState> message to native core <3065630590>
+ 📥 Received message <NmLockState> from native core <3065630590>. Duration: 3.9ms
+ 📤 Sending <NmLockState> message to native core <2825180108>
+ 📥 Received message <NmLockState> from native core <2825180108>. Duration: 4.8ms
+ 📤 Sending <NmLockState> message to native core <526167721>
+ 📥 Received message <NmLockState> from native core <526167721>. Duration: 6.7ms
+ 📤 Sending <NmLockState> message to native core <1027746265>
+ 📥 Received message <NmLockState> from native core <1027746265>. Duration: 3.5ms
+ 📤 Sending <NmLockState> message to native core <2009534322>
+ 📥 Received message <NmLockState> from native core <2009534322>. Duration: 4.8ms
+ 📤 Sending <NmLockState> message to native core <1616360716>
+ 📥 Received message <NmLockState> from native core <1616360716>. Duration: 4.9ms
+ 📤 Sending <NmLockState> message to native core <3804107777>
+ 📥 Received message <NmLockState> from native core <3804107777>. Duration: 1.8ms
+ DeviceTrust: access denied: [ missing backoffice permission, missing admin permission ] - aborting
+(anonymous) @ background.js:80
+ Unable to find any fillable passkeys
+(anonymous) @ background.js:80
+ Failed to _handleGetCredential: rj
+(anonymous) @ background.js:80
+ Could not complete _handleGetCredential while unlocked: missing-item
+(anonymous) @ background.js:80
+ 📤 Sending <NmLockState> message to native core <666904884>
+ 📥 Received message <NmLockState> from native core <666904884>. Duration: 2.9ms
+ 📤 Sending <NmLockState> message to native core <85272447>
+ 📥 Received message <NmLockState> from native core <85272447>. Duration: 2ms
+ DeviceTrust: access denied: [ missing backoffice permission, missing admin permission ] - aborting
+(anonymous) @ background.js:80
+ 📤 Sending <NmLockState> message to native core <3216450905>
+ 📥 Received message <NmLockState> from native core <3216450905>. Duration: 5.1ms
+ 📤 Sending <NmLockState> message to native core <1014096576>
+ 📥 Received message <NmLockState> from native core <1014096576>. Duration: 6.2ms
+ 📤 Sending <NmLockState> message to native core <636932587>
+ 📥 Received message <NmLockState> from native core <636932587>. Duration: 4.3ms
+ 📤 Sending <NmLockState> message to native core <1258118968>
+ 📥 Received message <NmLockState> from native core <1258118968>. Duration: 4.8ms
+ 📤 Sending <NmLockState> message to native core <2634816177>
+ 📥 Received message <NmLockState> from native core <2634816177>. Duration: 4.3ms
+ 📤 Sending <NmLockState> message to native core <1103970327>
+ 📥 Received message <NmLockState> from native core <1103970327>. Duration: 4ms
+ 📤 Sending <NmLockState> message to native core <1696944400>
+ 📥 Received message <NmLockState> from native core <1696944400>. Duration: 4ms
+ 📤 Sending <NmLockState> message to native core <3210669807>
+ 📥 Received message <NmLockState> from native core <3210669807>. Duration: 5ms
+ 📤 Sending <NmLockState> message to native core <1758068122>
+ 📥 Received message <NmLockState> from native core <1758068122>. Duration: 3.1ms
+ 📤 Sending <NmLockState> message to native core <4063571045>
+ 📥 Received message <NmLockState> from native core <4063571045>. Duration: 4.8ms
+ 📤 Sending <NmLockState> message to native core <921044631>
+ 📥 Received message <NmLockState> from native core <921044631>. Duration: 5.9ms
+ 📤 Sending <NmLockState> message to native core <3059003674>
+ 📥 Received message <NmLockState> from native core <3059003674>. Duration: 4.8ms
+ 📤 Sending <NmLockState> message to native core <1735419407>
+ 📥 Received message <NmLockState> from native core <1735419407>. Duration: 6.6ms
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ 📤 Sending <NmOfflineStatus> message to native core <753998910>
+ 📥 Received message <NmOfflineStatus> from native core <753998910>. Duration: 3.7ms
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ URL for frame 2976 tab 1223233469
+(anonymous) @ background.js:80
+ URL for frame 2976 tab 1223233469
+(anonymous) @ background.js:80
+ URL for frame 2976 tab 1223233469
+(anonymous) @ background.js:80
+ 📤 Sending <NmLockState> message to native core <4013618222>
+ 📥 Received message <NmLockState> from native core <4013618222>. Duration: 3.1ms
+ 📤 Sending <NmLockState> message to native core <1582991651>
+ 📥 Received message <NmLockState> from native core <1582991651>. Duration: 2.8ms
+ 📤 Sending <NmLockState> message to native core <3545386240>
+ 📥 Received message <NmLockState> from native core <3545386240>. Duration: 4.9ms
+ 📤 Sending <NmLockState> message to native core <222078946>
+ 📥 Received message <NmLockState> from native core <222078946>. Duration: 4.6ms
+ 📤 Sending <NmLockState> message to native core <2145887971>
+ 📥 Received message <NmLockState> from native core <2145887971>. Duration: 4.4ms
+ 📤 Sending <NmLockState> message to native core <1590957252>
+ 📥 Received message <NmLockState> from native core <1590957252>. Duration: 2.8ms
+ 📤 Sending <NmLockState> message to native core <185181254>
+ 📥 Received message <NmLockState> from native core <185181254>. Duration: 4.7ms
+ 📤 Sending <NmLockState> message to native core <4201653581>
+ 📥 Received message <NmLockState> from native core <4201653581>. Duration: 4.2ms
+ 📤 Sending <NmLockState> message to native core <2087231463>
+ 📥 Received message <NmLockState> from native core <2087231463>. Duration: 5.9ms
+ 📤 Sending <NmLockState> message to native core <1650049380>
+ 📥 Received message <NmLockState> from native core <1650049380>. Duration: 3ms
+ 📤 Sending <NmLockState> message to native core <3715839422>
+ 📥 Received message <NmLockState> from native core <3715839422>. Duration: 4.1ms
+ 📤 Sending <NmLockState> message to native core <1138032646>
+ 📥 Received message <NmLockState> from native core <1138032646>. Duration: 5.1ms
+ 📤 Sending <NmLockState> message to native core <771188268>
+ 📥 Received message <NmLockState> from native core <771188268>. Duration: 5.2ms
+ 📤 Sending <NmLockState> message to native core <2577024230>
+ 📥 Received message <NmLockState> from native core <2577024230>. Duration: 4.5ms
+ 📤 Sending <NmLockState> message to native core <1307215173>
+ 📥 Received message <NmLockState> from native core <1307215173>. Duration: 4.7ms
+ 📤 Sending <NmLockState> message to native core <1322719580>
+ 📥 Received message <NmLockState> from native core <1322719580>. Duration: 4.2ms
+ 📤 Sending <NmLockState> message to native core <145988693>
+ 📥 Received message <NmLockState> from native core <145988693>. Duration: 2.7ms
+ 📤 Sending <NmLockState> message to native core <3883196228>
+ 📥 Received message <NmLockState> from native core <3883196228>. Duration: 4.7ms
+ 📤 Sending <NmLockState> message to native core <359105131>
+ 📥 Received message <NmLockState> from native core <359105131>. Duration: 3.1ms
+ 📤 Sending <NmLockState> message to native core <1058816193>
+ 📥 Received message <NmLockState> from native core <1058816193>. Duration: 4.4ms
+ 📤 Sending <NmLockState> message to native core <39249763>
+ 📥 Received message <NmLockState> from native core <39249763>. Duration: 6.3ms
+ 📤 Sending <NmLockState> message to native core <447868036>
+ 📥 Received message <NmLockState> from native core <447868036>. Duration: 4.1ms
+ 📤 Sending <NmLockState> message to native core <1876422463>
+ 📥 Received message <NmLockState> from native core <1876422463>. Duration: 4.6ms
+ 📤 Sending <NmLockState> message to native core <1928777026>
+ 📥 Received message <NmLockState> from native core <1928777026>. Duration: 2ms
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ 📤 Sending <NmOfflineStatus> message to native core <622842167>
+ 📥 Received message <NmOfflineStatus> from native core <622842167>. Duration: 3.3ms
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ URL for frame 2990 tab 1223233469
+(anonymous) @ background.js:80
+ URL for frame 2990 tab 1223233469
+(anonymous) @ background.js:80
+ URL for frame 2990 tab 1223233469
+(anonymous) @ background.js:80
+ 📤 Sending <NmLockState> message to native core <2107787504>
+ 📥 Received message <NmLockState> from native core <2107787504>. Duration: 3ms
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ 📤 Sending <NmOfflineStatus> message to native core <3976491710>
+ 📥 Received message <NmOfflineStatus> from native core <3976491710>. Duration: 2.3ms
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ 📤 Sending <NmLockState> message to native core <3862423882>
+ 📥 Received message <NmLockState> from native core <3862423882>. Duration: 2ms
+ 📤 Sending <NmLockState> message to native core <1684717260>
+ 📥 Received message <NmLockState> from native core <1684717260>. Duration: 2.1ms
+ 📤 Sending <NmLockState> message to native core <3991003984>
+ 📥 Received message <NmLockState> from native core <3991003984>. Duration: 2.6ms
+ 📤 Sending <NmLockState> message to native core <973283747>
+ 📥 Received message <NmLockState> from native core <973283747>. Duration: 3.9ms
+ 📤 Sending <NmLockState> message to native core <375602093>
+ 📥 Received message <NmLockState> from native core <375602093>. Duration: 4.4ms
+ 📤 Sending <NmLockState> message to native core <3998825108>
+ 📥 Received message <NmLockState> from native core <3998825108>. Duration: 2.6ms
+ 📤 Sending <NmLockState> message to native core <3368404432>
+ 📥 Received message <NmLockState> from native core <3368404432>. Duration: 3.1ms
+ 📤 Sending <NmLockState> message to native core <620771167>
+ 📥 Received message <NmLockState> from native core <620771167>. Duration: 4.1ms
+ 📤 Sending <NmLockState> message to native core <3814316333>
+ 📥 Received message <NmLockState> from native core <3814316333>. Duration: 4.9ms
+ 📤 Sending <NmLockState> message to native core <2566957496>
+ 📥 Received message <NmLockState> from native core <2566957496>. Duration: 5.9ms
+ 📤 Sending <NmLockState> message to native core <2592386725>
+ 📥 Received message <NmLockState> from native core <2592386725>. Duration: 3.9ms
+ 📤 Sending <NmLockState> message to native core <4014240924>
+ 📥 Received message <NmLockState> from native core <4014240924>. Duration: 3.6ms
+ 📤 Sending <NmLockState> message to native core <472933175>
+ 📥 Received message <NmLockState> from native core <472933175>. Duration: 5.9ms
+ 📤 Sending <NmLockState> message to native core <2914868143>
+ 📥 Received message <NmLockState> from native core <2914868143>. Duration: 5.2ms
+ 📤 Sending <NmLockState> message to native core <1426726231>
+ 📥 Received message <NmLockState> from native core <1426726231>. Duration: 3ms
+ 📤 Sending <NmLockState> message to native core <2580131377>
+ 📥 Received message <NmLockState> from native core <2580131377>. Duration: 5.5ms
+ 📤 Sending <NmLockState> message to native core <2636212626>
+ 📥 Received message <NmLockState> from native core <2636212626>. Duration: 4ms
+ 📤 Sending <NmLockState> message to native core <1795201874>
+ 📥 Received message <NmLockState> from native core <1795201874>. Duration: 5.6ms
+ 📤 Sending <NmLockState> message to native core <2870210863>
+ 📥 Received message <NmLockState> from native core <2870210863>. Duration: 4.3ms
+ 📤 Sending <NmLockState> message to native core <318446190>
+ 📥 Received message <NmLockState> from native core <318446190>. Duration: 8.8ms
+ 📤 Sending <NmLockState> message to native core <4011263277>
+ 📥 Received message <NmLockState> from native core <4011263277>. Duration: 4ms
+ 📤 Sending <NmLockState> message to native core <3475267008>
+ 📥 Received message <NmLockState> from native core <3475267008>. Duration: 4.3ms
+ DeviceTrust: access denied: [ missing backoffice permission, missing admin permission ] - aborting
+(anonymous) @ background.js:80
+ 📤 Sending <NmLockState> message to native core <2206826724>
+ 📥 Received message <NmLockState> from native core <2206826724>. Duration: 4ms
+ 📤 Sending <NmLockState> message to native core <513736171>
+ 📥 Received message <NmLockState> from native core <513736171>. Duration: 3.6ms
+ 📤 Sending <NmLockState> message to native core <891346924>
+ 📥 Received message <NmLockState> from native core <891346924>. Duration: 4.1ms
+ DeviceTrust: access denied: [ missing backoffice permission, missing admin permission ] - aborting
+(anonymous) @ background.js:80
+ 📤 Sending <NmLockState> message to native core <1096887828>
+ 📥 Received message <NmLockState> from native core <1096887828>. Duration: 4.9ms
+ 📤 Sending <NmLockState> message to native core <1135583784>
+ 📥 Received message <NmLockState> from native core <1135583784>. Duration: 4.1ms
+ 📤 Sending <NmLockState> message to native core <880193716>
+ 📥 Received message <NmLockState> from native core <880193716>. Duration: 7ms
+ 📤 Sending <NmLockState> message to native core <1093237849>
+ 📥 Received message <NmLockState> from native core <1093237849>. Duration: 9.4ms
+ 📤 Sending <NmLockState> message to native core <3075456123>
+ 📥 Received message <NmLockState> from native core <3075456123>. Duration: 7.3ms
+ 📤 Sending <NmLockState> message to native core <472612599>
+ 📥 Received message <NmLockState> from native core <472612599>. Duration: 3.5ms
+ 📤 Sending <NmLockState> message to native core <1284852226>
+ 📥 Received message <NmLockState> from native core <1284852226>. Duration: 3.3ms
+ 📤 Sending <NmLockState> message to native core <2505369683>
+ 📥 Received message <NmLockState> from native core <2505369683>. Duration: 9ms
+ 📤 Sending <NmLockState> message to native core <299263162>
+ 📥 Received message <NmLockState> from native core <299263162>. Duration: 4.4ms
+ 📤 Sending <NmLockState> message to native core <24464412>
+ 📥 Received message <NmLockState> from native core <24464412>. Duration: 4.9ms
+ 📤 Sending <NmLockState> message to native core <2426207122>
+ 📥 Received message <NmLockState> from native core <2426207122>. Duration: 4.4ms
+ 📤 Sending <NmLockState> message to native core <338315281>
+ 📥 Received message <NmLockState> from native core <338315281>. Duration: 4.7ms
+ 📤 Sending <NmLockState> message to native core <3629488403>
+ 📥 Received message <NmLockState> from native core <3629488403>. Duration: 5.9ms
+ 📤 Sending <NmLockState> message to native core <2755415233>
+ 📥 Received message <NmLockState> from native core <2755415233>. Duration: 4.5ms
+ 📤 Sending <NmLockState> message to native core <2292079447>
+ 📥 Received message <NmLockState> from native core <2292079447>. Duration: 4.3ms
+ 📤 Sending <NmLockState> message to native core <388748271>
+ 📥 Received message <NmLockState> from native core <388748271>. Duration: 9.3ms
+ 📤 Sending <NmLockState> message to native core <1802489573>
+ 📥 Received message <NmLockState> from native core <1802489573>. Duration: 2.4ms
+ 📤 Sending <NmLockState> message to native core <1815663870>
+ 📥 Received message <NmLockState> from native core <1815663870>. Duration: 4.5ms
+ 📤 Sending <NmLockState> message to native core <622965706>
+ 📥 Received message <NmLockState> from native core <622965706>. Duration: 3.1ms
+ 📤 Sending <NmLockState> message to native core <4189068661>
+ 📥 Received message <NmLockState> from native core <4189068661>. Duration: 4.2ms
+ 📤 Sending <NmLockState> message to native core <1563974143>
+ 📥 Received message <NmLockState> from native core <1563974143>. Duration: 6.6ms
+ 📤 Sending <NmLockState> message to native core <3600074828>
+ 📥 Received message <NmLockState> from native core <3600074828>. Duration: 3.9ms
+ 📤 Sending <NmLockState> message to native core <3627575686>
+ 📥 Received message <NmLockState> from native core <3627575686>. Duration: 4.3ms
+ 📤 Sending <NmLockState> message to native core <3377614420>
+ 📥 Received message <NmLockState> from native core <3377614420>. Duration: 4.7ms
+ 📤 Sending <NmLockState> message to native core <1695836615>
+ 📥 Received message <NmLockState> from native core <1695836615>. Duration: 3.6ms
+ 📤 Sending <NmLockState> message to native core <63522216>
+ 📥 Received message <NmLockState> from native core <63522216>. Duration: 3.3ms
+ 📤 Sending <NmLockState> message to native core <2029183823>
+ 📥 Received message <NmLockState> from native core <2029183823>. Duration: 4.4ms
+ 📤 Sending <NmLockState> message to native core <674070008>
+ 📥 Received message <NmLockState> from native core <674070008>. Duration: 5.8ms
+ 📤 Sending <NmLockState> message to native core <1430214800>
+ 📥 Received message <NmLockState> from native core <1430214800>. Duration: 4.4ms
+ 📤 Sending <NmLockState> message to native core <4069834928>
+ 📥 Received message <NmLockState> from native core <4069834928>. Duration: 3.9ms
+ 📤 Sending <NmLockState> message to native core <2814741245>
+ 📥 Received message <NmLockState> from native core <2814741245>. Duration: 2.9ms
+ 📤 Sending <NmLockState> message to native core <4081288515>
+ 📥 Received message <NmLockState> from native core <4081288515>. Duration: 2.7ms
+ 📤 Sending <NmLockState> message to native core <3515528314>
+ 📥 Received message <NmLockState> from native core <3515528314>. Duration: 2.4ms
+ 📤 Sending <NmLockState> message to native core <1331029870>
+ 📥 Received message <NmLockState> from native core <1331029870>. Duration: 4ms
+ 📤 Sending <NmLockState> message to native core <1074633354>
+ 📥 Received message <NmLockState> from native core <1074633354>. Duration: 1.9ms
+ 📤 Sending <NmLockState> message to native core <3607277949>
+ 📥 Received message <NmLockState> from native core <3607277949>. Duration: 3.7ms
+ 📤 Sending <NmLockState> message to native core <424790148>
+ 📥 Received message <NmLockState> from native core <424790148>. Duration: 2.8ms
+ 📤 Sending <NmLockState> message to native core <2518121869>
+ 📥 Received message <NmLockState> from native core <2518121869>. Duration: 3ms
+ 📤 Sending <NmLockState> message to native core <2822375371>
+ 📥 Received message <NmLockState> from native core <2822375371>. Duration: 3.1ms
+ 📤 Sending <NmLockState> message to native core <624786259>
+ 📥 Received message <NmLockState> from native core <624786259>. Duration: 2.2ms
+ 📤 Sending <NmLockState> message to native core <1398105596>
+ 📥 Received message <NmLockState> from native core <1398105596>. Duration: 4.7ms
+ 📤 Sending <NmLockState> message to native core <994134161>
+ 📥 Received message <NmLockState> from native core <994134161>. Duration: 2.6ms
+ 📤 Sending <NmLockState> message to native core <992754269>
+ 📥 Received message <NmLockState> from native core <992754269>. Duration: 51.3ms
+ 📤 Sending <NmLockState> message to native core <308635586>
+ 📥 Received message <NmLockState> from native core <308635586>. Duration: 4.5ms
+ 📤 Sending <NmLockState> message to native core <1323236325>
+ 📥 Received message <NmLockState> from native core <1323236325>. Duration: 5.3ms
+ 📤 Sending <NmLockState> message to native core <195514221>
+ 📥 Received message <NmLockState> from native core <195514221>. Duration: 6.6ms
+ 📤 Sending <NmLockState> message to native core <3764067671>
+ 📥 Received message <NmLockState> from native core <3764067671>. Duration: 3.5ms
+ 📤 Sending <NmLockState> message to native core <839180120>
+ 📥 Received message <NmLockState> from native core <839180120>. Duration: 4.9ms
+ 📤 Sending <NmLockState> message to native core <3985928020>
+ 📥 Received message <NmLockState> from native core <3985928020>. Duration: 5ms
+ 📤 Sending <NmLockState> message to native core <3553793230>
+ 📥 Received message <NmLockState> from native core <3553793230>. Duration: 3.6ms
+ 📤 Sending <NmLockState> message to native core <3706205583>
+ 📥 Received message <NmLockState> from native core <3706205583>. Duration: 6.5ms
+ 📤 Sending <NmLockState> message to native core <1329929108>
+ 📥 Received message <NmLockState> from native core <1329929108>. Duration: 3.8ms
+ 📤 Sending <NmLockState> message to native core <4118934185>
+ 📥 Received message <NmLockState> from native core <4118934185>. Duration: 4.7ms
+ 📤 Sending <NmLockState> message to native core <3819099164>
+ 📥 Received message <NmLockState> from native core <3819099164>. Duration: 4.5ms
+ 📤 Sending <NmLockState> message to native core <2107460558>
+ 📥 Received message <NmLockState> from native core <2107460558>. Duration: 3.3ms
+ 📤 Sending <NmLockState> message to native core <2558078672>
+ 📥 Received message <NmLockState> from native core <2558078672>. Duration: 6.6ms
+ 📤 Sending <NmLockState> message to native core <1498651180>
+ 📥 Received message <NmLockState> from native core <1498651180>. Duration: 3ms
+ 📤 Sending <NmLockState> message to native core <3689435592>
+ 📥 Received message <NmLockState> from native core <3689435592>. Duration: 4.2ms
+ 📤 Sending <NmLockState> message to native core <2213216455>
+ 📥 Received message <NmLockState> from native core <2213216455>. Duration: 3.3ms
+ 📤 Sending <NmLockState> message to native core <2021601986>
+ 📥 Received message <NmLockState> from native core <2021601986>. Duration: 2.4ms
+ 📤 Sending <NmLockState> message to native core <2992745736>
+ 📥 Received message <NmLockState> from native core <2992745736>. Duration: 5.6ms
+ 📤 Sending <NmLockState> message to native core <49626733>
+ 📥 Received message <NmLockState> from native core <49626733>. Duration: 4.2ms
+ 📤 Sending <NmLockState> message to native core <3042212114>
+ 📥 Received message <NmLockState> from native core <3042212114>. Duration: 3.5ms
+ Unable to inject for a URL (redacted)
+(anonymous) @ background.js:80
+ 📤 Sending <NmLockState> message to native core <2120754748>
+ 📥 Received message <NmLockState> from native core <2120754748>. Duration: 4.2ms
+ 📤 Sending <NmLockState> message to native core <1391955922>
+ 📥 Received message <NmLockState> from native core <1391955922>. Duration: 3.2ms
+ 📤 Sending <NmLockState> message to native core <1328549799>
+ 📥 Received message <NmLockState> from native core <1328549799>. Duration: 4.8ms
+ 📤 Sending <NmLockState> message to native core <2692106475>
+ 📥 Received message <NmLockState> from native core <2692106475>. Duration: 4.9ms
+ 📤 Sending <NmLockState> message to native core <2605102111>
+ 📥 Received message <NmLockState> from native core <2605102111>. Duration: 2.6ms
+ 📤 Sending <NmLockState> message to native core <4192392613>
+ 📥 Received message <NmLockState> from native core <4192392613>. Duration: 2.1ms
+ 📤 Sending <NmLockState> message to native core <2939475922>
+ 📥 Received message <NmLockState> from native core <2939475922>. Duration: 4.9ms
+ 📤 Sending <NmLockState> message to native core <3895976285>
+ 📥 Received message <NmLockState> from native core <3895976285>. Duration: 2.2ms
+ 📤 Sending <NmLockState> message to native core <494660611>
+ 📥 Received message <NmLockState> from native core <494660611>. Duration: 2.6ms
+ 📤 Sending <NmLockState> message to native core <1957541391>
+ 📥 Received message <NmLockState> from native core <1957541391>. Duration: 3.6ms
+ 📤 Sending <NmLockState> message to native core <3165289331>
+ 📥 Received message <NmLockState> from native core <3165289331>. Duration: 3.9ms
+ 📤 Sending <NmLockState> message to native core <2418039635>
+ 📥 Received message <NmLockState> from native core <2418039635>. Duration: 4.4ms
+ 📤 Sending <NmLockState> message to native core <2436372967>
+ 📥 Received message <NmLockState> from native core <2436372967>. Duration: 3.3ms
+ 📤 Sending <NmLockState> message to native core <2698019830>
+ 📥 Received message <NmLockState> from native core <2698019830>. Duration: 3.5ms
+ 📤 Sending <NmLockState> message to native core <726291088>
+ 📥 Received message <NmLockState> from native core <726291088>. Duration: 4.9ms
+ 📤 Sending <NmLockState> message to native core <3367211477>
+ 📥 Received message <NmLockState> from native core <3367211477>. Duration: 5.4ms
+ 📤 Sending <NmLockState> message to native core <2434687782>
+ 📥 Received message <NmLockState> from native core <2434687782>. Duration: 2.2ms
+ 📤 Sending <NmLockState> message to native core <2578458568>
+ 📥 Received message <NmLockState> from native core <2578458568>. Duration: 3.7ms
+ 📤 Sending <NmLockState> message to native core <2579421152>
+ 📥 Received message <NmLockState> from native core <2579421152>. Duration: 3.7ms
+ DeviceTrust: access denied: [ missing backoffice permission, missing admin permission ] - aborting
+(anonymous) @ background.js:80
+ 📤 Sending <NmLockState> message to native core <2956900807>
+ 📥 Received message <NmLockState> from native core <2956900807>. Duration: 8.2ms
+ 📤 Sending <NmLockState> message to native core <3719063154>
+ 📥 Received message <NmLockState> from native core <3719063154>. Duration: 2.2ms
+ 📤 Sending <NmLockState> message to native core <3609149777>
+ 📥 Received message <NmLockState> from native core <3609149777>. Duration: 3.4ms
+ 📤 Sending <NmLockState> message to native core <1685040254>
+ 📥 Received message <NmLockState> from native core <1685040254>. Duration: 6ms
+ 📤 Sending <NmLockState> message to native core <2720976981>
+ 📥 Received message <NmLockState> from native core <2720976981>. Duration: 5.3ms
+ 📤 Sending <NmLockState> message to native core <1618158051>
+ 📥 Received message <NmLockState> from native core <1618158051>. Duration: 4.4ms
+ 📤 Sending <NmLockState> message to native core <1137313406>
+ 📥 Received message <NmLockState> from native core <1137313406>. Duration: 2.5ms
+ 📤 Sending <NmLockState> message to native core <2991672817>
+ 📥 Received message <NmLockState> from native core <2991672817>. Duration: 3.7ms
+ 📤 Sending <NmLockState> message to native core <1169847605>
+ 📥 Received message <NmLockState> from native core <1169847605>. Duration: 5.6ms
+ 📤 Sending <NmLockState> message to native core <3207113166>
+ 📥 Received message <NmLockState> from native core <3207113166>. Duration: 3.3ms
+ 📤 Sending <NmLockState> message to native core <3424339203>
+ 📥 Received message <NmLockState> from native core <3424339203>. Duration: 5.7ms
+ 📤 Sending <NmLockState> message to native core <1828999141>
+ 📥 Received message <NmLockState> from native core <1828999141>. Duration: 5.9ms
+ 📤 Sending <NmLockState> message to native core <3820799773>
+ 📥 Received message <NmLockState> from native core <3820799773>. Duration: 5.5ms
+ 📤 Sending <NmLockState> message to native core <774218686>
+ 📥 Received message <NmLockState> from native core <774218686>. Duration: 3.4ms
+ 📤 Sending <NmLockState> message to native core <1558862437>
+ 📥 Received message <NmLockState> from native core <1558862437>. Duration: 3.3ms
+ 📤 Sending <NmLockState> message to native core <3503366058>
+ 📥 Received message <NmLockState> from native core <3503366058>. Duration: 2.9ms
+ 📤 Sending <NmLockState> message to native core <1571524877>
+ 📥 Received message <NmLockState> from native core <1571524877>. Duration: 3.8ms
+ 📤 Sending <NmLockState> message to native core <236178144>
+ 📥 Received message <NmLockState> from native core <236178144>. Duration: 2.6ms
+ 📤 Sending <NmLockState> message to native core <4054829515>
+ 📥 Received message <NmLockState> from native core <4054829515>. Duration: 3ms
+ 📤 Sending <NmLockState> message to native core <3261261164>
+ 📥 Received message <NmLockState> from native core <3261261164>. Duration: 4.7ms
+ 📤 Sending <NmLockState> message to native core <3721152061>
+ 📥 Received message <NmLockState> from native core <3721152061>. Duration: 5.1ms
+ 📤 Sending <NmLockState> message to native core <2347073131>
+ 📥 Received message <NmLockState> from native core <2347073131>. Duration: 4.8ms
+ 📤 Sending <NmLockState> message to native core <3715124587>
+ 📥 Received message <NmLockState> from native core <3715124587>. Duration: 4.2ms
+ DeviceTrust: access denied: [ missing backoffice permission, missing admin permission ] - aborting
+(anonymous) @ background.js:80
+ 📤 Sending <NmLockState> message to native core <1513782331>
+ 📥 Received message <NmLockState> from native core <1513782331>. Duration: 5.2ms
+ 📤 Sending <NmLockState> message to native core <2601086806>
+ 📥 Received message <NmLockState> from native core <2601086806>. Duration: 2.7ms
+ 📤 Sending <NmLockState> message to native core <1393567288>
+ 📥 Received message <NmLockState> from native core <1393567288>. Duration: 4.6ms
+ 📤 Sending <NmLockState> message to native core <1244727861>
+ 📥 Received message <NmLockState> from native core <1244727861>. Duration: 2.6ms
+ 📤 Sending <NmLockState> message to native core <3742341518>
+ 📥 Received message <NmLockState> from native core <3742341518>. Duration: 4ms
+ 📤 Sending <NmLockState> message to native core <4144159590>
+ 📥 Received message <NmLockState> from native core <4144159590>. Duration: 2.5ms
+ 📤 Sending <NmLockState> message to native core <1558962804>
+ 📥 Received message <NmLockState> from native core <1558962804>. Duration: 2.9ms
+ 📤 Sending <NmLockState> message to native core <3889541698>
+ 📥 Received message <NmLockState> from native core <3889541698>. Duration: 5.1ms
+ 📤 Sending <NmLockState> message to native core <3125295841>
+ 📥 Received message <NmLockState> from native core <3125295841>. Duration: 3.3ms
+ 📤 Sending <NmLockState> message to native core <1060949583>
+ 📥 Received message <NmLockState> from native core <1060949583>. Duration: 2.5ms
+ 📤 Sending <NmLockState> message to native core <1875944945>
+ 📥 Received message <NmLockState> from native core <1875944945>. Duration: 4.8ms
+ 📤 Sending <NmLockState> message to native core <2354417084>
+ 📥 Received message <NmLockState> from native core <2354417084>. Duration: 3.4ms
+ 📤 Sending <NmLockState> message to native core <1023910453>
+ 📥 Received message <NmLockState> from native core <1023910453>. Duration: 3.3ms
+ 📤 Sending <NmLockState> message to native core <2365132414>
+ 📥 Received message <NmLockState> from native core <2365132414>. Duration: 3.5ms
+ 📤 Sending <NmLockState> message to native core <868729135>
+ 📥 Received message <NmLockState> from native core <868729135>. Duration: 4ms
+ 📤 Sending <NmLockState> message to native core <3871736364>
+ 📥 Received message <NmLockState> from native core <3871736364>. Duration: 3.8ms
+ 📤 Sending <NmLockState> message to native core <913332810>
+ 📥 Received message <NmLockState> from native core <913332810>. Duration: 3.5ms
+ 📤 Sending <NmLockState> message to native core <3546617210>
+ 📥 Received message <NmLockState> from native core <3546617210>. Duration: 3.5ms
+ 📤 Sending <NmLockState> message to native core <600321742>
+ 📥 Received message <NmLockState> from native core <600321742>. Duration: 3.4ms
+ 📤 Sending <NmLockState> message to native core <268559009>
+ 📥 Received message <NmLockState> from native core <268559009>. Duration: 2.8ms
+ 📤 Sending <NmLockState> message to native core <4026416819>
+ 📥 Received message <NmLockState> from native core <4026416819>. Duration: 3.8ms
+ 📤 Sending <NmLockState> message to native core <2558688251>
+ 📥 Received message <NmLockState> from native core <2558688251>. Duration: 4.1ms
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ 📤 Sending <NmOfflineStatus> message to native core <4272759760>
+ 📥 Received message <NmOfflineStatus> from native core <4272759760>. Duration: 1.5ms
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ DeviceTrust: access denied: [ missing backoffice permission, missing admin permission ] - aborting
+(anonymous) @ background.js:80
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ 📤 Sending <NmOfflineStatus> message to native core <1865762444>
+ 📥 Received message <NmOfflineStatus> from native core <1865762444>. Duration: 1.5ms
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ 📤 Sending <NmLockState> message to native core <2917418123>
+ 📥 Received message <NmLockState> from native core <2917418123>. Duration: 4.1ms
+ 📤 Sending <NmLockState> message to native core <1236866498>
+ 📥 Received message <NmLockState> from native core <1236866498>. Duration: 3.9ms
+ 📤 Sending <NmLockState> message to native core <429324450>
+ 📥 Received message <NmLockState> from native core <429324450>. Duration: 3.6ms
+ 📤 Sending <NmLockState> message to native core <1147711836>
+ 📥 Received message <NmLockState> from native core <1147711836>. Duration: 1.9ms
+ 📤 Sending <NmLockState> message to native core <490300051>
+ 📥 Received message <NmLockState> from native core <490300051>. Duration: 2.3ms
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ DeviceTrust: access denied: [ missing backoffice permission, missing admin permission ] - aborting
+(anonymous) @ background.js:80
+ 📤 Sending <NmLockState> message to native core <697621923>
+ 📥 Received message <NmLockState> from native core <697621923>. Duration: 5.5ms
+ 📤 Sending <NmLockState> message to native core <1819175264>
+ 📥 Received message <NmLockState> from native core <1819175264>. Duration: 5.1ms
+ DeviceTrust: access denied: [ missing backoffice permission, missing admin permission ] - aborting
+(anonymous) @ background.js:80
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ 📤 Sending <NmOfflineStatus> message to native core <2631965415>
+ 📥 Received message <NmOfflineStatus> from native core <2631965415>. Duration: 1.6ms
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ 📤 Sending <NmLockState> message to native core <1315498055>
+ 📥 Received message <NmLockState> from native core <1315498055>. Duration: 3.2ms
+ 📤 Sending <NmLockState> message to native core <2353205055>
+ 📥 Received message <NmLockState> from native core <2353205055>. Duration: 4.3ms
+ 📤 Sending <NmLockState> message to native core <3340510443>
+ 📥 Received message <NmLockState> from native core <3340510443>. Duration: 3.7ms
+ 📤 Sending <NmLockState> message to native core <3752813760>
+ 📥 Received message <NmLockState> from native core <3752813760>. Duration: 4.1ms
+ 📤 Sending <NmLockState> message to native core <2463194889>
+ 📥 Received message <NmLockState> from native core <2463194889>. Duration: 2.9ms
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ 📤 Sending <NmOfflineStatus> message to native core <2325619757>
+ 📥 Received message <NmOfflineStatus> from native core <2325619757>. Duration: 3.9ms
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+ URL for frame 3029 tab 1223233469
+(anonymous) @ background.js:80
+ URL for frame 3029 tab 1223233469
+(anonymous) @ background.js:80
+ URL for frame 3029 tab 1223233469
+(anonymous) @ background.js:80
+ 📤 Sending <NmLockState> message to native core <3663017275>
+ 📥 Received message <NmLockState> from native core <3663017275>. Duration: 3.1ms
+background.js:80 Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+background.js:80 📤 Sending <NmOfflineStatus> message to native core <3799628435>
+background.js:80 📥 Received message <NmOfflineStatus> from native core <3799628435>. Duration: 3.4ms
+background.js:80 Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+background.js:80 Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+background.js:80 📤 Sending <NmLockState> message to native core <3475752929>
+background.js:80 📥 Received message <NmLockState> from native core <3475752929>. Duration: 4.3ms
+background.js:80 📤 Sending <NmLockState> message to native core <352673240>
+background.js:80 📥 Received message <NmLockState> from native core <352673240>. Duration: 2.9ms
+background.js:80 URL for frame 3029 tab 1223233469
+(anonymous) @ background.js:80
+background.js:80 URL for frame 3029 tab 1223233469
+(anonymous) @ background.js:80
+background.js:80 URL for frame 3029 tab 1223233469
+(anonymous) @ background.js:80
+background.js:80 📤 Sending <NmLockState> message to native core <3151028673>
+background.js:80 📥 Received message <NmLockState> from native core <3151028673>. Duration: 4.8ms
+background.js:80 📤 Sending <NmLockState> message to native core <3663463948>
+background.js:80 📥 Received message <NmLockState> from native core <3663463948>. Duration: 5.1ms
+background.js:80 Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+background.js:80 Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+background.js:80 Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+background.js:80 Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+background.js:80 📤 Sending <NmLockState> message to native core <1824239312>
+background.js:80 📥 Received message <NmLockState> from native core <1824239312>. Duration: 5.2ms
+background.js:80 📤 Sending <NmLockState> message to native core <4205879768>
+background.js:80 📥 Received message <NmLockState> from native core <4205879768>. Duration: 2.9ms
+background.js:80 📤 Sending <NmLockState> message to native core <983861994>
+background.js:80 📥 Received message <NmLockState> from native core <983861994>. Duration: 4.5ms
+background.js:80 📤 Sending <NmLockState> message to native core <251330599>
+background.js:80 📥 Received message <NmLockState> from native core <251330599>. Duration: 3.3ms
+background.js:80 📤 Sending <NmLockState> message to native core <3425951299>
+background.js:80 📥 Received message <NmLockState> from native core <3425951299>. Duration: 4.2ms
+background.js:80 📤 Sending <NmLockState> message to native core <2444743655>
+background.js:80 📥 Received message <NmLockState> from native core <2444743655>. Duration: 5.6ms
+background.js:80 URL for frame 3029 tab 1223233469
+(anonymous) @ background.js:80
+background.js:80 URL for frame 3029 tab 1223233469
+(anonymous) @ background.js:80
+background.js:80 URL for frame 3029 tab 1223233469
+(anonymous) @ background.js:80
+background.js:80 Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+background.js:80 📤 Sending <NmOfflineStatus> message to native core <142058989>
+background.js:80 📥 Received message <NmOfflineStatus> from native core <142058989>. Duration: 5.4ms
+background.js:80 Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+background.js:80 Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+background.js:80 Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+background.js:80 Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+background.js:80 📤 Sending <NmLockState> message to native core <1209124017>
+background.js:80 📥 Received message <NmLockState> from native core <1209124017>. Duration: 4.1ms
+background.js:80 📤 Sending <NmLockState> message to native core <3588906159>
+background.js:80 📥 Received message <NmLockState> from native core <3588906159>. Duration: 4.3ms
+background.js:80 URL for frame 3029 tab 1223233469
+(anonymous) @ background.js:80
+background.js:80 URL for frame 3029 tab 1223233469
+(anonymous) @ background.js:80
+background.js:80 URL for frame 3029 tab 1223233469
+(anonymous) @ background.js:80
+background.js:80 📤 Sending <NmLockState> message to native core <81448057>
+background.js:80 📥 Received message <NmLockState> from native core <81448057>. Duration: 4.9ms
+background.js:80 📤 Sending <NmLockState> message to native core <1627546101>
+background.js:80 📥 Received message <NmLockState> from native core <1627546101>. Duration: 3.9ms
+background.js:80 📤 Sending <NmLockState> message to native core <1667772106>
+background.js:80 📥 Received message <NmLockState> from native core <1667772106>. Duration: 4ms
+background.js:80 📤 Sending <NmLockState> message to native core <2434283599>
+background.js:80 📥 Received message <NmLockState> from native core <2434283599>. Duration: 4.7ms
+background.js:80 📤 Sending <NmLockState> message to native core <3856417722>
+background.js:80 📥 Received message <NmLockState> from native core <3856417722>. Duration: 3.1ms
+background.js:80 📤 Sending <NmLockState> message to native core <1649967799>
+background.js:80 📥 Received message <NmLockState> from native core <1649967799>. Duration: 4.4ms
+background.js:80 📤 Sending <NmLockState> message to native core <2403932674>
+background.js:80 📥 Received message <NmLockState> from native core <2403932674>. Duration: 2.8ms
+background.js:80 📤 Sending <NmLockState> message to native core <586771617>
+background.js:80 📥 Received message <NmLockState> from native core <586771617>. Duration: 4.1ms
+background.js:80 📤 Sending <NmLockState> message to native core <253488518>
+background.js:80 📥 Received message <NmLockState> from native core <253488518>. Duration: 2.8ms
+background.js:80 📤 Sending <NmLockState> message to native core <2080986697>
+background.js:80 📥 Received message <NmLockState> from native core <2080986697>. Duration: 4ms
+background.js:80 📤 Sending <NmLockState> message to native core <623837791>
+background.js:80 📥 Received message <NmLockState> from native core <623837791>. Duration: 3.9ms
+background.js:80 📤 Sending <NmLockState> message to native core <137971161>
+background.js:80 📥 Received message <NmLockState> from native core <137971161>. Duration: 5.1ms
+background.js:80 📤 Sending <NmLockState> message to native core <2868894501>
+background.js:80 📥 Received message <NmLockState> from native core <2868894501>. Duration: 4.6ms
+background.js:80 📤 Sending <NmLockState> message to native core <1653948676>
+background.js:80 📥 Received message <NmLockState> from native core <1653948676>. Duration: 4.2ms
+background.js:80 📤 Sending <NmLockState> message to native core <629408265>
+background.js:80 📥 Received message <NmLockState> from native core <629408265>. Duration: 4ms
+background.js:80 📤 Sending <NmLockState> message to native core <1445842567>
+background.js:80 📥 Received message <NmLockState> from native core <1445842567>. Duration: 3ms
+background.js:80 📤 Sending <NmLockState> message to native core <3701991444>
+background.js:80 📥 Received message <NmLockState> from native core <3701991444>. Duration: 4.8ms
+background.js:80 📤 Sending <NmOfflineStatus> message to native core <431392909>
+background.js:80 📥 Received message <NmOfflineStatus> from native core <431392909>. Duration: 2.2ms
+background.js:80 📤 Sending <NmLockState> message to native core <1400798182>
+background.js:80 📥 Received message <NmLockState> from native core <1400798182>. Duration: 4.4ms
+background.js:80 📤 Sending <NmLockState> message to native core <3624802731>
+background.js:80 📥 Received message <NmLockState> from native core <3624802731>. Duration: 3.4ms
+background.js:80 📤 Sending <NmLockState> message to native core <2372132287>
+background.js:80 📥 Received message <NmLockState> from native core <2372132287>. Duration: 3.9ms
+background.js:80 📤 Sending <NmLockState> message to native core <4021597961>
+background.js:80 📥 Received message <NmLockState> from native core <4021597961>. Duration: 4.2ms
+background.js:80 📤 Sending <NmLockState> message to native core <237306792>
+background.js:80 📥 Received message <NmLockState> from native core <237306792>. Duration: 3.8ms
+background.js:80 📤 Sending <NmLockState> message to native core <3649372270>
+background.js:80 📥 Received message <NmLockState> from native core <3649372270>. Duration: 5.2ms
+background.js:80 DeviceTrust: access denied: [ missing backoffice permission, missing admin permission ] - aborting
+(anonymous) @ background.js:80
+api/auth/me:1  Failed to load resource: the server responded with a status of 401 ()
+background.js:80 📤 Sending <NmOfflineStatus> message to native core <3170144156>
+background.js:80 📥 Received message <NmOfflineStatus> from native core <3170144156>. Duration: 2.8ms
+background.js:80 Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+background.js:80 📤 Sending <NmOfflineStatus> message to native core <2354622196>
+background.js:80 📥 Received message <NmOfflineStatus> from native core <2354622196>. Duration: 1.6ms
+background.js:80 Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+background.js:80 Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+background.js:80 Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+background.js:80 Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+yhctime.com.png:1  Failed to load resource: the server responded with a status of 404 ()
+yhctime.com.png:1  Failed to load resource: the server responded with a status of 404 ()
+c.1password.com/richicons/images/login/120/analysis.yhctime.com.png:1  Failed to load resource: the server responded with a status of 404 ()
+background.js:80 📤 Sending <NmLockState> message to native core <1199857681>
+background.js:80 📥 Received message <NmLockState> from native core <1199857681>. Duration: 4.8ms
+background.js:80 📤 Sending <NmLockState> message to native core <339311422>
+background.js:80 📥 Received message <NmLockState> from native core <339311422>. Duration: 4.2ms
+api/auth/login:1  Failed to load resource: the server responded with a status of 500 ()
+api/auth/login:1  Failed to load resource: the server responded with a status of 500 ()
+api/auth/login:1  Failed to load resource: the server responded with a status of 500 ()
+background.js:80 📤 Sending <NmLockState> message to native core <2454155607>
+background.js:80 📥 Received message <NmLockState> from native core <2454155607>. Duration: 5ms
+background.js:80 📤 Sending <NmLockState> message to native core <946887300>
+background.js:80 📥 Received message <NmLockState> from native core <946887300>. Duration: 6.4ms
+background.js:80 📤 Sending <NmLockState> message to native core <2252122926>
+background.js:80 📥 Received message <NmLockState> from native core <2252122926>. Duration: 2.3ms
+background.js:80 📤 Sending <NmLockState> message to native core <430775012>
+background.js:80 📥 Received message <NmLockState> from native core <430775012>. Duration: 4.4ms
+background.js:80 📤 Sending <NmLockState> message to native core <3239631798>
+background.js:80 📥 Received message <NmLockState> from native core <3239631798>. Duration: 1.7ms
+background.js:80 📤 Sending <NmLockState> message to native core <1111818383>
+background.js:80 📥 Received message <NmLockState> from native core <1111818383>. Duration: 3ms
+background.js:80 Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+background.js:80 Cannot find supported account to load managed apps
+(anonymous) @ background.js:80
+login:1  Failed to load resource: the server responded with a status of 500 ()
