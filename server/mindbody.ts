@@ -1009,15 +1009,14 @@ export class MindbodyService {
               : [];
 
           if (purchasedItems.length === 0) {
-            // Log first few instances for debugging
-            if (imported < 5) {
-              console.log(
-                `Sale ${sale.Id} has no purchased items, structure:`,
-                JSON.stringify(sale).substring(0, 300)
-              );
-            }
+            console.log(
+              `[Sales Import] Sale ${sale.Id} has NO PurchasedItems - full sale:`,
+              JSON.stringify(sale, null, 2)
+            );
             continue;
           }
+          
+          console.log(`[Sales Import] Sale ${sale.Id}: Processing ${purchasedItems.length} items`);
 
           // Create a revenue record for each purchased item (line-item tracking)
           for (const item of purchasedItems) {
@@ -1028,8 +1027,14 @@ export class MindbodyService {
                 (item.UnitPrice && item.Quantity ? item.UnitPrice * item.Quantity : null);
 
               // Skip items with no amount or zero amount
-              if (!amount && amount !== 0) continue;
-              if (amount === 0) continue;
+              if (!amount && amount !== 0) {
+                console.log(`[Sales Import] Skipping item from Sale ${sale.Id} - no amount found. Item:`, JSON.stringify(item, null, 2));
+                continue;
+              }
+              if (amount === 0) {
+                console.log(`[Sales Import] Skipping item from Sale ${sale.Id} - zero amount. Item:`, JSON.stringify(item, null, 2));
+                continue;
+              }
 
               // Build description: Item name + quantity (if > 1)
               let description = item.Name || item.Description || "Unknown item";
