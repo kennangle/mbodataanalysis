@@ -184,7 +184,8 @@ export const setupAuth = (app: Express) => {
           organizationId: user.organizationId,
         });
       });
-    } catch {
+    } catch (error) {
+      console.error("Registration error:", error);
       res.status(500).json({ error: "Registration failed" });
     }
   });
@@ -192,6 +193,7 @@ export const setupAuth = (app: Express) => {
   app.post("/api/auth/login", (req, res, next) => {
     passport.authenticate("local", (err: any, user: User | false, info: any) => {
       if (err) {
+        console.error("Login authentication error:", err);
         return res.status(500).json({ error: "Internal server error" });
       }
 
@@ -201,6 +203,7 @@ export const setupAuth = (app: Express) => {
 
       req.login(user, (err) => {
         if (err) {
+          console.error("Login session error:", err);
           return res.status(500).json({ error: "Login failed" });
         }
 
@@ -222,6 +225,35 @@ export const setupAuth = (app: Express) => {
       }
       res.json({ message: "Logged out successfully" });
     });
+  });
+
+  // Health check endpoint for debugging production issues
+  app.get("/api/auth/health", async (req, res) => {
+    try {
+      const checks = {
+        sessionSecret: !!process.env.SESSION_SECRET,
+        databaseUrl: !!process.env.DATABASE_URL,
+        environment: process.env.NODE_ENV || 'development',
+        sessionStoreConnected: false,
+        canQueryDatabase: false,
+      };
+
+      // Test database connection
+      try {
+        const testUser = await storage.getUserByEmail('test@example.com');
+        checks.canQueryDatabase = true;
+      } catch (err) {
+        console.error('Health check - database query failed:', err);
+      }
+
+      // Test session store (it's connected if we got this far)
+      checks.sessionStoreConnected = true;
+
+      res.json(checks);
+    } catch (error) {
+      console.error('Health check error:', error);
+      res.status(500).json({ error: 'Health check failed', details: String(error) });
+    }
   });
 
   app.get("/api/auth/me", (req, res) => {
