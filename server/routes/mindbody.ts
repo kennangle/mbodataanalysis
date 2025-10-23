@@ -196,6 +196,8 @@ export function registerMindbodyRoutes(app: Express) {
 
       const { config } = req.body;
       console.log("[Import Start] Request body:", JSON.stringify({ config }, null, 2));
+      console.log("[Import Start] Raw startDate from frontend:", config?.startDate);
+      console.log("[Import Start] Raw endDate from frontend:", config?.endDate);
 
       // Check if there's already an active job (running or pending)
       const activeJob = await storage.getActiveImportJob(organizationId);
@@ -223,9 +225,10 @@ export function registerMindbodyRoutes(app: Express) {
       let endDate: Date;
 
       if (config?.startDate) {
-        // Parse YYYY-MM-DD format avoiding timezone issues
+        // Parse YYYY-MM-DD format in UTC to avoid timezone issues
         const [year, month, day] = config.startDate.split("-").map(Number);
-        startDate = new Date(year, month - 1, day);
+        startDate = new Date(Date.UTC(year, month - 1, day));
+        console.log("[Import Start] Parsed startDate:", startDate.toISOString(), "from:", config.startDate);
       } else {
         const defaultStart = new Date();
         defaultStart.setFullYear(defaultStart.getFullYear() - 1);
@@ -233,9 +236,10 @@ export function registerMindbodyRoutes(app: Express) {
       }
 
       if (config?.endDate) {
-        // Parse YYYY-MM-DD format avoiding timezone issues
+        // Parse YYYY-MM-DD format in UTC to avoid timezone issues
         const [year, month, day] = config.endDate.split("-").map(Number);
-        endDate = new Date(year, month - 1, day);
+        endDate = new Date(Date.UTC(year, month - 1, day));
+        console.log("[Import Start] Parsed endDate:", endDate.toISOString(), "from:", config.endDate);
       } else {
         endDate = new Date();
       }
