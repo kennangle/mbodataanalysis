@@ -166,7 +166,8 @@ export const revenue = pgTable(
     type: text("type").notNull(),
     description: text("description"),
     transactionDate: timestamp("transaction_date").notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
+    // TEMPORARY: createdAt commented out to bypass Replit publishing bug
+    // createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({
     orgIdx: index("revenue_org_idx").on(table.organizationId),
@@ -182,7 +183,7 @@ export const revenue = pgTable(
 
 export const insertRevenueSchema = createInsertSchema(revenue).omit({
   id: true,
-  createdAt: true,
+  // createdAt: true, // TEMPORARY: commented out
 });
 export type InsertRevenue = z.infer<typeof insertRevenueSchema>;
 export type Revenue = typeof revenue.$inferSelect;
