@@ -302,6 +302,8 @@ export function DataImportCard() {
         if (status.status === "completed") {
           clearInterval(pollInterval);
           lastProgressRef.current = null;
+          setCurrentJobId(null);
+          setJobStatus(null);
           queryClient.invalidateQueries();
           toast({
             title: "Import completed",
@@ -310,6 +312,8 @@ export function DataImportCard() {
         } else if (status.status === "failed") {
           clearInterval(pollInterval);
           lastProgressRef.current = null;
+          setCurrentJobId(null);
+          setJobStatus(null);
           toast({
             variant: "destructive",
             title: "Import failed",
