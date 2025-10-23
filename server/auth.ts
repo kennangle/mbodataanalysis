@@ -79,20 +79,15 @@ export const setupAuth = (app: Express) => {
 
   // Google OAuth Strategy
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    // For now, use the Replit dev URL since that's where requests are actually coming from
     let googleCallbackURL = "http://localhost:5000/api/auth/google/callback";
     
-    // In production, use the custom domain
-    // Check REPLIT_ENVIRONMENT instead of NODE_ENV since dev script overrides NODE_ENV
-    if (process.env.REPLIT_ENVIRONMENT === "production") {
-      googleCallbackURL = "https://analysis.yhctime.com/api/auth/google/callback";
-    } else if (process.env.REPLIT_DOMAINS) {
-      // In development, use the Replit dev URL
+    if (process.env.REPLIT_DOMAINS) {
       const domains = process.env.REPLIT_DOMAINS.split(",");
       googleCallbackURL = `https://${domains[0]}/api/auth/google/callback`;
     }
 
     console.log(`[Google OAuth] Using callback URL: ${googleCallbackURL}`);
-    console.log(`[Google OAuth] REPLIT_ENVIRONMENT: ${process.env.REPLIT_ENVIRONMENT}`);
 
     passport.use(
       new GoogleStrategy(
