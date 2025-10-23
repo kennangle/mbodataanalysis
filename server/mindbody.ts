@@ -540,9 +540,16 @@ export class MindbodyService {
     // Load schedules once on first batch, reuse on subsequent batches
     // Match by StartDateTime since ClassId in visits != ClassScheduleId in schedules
     if (!schedulesByTime) {
-      const schedules = await storage.getClassSchedules(organizationId);
-      schedulesByTime = new Map(schedules.map((s) => [s.startTime.toISOString(), s]));
-      console.log(`[Visits] Loaded ${schedules.length} schedules into memory (one-time load)`);
+      try {
+        console.log(`[Visits] Loading class schedules for organization ${organizationId}...`);
+        const schedules = await storage.getClassSchedules(organizationId);
+        console.log(`[Visits] Retrieved ${schedules.length} schedules from database`);
+        schedulesByTime = new Map(schedules.map((s) => [s.startTime.toISOString(), s]));
+        console.log(`[Visits] Loaded ${schedules.length} schedules into memory (one-time load)`);
+      } catch (error) {
+        console.error(`[Visits] CRITICAL ERROR loading schedules:`, error);
+        throw new Error(`Failed to load class schedules: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
 
     // DEBUG: Log sample schedule times
