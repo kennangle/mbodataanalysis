@@ -237,6 +237,7 @@ export const importJobs = pgTable(
     currentOffset: integer("current_offset").default(0), // Current pagination offset
     error: text("error"), // Error message if failed
     pausedAt: timestamp("paused_at"), // When the import was paused
+    heartbeatAt: timestamp("heartbeat_at"), // Last worker heartbeat - updated every minute
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },

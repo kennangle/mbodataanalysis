@@ -46,6 +46,24 @@ function isDatabaseConnectionError(error: any): boolean {
   );
 }
 
+// Keep database connection alive and update heartbeat
+async function keepAliveAndHeartbeat(jobId: string, context: string): Promise<void> {
+  try {
+    await withDatabaseRetry(
+      async () => {
+        // Ping database to keep connection alive
+        await storage.keepConnectionAlive();
+        // Update heartbeat timestamp
+        await storage.updateImportJobHeartbeat(jobId);
+      },
+      `Keep-alive and heartbeat (${context})`
+    );
+  } catch (error) {
+    console.error(`[Keep-Alive] Failed for job ${jobId} at ${context}:`, error);
+    throw error;
+  }
+}
+
 // Retry wrapper for database operations that may fail due to connection issues
 async function withDatabaseRetry<T>(
   operation: () => Promise<T>,
@@ -87,9 +105,45 @@ export class ImportWorker {
   private jobQueue: string[] = [];
   private isProcessing = false;
   private currentJobId: string | null = null;
+  private watchdogInterval: NodeJS.Timeout | null = null;
 
   constructor() {
     this.registerShutdownHandlers();
+    this.startWatchdog();
+  }
+
+  private startWatchdog(): void {
+    // Check for stalled jobs every 2 minutes
+    this.watchdogInterval = setInterval(async () => {
+      try {
+        await this.checkForStalledJobs();
+      } catch (error) {
+        console.error('[Watchdog] Error checking for stalled jobs:', error);
+      }
+    }, 120000); // 2 minutes
+  }
+
+  private async checkForStalledJobs(): Promise<void> {
+    try {
+      // Query for running jobs with stale heartbeats (>3 minutes old)
+      const stalledJobs = await storage.getStalledImportJobs(3);
+      
+      for (const job of stalledJobs) {
+        console.log(`[Watchdog] Detected stalled job ${job.id} - last heartbeat: ${job.heartbeatAt}`);
+        
+        await withDatabaseRetry(
+          () => storage.updateImportJob(job.id, {
+            status: "failed",
+            error: "Import worker stopped responding (connection timeout). Please try a smaller date range or contact support.",
+          }),
+          `Mark stalled job ${job.id} as failed`
+        );
+        
+        console.log(`[Watchdog] Marked job ${job.id} as failed`);
+      }
+    } catch (error) {
+      console.error('[Watchdog] Failed to check for stalled jobs:', error);
+    }
   }
 
   private registerShutdownHandlers(): void {
@@ -99,6 +153,11 @@ export class ImportWorker {
     // Handle graceful shutdown signals
     const handleShutdown = async (signal: string) => {
       console.log(`[ImportWorker] Received ${signal} signal, marking job as interrupted...`);
+      
+      // Stop watchdog
+      if (this.watchdogInterval) {
+        clearInterval(this.watchdogInterval);
+      }
       
       if (this.currentJobId) {
         try {
@@ -209,6 +268,7 @@ export class ImportWorker {
         () => storage.updateImportJob(jobId, {
           status: "running",
           progress: JSON.stringify(progress),
+          heartbeatAt: new Date(), // Set initial heartbeat
         }),
         'Set job status to running'
       );
@@ -483,13 +543,18 @@ export class ImportWorker {
 
     let batchResult;
     do {
+      // CRITICAL: Keep database connection alive and update heartbeat
+      await keepAliveAndHeartbeat(job.id, `visits batch ${progress.visits.current || 0}`);
+      
+      console.log(`[Import] Processing visits batch: student ${progress.visits.current || 0}/${progress.visits.total || 0}`);
+
       // Check if job has been cancelled before processing next batch
       const currentJob = await withDatabaseRetry(
         () => storage.getImportJob(job.id),
         'Check job status before visits batch'
       );
       if (currentJob?.status === "paused" || currentJob?.status === "cancelled") {
-        console.log(`Job ${job.id} has been cancelled, stopping visits import`);
+        console.log(`[Import] Job ${job.id} has been cancelled, stopping visits import`);
         return;
       }
 

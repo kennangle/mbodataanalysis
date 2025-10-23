@@ -134,6 +134,9 @@ export interface IStorage {
   getImportJobs(organizationId: string, limit?: number): Promise<ImportJob[]>;
   updateImportJob(id: string, job: Partial<InsertImportJob>): Promise<void>;
   getActiveImportJob(organizationId: string): Promise<ImportJob | undefined>;
+  getStalledImportJobs(staleMinutes: number): Promise<ImportJob[]>;
+  updateImportJobHeartbeat(id: string): Promise<void>;
+  keepConnectionAlive(): Promise<void>;
 
   // Webhooks
   createWebhookSubscription(subscription: InsertWebhookSubscription): Promise<WebhookSubscription>;
@@ -888,6 +891,32 @@ export class DbStorage implements IStorage {
       .orderBy(desc(importJobs.createdAt))
       .limit(1);
     return result[0];
+  }
+
+  async getStalledImportJobs(staleMinutes: number): Promise<ImportJob[]> {
+    const staleThreshold = new Date(Date.now() - staleMinutes * 60 * 1000);
+    const result = await db
+      .select()
+      .from(importJobs)
+      .where(
+        and(
+          eq(importJobs.status, "running"),
+          sql`${importJobs.heartbeatAt} < ${staleThreshold} OR ${importJobs.heartbeatAt} IS NULL`
+        )
+      );
+    return result;
+  }
+
+  async updateImportJobHeartbeat(id: string): Promise<void> {
+    await db
+      .update(importJobs)
+      .set({ heartbeatAt: new Date() })
+      .where(eq(importJobs.id, id));
+  }
+
+  async keepConnectionAlive(): Promise<void> {
+    // Execute a simple query to keep the database connection alive
+    await db.execute(sql`SELECT 1`);
   }
 
   async createWebhookSubscription(
