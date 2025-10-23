@@ -92,11 +92,15 @@ export function DataImportCard() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Fetch import history
+  // Fetch import history - always enabled to detect running imports
   const { data: importHistory = [] } = useQuery<JobStatus[]>({
     queryKey: ["/api/mindbody/import/history"],
-    enabled: !currentJobId, // Only fetch when no active import
   });
+  
+  // Check if there's a running/pending import in history
+  const activeHistoryJob = importHistory.find(
+    (job) => job.status === "running" || job.status === "pending"
+  );
 
   // Track last progress snapshot to detect stalled imports
   const lastProgressRef = useRef<{ snapshot: string; timestamp: number } | null>(null);
@@ -511,12 +515,15 @@ export function DataImportCard() {
     startImportMutation.reset();
   };
 
+  // Use activeHistoryJob if jobStatus is null but we have a running import in history
+  const displayJob = jobStatus || activeHistoryJob;
+
   // Calculate overall progress
   const calculateProgress = (): number => {
-    if (!jobStatus || !jobStatus.progress) return 0;
+    if (!displayJob || !displayJob.progress) return 0;
 
     // Filter to only data type progress (not apiCallCount or importStartTime)
-    const dataTypes = Object.keys(jobStatus.progress).filter(
+    const dataTypes = Object.keys(displayJob.progress).filter(
       (key) => key !== "apiCallCount" && key !== "importStartTime"
     );
     if (dataTypes.length === 0) return 0;
@@ -525,7 +532,7 @@ export function DataImportCard() {
     let completedTypes = 0;
 
     dataTypes.forEach((type) => {
-      const typeProgress = jobStatus.progress[type as keyof JobProgress];
+      const typeProgress = displayJob.progress[type as keyof JobProgress];
       if (typeProgress && typeof typeProgress === "object" && "completed" in typeProgress) {
         if (typeProgress.completed) {
           completedTypes++;
@@ -540,11 +547,19 @@ export function DataImportCard() {
 
     return Math.min(Math.round(avgProgress), 100);
   };
-
-  const isJobActive = jobStatus?.status === "running" || jobStatus?.status === "pending";
-  const isJobResumable = jobStatus?.status === "failed" || jobStatus?.status === "paused";
-  const isJobCompleted = jobStatus?.status === "completed";
-  const isJobCancelled = jobStatus?.status === "cancelled";
+  
+  const isJobActive = displayJob?.status === "running" || displayJob?.status === "pending";
+  const isJobResumable = displayJob?.status === "failed" || displayJob?.status === "paused";
+  const isJobCompleted = displayJob?.status === "completed";
+  const isJobCancelled = displayJob?.status === "cancelled";
+  
+  // Sync currentJobId with active history job if needed
+  useEffect(() => {
+    if (activeHistoryJob && !currentJobId) {
+      setCurrentJobId(activeHistoryJob.id);
+      setJobStatus(activeHistoryJob);
+    }
+  }, [activeHistoryJob, currentJobId]);
 
   return (
     <Card>
@@ -555,11 +570,11 @@ export function DataImportCard() {
             <CardDescription>Import your Mindbody account data</CardDescription>
           </div>
           {isJobCompleted && <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />}
-          {jobStatus?.status === "failed" && <AlertCircle className="h-5 w-5 text-destructive" />}
+          {displayJob?.status === "failed" && <AlertCircle className="h-5 w-5 text-destructive" />}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!currentJobId && (
+        {!isJobActive && !isJobResumable && !isJobCompleted && !isJobCancelled && (
           <div className="space-y-6">
             <p className="text-sm text-muted-foreground">
               Import your students, classes, schedules, attendance records, and revenue data from
@@ -691,23 +706,23 @@ export function DataImportCard() {
           </div>
         )}
 
-        {isJobActive && jobStatus && (
+        {isJobActive && displayJob && (
           <div className="space-y-4">
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">
                   Importing{" "}
-                  {jobStatus.currentDataType
-                    ? getDisplayName(jobStatus.currentDataType).toLowerCase()
+                  {displayJob.currentDataType
+                    ? getDisplayName(displayJob.currentDataType).toLowerCase()
                     : "data"}
                   ...
                 </span>
                 <span className="font-medium">{calculateProgress()}%</span>
               </div>
-              {jobStatus.startDate && jobStatus.endDate && (
+              {displayJob.startDate && displayJob.endDate && (
                 <div className="text-xs text-muted-foreground">
-                  {format(parseDateSafe(jobStatus.startDate), "MMM d, yyyy")} -{" "}
-                  {format(parseDateSafe(jobStatus.endDate), "MMM d, yyyy")}
+                  {format(parseDateSafe(displayJob.startDate), "MMM d, yyyy")} -{" "}
+                  {format(parseDateSafe(displayJob.endDate), "MMM d, yyyy")}
                 </div>
               )}
               <Progress value={calculateProgress()} />
@@ -715,12 +730,12 @@ export function DataImportCard() {
 
             {/* Show detailed progress for each data type */}
             <div className="space-y-2 text-xs">
-              {Object.entries(jobStatus.progress)
+              {Object.entries(displayJob.progress)
                 .filter(([type]) => type !== "apiCallCount" && type !== "importStartTime")
                 .map(([type, data]) => {
                   if (typeof data === "object" && "completed" in data) {
                     const existingCount =
-                      jobStatus.existingCounts?.[type as keyof typeof jobStatus.existingCounts] ||
+                      displayJob.existingCounts?.[type as keyof typeof displayJob.existingCounts] ||
                       0;
                     const sessionImported = (data as any).imported || 0;
                     const totalRecords = existingCount + sessionImported;
@@ -763,7 +778,7 @@ export function DataImportCard() {
 
             {/* API Call Tracking */}
             {(() => {
-              const metrics = calculateApiMetrics(jobStatus.progress);
+              const metrics = calculateApiMetrics(displayJob.progress);
               const isApproachingLimit = metrics.apiCallCount >= 4500;
               const hasExceededLimit = metrics.limitExceeded;
 
@@ -852,27 +867,27 @@ export function DataImportCard() {
           </div>
         )}
 
-        {isJobCompleted && jobStatus && (
+        {isJobCompleted && displayJob && (
           <div className="space-y-4">
             <div className="rounded-lg bg-green-50 dark:bg-green-950/20 p-4">
               <p className="text-sm font-medium text-green-900 dark:text-green-100">
                 Import completed successfully!
               </p>
               <div className="text-xs text-green-700 dark:text-green-300 mt-2 space-y-1">
-                {jobStatus.progress.clients && (
+                {displayJob.progress.clients && (
                   <p>
-                    Students: {jobStatus.progress.clients.imported} new,{" "}
-                    {jobStatus.progress.clients.updated} updated
+                    Students: {displayJob.progress.clients.imported} new,{" "}
+                    {displayJob.progress.clients.updated} updated
                   </p>
                 )}
-                {jobStatus.progress.classes && (
-                  <p>Classes: {jobStatus.progress.classes.imported} imported</p>
+                {displayJob.progress.classes && (
+                  <p>Classes: {displayJob.progress.classes.imported} imported</p>
                 )}
-                {jobStatus.progress.visits && (
-                  <p>Visits: {jobStatus.progress.visits.imported} imported</p>
+                {displayJob.progress.visits && (
+                  <p>Visits: {displayJob.progress.visits.imported} imported</p>
                 )}
-                {jobStatus.progress.sales && (
-                  <p>Sales: {jobStatus.progress.sales.imported} imported</p>
+                {displayJob.progress.sales && (
+                  <p>Sales: {displayJob.progress.sales.imported} imported</p>
                 )}
               </div>
             </div>
@@ -887,12 +902,12 @@ export function DataImportCard() {
           </div>
         )}
 
-        {isJobCancelled && jobStatus && (
+        {isJobCancelled && displayJob && (
           <div className="space-y-4">
             <div className="rounded-lg bg-muted p-4">
               <p className="text-sm font-medium">Import cancelled</p>
-              {jobStatus.error && (
-                <p className="text-xs text-muted-foreground mt-1">{jobStatus.error}</p>
+              {displayJob.error && (
+                <p className="text-xs text-muted-foreground mt-1">{displayJob.error}</p>
               )}
             </div>
             <Button
@@ -906,28 +921,28 @@ export function DataImportCard() {
           </div>
         )}
 
-        {isJobResumable && jobStatus && (
+        {isJobResumable && displayJob && (
           <div className="space-y-4">
             <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 p-4 space-y-3">
               <div>
                 <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
-                  Import {jobStatus.status === "failed" ? "Failed" : "Paused"}
+                  Import {displayJob.status === "failed" ? "Failed" : "Paused"}
                 </p>
-                {jobStatus.pausedAt && (
+                {displayJob.pausedAt && (
                   <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
-                    {format(new Date(jobStatus.pausedAt), "MMM d, yyyy 'at' h:mm a")}
+                    {format(new Date(displayJob.pausedAt), "MMM d, yyyy 'at' h:mm a")}
                   </p>
                 )}
               </div>
 
               {/* Why it stopped */}
-              {jobStatus.error && (
+              {displayJob.error && (
                 <div className="pt-2 border-t border-amber-200 dark:border-amber-800">
                   <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
                     Reason:
                   </p>
                   <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
-                    {jobStatus.error}
+                    {displayJob.error}
                   </p>
                 </div>
               )}
@@ -938,39 +953,39 @@ export function DataImportCard() {
                   Progress Checkpoint:
                 </p>
                 <div className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
-                  {jobStatus.currentDataType && (
+                  {displayJob.currentDataType && (
                     <p className="font-medium">
-                      Currently processing: {getDisplayName(jobStatus.currentDataType)}
+                      Currently processing: {getDisplayName(displayJob.currentDataType)}
                     </p>
                   )}
-                  {jobStatus.progress.clients && jobStatus.progress.clients.total > 0 && (
+                  {displayJob.progress.clients && displayJob.progress.clients.total > 0 && (
                     <p>
-                      • Students: {jobStatus.progress.clients.imported} new, {jobStatus.progress.clients.updated} updated ({jobStatus.progress.clients.current.toLocaleString()} / {jobStatus.progress.clients.total.toLocaleString()} processed)
-                      {!jobStatus.progress.clients.completed && " - Will resume from here"}
+                      • Students: {displayJob.progress.clients.imported} new, {displayJob.progress.clients.updated} updated ({displayJob.progress.clients.current.toLocaleString()} / {displayJob.progress.clients.total.toLocaleString()} processed)
+                      {!displayJob.progress.clients.completed && " - Will resume from here"}
                     </p>
                   )}
-                  {jobStatus.progress.classes && jobStatus.progress.classes.total > 0 && (
+                  {displayJob.progress.classes && displayJob.progress.classes.total > 0 && (
                     <p>
-                      • Classes: {jobStatus.progress.classes.imported.toLocaleString()} imported ({jobStatus.progress.classes.current.toLocaleString()} / {jobStatus.progress.classes.total.toLocaleString()} processed)
-                      {!jobStatus.progress.classes.completed && " - Will resume from here"}
+                      • Classes: {displayJob.progress.classes.imported.toLocaleString()} imported ({displayJob.progress.classes.current.toLocaleString()} / {displayJob.progress.classes.total.toLocaleString()} processed)
+                      {!displayJob.progress.classes.completed && " - Will resume from here"}
                     </p>
                   )}
-                  {jobStatus.progress.visits && jobStatus.progress.visits.total > 0 && (
+                  {displayJob.progress.visits && displayJob.progress.visits.total > 0 && (
                     <p>
-                      • Visits: {jobStatus.progress.visits.imported.toLocaleString()} imported ({jobStatus.progress.visits.current.toLocaleString()} / {jobStatus.progress.visits.total.toLocaleString()} processed)
-                      {!jobStatus.progress.visits.completed && " - Will resume from here"}
+                      • Visits: {displayJob.progress.visits.imported.toLocaleString()} imported ({displayJob.progress.visits.current.toLocaleString()} / {displayJob.progress.visits.total.toLocaleString()} processed)
+                      {!displayJob.progress.visits.completed && " - Will resume from here"}
                     </p>
                   )}
-                  {jobStatus.progress.sales && jobStatus.progress.sales.total > 0 && (
+                  {displayJob.progress.sales && displayJob.progress.sales.total > 0 && (
                     <p>
-                      • Sales: {jobStatus.progress.sales.imported.toLocaleString()} imported ({jobStatus.progress.sales.current.toLocaleString()} / {jobStatus.progress.sales.total.toLocaleString()} processed)
-                      {!jobStatus.progress.sales.completed && " - Will resume from here"}
+                      • Sales: {displayJob.progress.sales.imported.toLocaleString()} imported ({displayJob.progress.sales.current.toLocaleString()} / {displayJob.progress.sales.total.toLocaleString()} processed)
+                      {!displayJob.progress.sales.completed && " - Will resume from here"}
                     </p>
                   )}
-                  {jobStatus.progress.apiCallCount !== undefined &&
-                    jobStatus.progress.apiCallCount > 0 && (
+                  {displayJob.progress.apiCallCount !== undefined &&
+                    displayJob.progress.apiCallCount > 0 && (
                       <p className="pt-1">
-                        • API Calls Used: {jobStatus.progress.apiCallCount.toLocaleString()} / 5,000 (free tier limit)
+                        • API Calls Used: {displayJob.progress.apiCallCount.toLocaleString()} / 5,000 (free tier limit)
                       </p>
                     )}
                 </div>
@@ -1035,32 +1050,37 @@ export function DataImportCard() {
           </div>
         )}
 
-        {/* Import History - Only show when no active import */}
-        {!currentJobId && importHistory.length > 0 && (
-          <Collapsible
-            open={isHistoryOpen}
-            onOpenChange={setIsHistoryOpen}
-            className="mt-6 pt-6 border-t"
-          >
-            <CollapsibleTrigger asChild>
-              <Button
-                variant="ghost"
-                className="w-full flex items-center justify-between p-2 hover-elevate"
-                data-testid="button-toggle-history"
-              >
-                <div className="flex items-center gap-2">
-                  <History className="h-4 w-4" />
-                  <span className="text-sm font-medium">Import History ({importHistory.length})</span>
-                </div>
-                {isHistoryOpen ? (
-                  <ChevronUp className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="mt-3 space-y-3">
-              {importHistory.map((job) => {
+        {/* Import History - Show completed/failed/cancelled imports (exclude running/pending which are shown above) */}
+        {(() => {
+          const completedHistory = importHistory.filter(
+            (job) => job.status !== "running" && job.status !== "pending"
+          );
+          
+          return completedHistory.length > 0 && (
+            <Collapsible
+              open={isHistoryOpen}
+              onOpenChange={setIsHistoryOpen}
+              className="mt-6 pt-6 border-t"
+            >
+              <CollapsibleTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="w-full flex items-center justify-between p-2 hover-elevate"
+                  data-testid="button-toggle-history"
+                >
+                  <div className="flex items-center gap-2">
+                    <History className="h-4 w-4" />
+                    <span className="text-sm font-medium">Import History ({completedHistory.length})</span>
+                  </div>
+                  {isHistoryOpen ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-3 space-y-3">
+                {completedHistory.map((job) => {
                 const progress = calculateJobProgress(job.progress);
                 const statusColor = getStatusColor(job.status);
                 
@@ -1125,7 +1145,8 @@ export function DataImportCard() {
               })}
             </CollapsibleContent>
           </Collapsible>
-        )}
+          );
+        })()}
       </CardContent>
     </Card>
   );
