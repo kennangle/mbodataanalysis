@@ -195,10 +195,12 @@ export function registerMindbodyRoutes(app: Express) {
       }
 
       const { config } = req.body;
+      console.log("[Import Start] Request body:", JSON.stringify({ config }, null, 2));
 
       // Check if there's already an active job (running or pending)
       const activeJob = await storage.getActiveImportJob(organizationId);
       if (activeJob) {
+        console.log("[Import Start] Active job found:", activeJob.id, activeJob.status);
         // Allow starting new import if the active job is paused or cancelled
         if (activeJob.status === "paused" || activeJob.status === "cancelled") {
           // Clean up the old paused/cancelled job by marking it as cancelled
@@ -208,6 +210,7 @@ export function registerMindbodyRoutes(app: Express) {
           });
         } else {
           // Reject if there's a truly active (running/pending) job
+          console.log("[Import Start] Rejecting - active job in progress");
           return res.status(400).json({
             error: "An import is already in progress",
             jobId: activeJob.id,
@@ -243,7 +246,10 @@ export function registerMindbodyRoutes(app: Express) {
       if (config?.dataTypes?.visits) dataTypes.push("visits");
       if (config?.dataTypes?.sales) dataTypes.push("sales");
 
+      console.log("[Import Start] Parsed dataTypes:", dataTypes);
+
       if (dataTypes.length === 0) {
+        console.log("[Import Start] Rejecting - no data types selected");
         return res.status(400).json({ error: "At least one data type must be selected" });
       }
 
