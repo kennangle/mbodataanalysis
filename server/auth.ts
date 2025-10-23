@@ -80,7 +80,12 @@ export const setupAuth = (app: Express) => {
   // Google OAuth Strategy
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     let googleCallbackURL = "http://localhost:5000/api/auth/google/callback";
-    if (process.env.REPLIT_DOMAINS) {
+    
+    // In production, use the custom domain
+    if (process.env.NODE_ENV === "production" || process.env.REPLIT_ENVIRONMENT === "production") {
+      googleCallbackURL = "https://analysis.yhctime.com/api/auth/google/callback";
+    } else if (process.env.REPLIT_DOMAINS) {
+      // In development, use the Replit dev URL
       const domains = process.env.REPLIT_DOMAINS.split(",");
       googleCallbackURL = `https://${domains[0]}/api/auth/google/callback`;
     }
