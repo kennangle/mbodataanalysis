@@ -908,10 +908,20 @@ export class DbStorage implements IStorage {
   }
 
   async updateImportJobHeartbeat(id: string): Promise<void> {
-    await db
-      .update(importJobs)
-      .set({ heartbeatAt: new Date() })
-      .where(eq(importJobs.id, id));
+    try {
+      await db
+        .update(importJobs)
+        .set({ heartbeatAt: new Date() })
+        .where(eq(importJobs.id, id));
+    } catch (error: any) {
+      // Silently fail if heartbeat_at column doesn't exist yet (backward compatibility)
+      if (error?.message?.includes('column') || error?.message?.includes('heartbeat_at')) {
+        // Column doesn't exist yet - this is okay, heartbeat is optional
+        return;
+      }
+      // Re-throw other errors
+      throw error;
+    }
   }
 
   async keepConnectionAlive(): Promise<void> {

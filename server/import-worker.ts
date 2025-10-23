@@ -53,14 +53,15 @@ async function keepAliveAndHeartbeat(jobId: string, context: string): Promise<vo
       async () => {
         // Ping database to keep connection alive
         await storage.keepConnectionAlive();
-        // Update heartbeat timestamp
+        // Update heartbeat timestamp (optional - won't fail if column doesn't exist)
         await storage.updateImportJobHeartbeat(jobId);
       },
       `Keep-alive and heartbeat (${context})`
     );
   } catch (error) {
-    console.error(`[Keep-Alive] Failed for job ${jobId} at ${context}:`, error);
-    throw error;
+    // Log but don't crash - keep-alive is a best-effort optimization
+    console.warn(`[Keep-Alive] Warning for job ${jobId} at ${context}:`, error);
+    // Don't throw - this is non-critical
   }
 }
 
