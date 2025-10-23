@@ -21,13 +21,12 @@ export const users = pgTable("users", {
   organizationId: uuid("organization_id"),
   provider: text("provider").notNull().default("local"), // "local", "google"
   providerId: text("provider_id"), // OAuth provider user ID
-  // TEMPORARY: createdAt commented out to bypass Replit publishing bug
-  // createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
-  // createdAt: true, // TEMPORARY: commented out
+  createdAt: true,
 });
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -38,13 +37,12 @@ export const organizations = pgTable("organizations", {
   mindbodyAccessToken: text("mindbody_access_token"),
   mindbodyRefreshToken: text("mindbody_refresh_token"),
   mindbodySiteId: text("mindbody_site_id"),
-  // TEMPORARY: createdAt commented out to bypass Replit publishing bug
-  // createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const insertOrganizationSchema = createInsertSchema(organizations).omit({
   id: true,
-  // createdAt: true, // TEMPORARY: commented out
+  createdAt: true,
 });
 export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
 export type Organization = typeof organizations.$inferSelect;
@@ -62,8 +60,7 @@ export const students = pgTable(
     status: text("status").notNull().default("active"),
     membershipType: text("membership_type"),
     joinDate: timestamp("join_date"),
-    // TEMPORARY: createdAt commented out to bypass Replit publishing bug
-    // createdAt: timestamp("created_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({
     orgIdx: index("students_org_idx").on(table.organizationId),
@@ -72,7 +69,7 @@ export const students = pgTable(
 
 export const insertStudentSchema = createInsertSchema(students).omit({
   id: true,
-  // createdAt: true, // TEMPORARY: commented out
+  createdAt: true,
 });
 export type InsertStudent = z.infer<typeof insertStudentSchema>;
 export type Student = typeof students.$inferSelect;
@@ -88,8 +85,7 @@ export const classes = pgTable(
     instructorName: text("instructor_name"),
     capacity: integer("capacity"),
     duration: integer("duration"),
-    // TEMPORARY: createdAt commented out to bypass Replit publishing bug
-    // createdAt: timestamp("created_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({
     orgIdx: index("classes_org_idx").on(table.organizationId),
@@ -98,7 +94,7 @@ export const classes = pgTable(
 
 export const insertClassSchema = createInsertSchema(classes).omit({
   id: true,
-  // createdAt: true, // TEMPORARY: commented out
+  createdAt: true,
 });
 export type InsertClass = z.infer<typeof insertClassSchema>;
 export type Class = typeof classes.$inferSelect;
@@ -113,8 +109,7 @@ export const classSchedules = pgTable(
     startTime: timestamp("start_time").notNull(),
     endTime: timestamp("end_time").notNull(),
     location: text("location"),
-    // TEMPORARY: createdAt commented out to bypass Replit publishing bug
-    // createdAt: timestamp("created_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({
     orgIdx: index("schedules_org_idx").on(table.organizationId),
@@ -125,7 +120,7 @@ export const classSchedules = pgTable(
 
 export const insertClassScheduleSchema = createInsertSchema(classSchedules).omit({
   id: true,
-  // createdAt: true, // TEMPORARY: commented out
+  createdAt: true,
 });
 export type InsertClassSchedule = z.infer<typeof insertClassScheduleSchema>;
 export type ClassSchedule = typeof classSchedules.$inferSelect;
@@ -139,8 +134,7 @@ export const attendance = pgTable(
     scheduleId: uuid("schedule_id").notNull(),
     attendedAt: timestamp("attended_at").notNull(),
     status: text("status").notNull().default("attended"),
-    // TEMPORARY: createdAt commented out to bypass Replit publishing bug
-    // createdAt: timestamp("created_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({
     orgIdx: index("attendance_org_idx").on(table.organizationId),
@@ -155,7 +149,7 @@ export const attendance = pgTable(
 
 export const insertAttendanceSchema = createInsertSchema(attendance).omit({
   id: true,
-  // createdAt: true, // TEMPORARY: commented out
+  createdAt: true,
 });
 export type InsertAttendance = z.infer<typeof insertAttendanceSchema>;
 export type Attendance = typeof attendance.$inferSelect;
@@ -172,8 +166,7 @@ export const revenue = pgTable(
     type: text("type").notNull(),
     description: text("description"),
     transactionDate: timestamp("transaction_date").notNull(),
-    // TEMPORARY: createdAt commented out to bypass Replit publishing bug
-    // createdAt: timestamp("created_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({
     orgIdx: index("revenue_org_idx").on(table.organizationId),
@@ -189,7 +182,7 @@ export const revenue = pgTable(
 
 export const insertRevenueSchema = createInsertSchema(revenue).omit({
   id: true,
-  // createdAt: true, // TEMPORARY: commented out
+  createdAt: true,
 });
 export type InsertRevenue = z.infer<typeof insertRevenueSchema>;
 export type Revenue = typeof revenue.$inferSelect;
@@ -203,8 +196,7 @@ export const aiQueries = pgTable(
     query: text("query").notNull(),
     response: text("response"),
     tokensUsed: integer("tokens_used"),
-    // TEMPORARY: createdAt commented out to bypass Replit publishing bug
-    // createdAt: timestamp("created_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({
     orgIdx: index("ai_queries_org_idx").on(table.organizationId),
@@ -214,7 +206,7 @@ export const aiQueries = pgTable(
 
 export const insertAIQuerySchema = createInsertSchema(aiQueries).omit({
   id: true,
-  // createdAt: true, // TEMPORARY: commented out
+  createdAt: true,
 });
 export type InsertAIQuery = z.infer<typeof insertAIQuerySchema>;
 export type AIQuery = typeof aiQueries.$inferSelect;
@@ -245,9 +237,8 @@ export const importJobs = pgTable(
     currentOffset: integer("current_offset").default(0), // Current pagination offset
     error: text("error"), // Error message if failed
     pausedAt: timestamp("paused_at"), // When the import was paused
-    // TEMPORARY: createdAt/updatedAt commented out to bypass Replit publishing bug
-    // createdAt: timestamp("created_at").defaultNow().notNull(),
-    // updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => ({
     orgIdx: index("import_jobs_org_idx").on(table.organizationId),
@@ -257,8 +248,8 @@ export const importJobs = pgTable(
 
 export const insertImportJobSchema = createInsertSchema(importJobs).omit({
   id: true,
-  // createdAt: true, // TEMPORARY: commented out
-  // updatedAt: true, // TEMPORARY: commented out
+  createdAt: true,
+  updatedAt: true,
 });
 export type InsertImportJob = z.infer<typeof insertImportJobSchema>;
 export type ImportJob = typeof importJobs.$inferSelect;
@@ -270,8 +261,7 @@ export const passwordResetTokens = pgTable(
     userId: uuid("user_id").notNull(),
     token: text("token").notNull().unique(),
     expiresAt: timestamp("expires_at").notNull(),
-    // TEMPORARY: createdAt commented out to bypass Replit publishing bug
-    // createdAt: timestamp("created_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({
     userIdx: index("password_reset_tokens_user_idx").on(table.userId),
@@ -282,7 +272,7 @@ export const passwordResetTokens = pgTable(
 
 export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTokens).omit({
   id: true,
-  // createdAt: true, // TEMPORARY: commented out
+  createdAt: true,
 });
 export type InsertPasswordResetToken = z.infer<typeof insertPasswordResetTokenSchema>;
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
@@ -299,8 +289,7 @@ export const webhookSubscriptions = pgTable(
     messageSignatureKey: text("message_signature_key"), // For HMAC verification
     referenceId: text("reference_id"),
     eventSchemaVersion: integer("event_schema_version").notNull().default(1),
-    // TEMPORARY: createdAt commented out to bypass Replit publishing bug
-    // createdAt: timestamp("created_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({
     orgIdx: index("webhook_subscriptions_org_idx").on(table.organizationId),
@@ -310,7 +299,7 @@ export const webhookSubscriptions = pgTable(
 
 export const insertWebhookSubscriptionSchema = createInsertSchema(webhookSubscriptions).omit({
   id: true,
-  // createdAt: true, // TEMPORARY: commented out
+  createdAt: true,
 });
 export type InsertWebhookSubscription = z.infer<typeof insertWebhookSubscriptionSchema>;
 export type WebhookSubscription = typeof webhookSubscriptions.$inferSelect;
@@ -327,8 +316,7 @@ export const webhookEvents = pgTable(
     processed: boolean("processed").notNull().default(false),
     processedAt: timestamp("processed_at"),
     error: text("error"), // Error message if processing failed
-    // TEMPORARY: createdAt commented out to bypass Replit publishing bug
-    // createdAt: timestamp("created_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({
     orgIdx: index("webhook_events_org_idx").on(table.organizationId),
@@ -339,7 +327,7 @@ export const webhookEvents = pgTable(
 
 export const insertWebhookEventSchema = createInsertSchema(webhookEvents).omit({
   id: true,
-  // createdAt: true, // TEMPORARY: commented out
+  createdAt: true,
 });
 export type InsertWebhookEvent = z.infer<typeof insertWebhookEventSchema>;
 export type WebhookEvent = typeof webhookEvents.$inferSelect;
@@ -356,9 +344,8 @@ export const scheduledImports = pgTable(
     lastRunAt: timestamp("last_run_at"),
     lastRunStatus: text("last_run_status"), // "success" | "failed" | "running"
     lastRunError: text("last_run_error"),
-    // TEMPORARY: createdAt/updatedAt commented out to bypass Replit publishing bug
-    // createdAt: timestamp("created_at").defaultNow().notNull(),
-    // updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => ({
     orgIdx: uniqueIndex("scheduled_imports_org_idx").on(table.organizationId),
@@ -367,8 +354,8 @@ export const scheduledImports = pgTable(
 
 export const insertScheduledImportSchema = createInsertSchema(scheduledImports).omit({
   id: true,
-  // createdAt: true, // TEMPORARY: commented out
-  // updatedAt: true, // TEMPORARY: commented out
+  createdAt: true,
+  updatedAt: true,
 });
 export type InsertScheduledImport = z.infer<typeof insertScheduledImportSchema>;
 export type ScheduledImport = typeof scheduledImports.$inferSelect;
