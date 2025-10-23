@@ -286,7 +286,11 @@ export const setupAuth = (app: Express) => {
   });
 
   // Google OAuth routes
-  app.get("/api/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+  app.get("/api/auth/google", (req, res, next) => {
+    console.log("[Google OAuth] Initiating Google login from:", req.headers.host);
+    console.log("[Google OAuth] User-Agent:", req.headers["user-agent"]);
+    passport.authenticate("google", { scope: ["profile", "email"] })(req, res, next);
+  });
 
   app.get(
     "/api/auth/google/callback",
