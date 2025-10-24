@@ -358,7 +358,11 @@ export function registerMindbodyRoutes(app: Express) {
 
       // Can only resume paused or failed jobs
       if (job.status !== "paused" && job.status !== "failed") {
-        return res.status(400).json({ error: "Job is not in a resumable state" });
+        console.log(`Cannot resume job ${jobId}: current status is ${job.status}, expected paused or failed`);
+        return res.status(400).json({ 
+          error: `Cannot resume import: job is currently ${job.status}. Only paused or failed jobs can be resumed. ${job.status === "running" || job.status === "pending" ? "The import appears to already be running. Please refresh the page." : "Please check the import status and try again."}`,
+          currentStatus: job.status 
+        });
       }
 
       // No wait time restrictions - Mindbody has 5,000 calls/month free tier, then $0.002/call
