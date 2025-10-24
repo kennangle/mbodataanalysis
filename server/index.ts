@@ -62,32 +62,58 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Clean up orphaned import jobs on startup
-  // Import worker is in-memory and doesn't survive restarts
+  // Auto-resume interrupted import jobs on startup
   try {
     const { db } = await import("./db");
     const { importJobs } = await import("@shared/schema");
-    const { eq } = await import("drizzle-orm");
+    const { eq, or, inArray } = await import("drizzle-orm");
+    const { importWorker } = await import("./import-worker");
 
-    const runningJobs = await db.select().from(importJobs).where(eq(importJobs.status, "running"));
+    // Find jobs that were interrupted (running or pending, but not paused)
+    const interruptedJobs = await db
+      .select()
+      .from(importJobs)
+      .where(
+        or(
+          eq(importJobs.status, "running"),
+          eq(importJobs.status, "pending")
+        )
+      );
 
-    if (runningJobs.length > 0) {
-      console.log(`Found ${runningJobs.length} orphaned import job(s), marking as failed...`);
-      for (const job of runningJobs) {
+    if (interruptedJobs.length > 0) {
+      console.log(`[Auto-Resume] Found ${interruptedJobs.length} interrupted import job(s), auto-resuming...`);
+      
+      for (const job of interruptedJobs) {
+        // Get the progress to show what was preserved
+        const progress = typeof job.progress === 'string' 
+          ? JSON.parse(job.progress) 
+          : job.progress || {};
+        
+        const progressInfo = progress.visits 
+          ? `${progress.visits.current}/${progress.visits.total} students (${progress.visits.imported} imported)`
+          : 'starting';
+        
+        console.log(`[Auto-Resume] Resuming job ${job.id} from checkpoint: ${progressInfo}`);
+        
+        // Update status to running (in case it was pending)
         await db
           .update(importJobs)
           .set({
-            status: "failed",
-            error: "Import interrupted by application restart. You can start a new import.",
+            status: "running",
+            error: null,
             updatedAt: new Date(),
           })
           .where(eq(importJobs.id, job.id));
+        
+        // Queue the job for processing - this preserves all progress!
+        await importWorker.processJob(job.id);
       }
-      console.log(`Successfully cleaned up ${runningJobs.length} orphaned job(s)`);
+      
+      console.log(`[Auto-Resume] Successfully queued ${interruptedJobs.length} job(s) for auto-resume`);
     }
   } catch (error) {
-    console.error("Failed to clean up orphaned import jobs on startup:", error);
-    // Don't abort startup if cleanup fails
+    console.error("[Auto-Resume] Failed to auto-resume interrupted import jobs on startup:", error);
+    // Don't abort startup if auto-resume fails
   }
 
   // Start the import scheduler
