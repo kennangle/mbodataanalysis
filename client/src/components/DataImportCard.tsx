@@ -324,7 +324,8 @@ export function DataImportCard() {
             description: status.error || "Unknown error occurred",
           });
         } else if (status.status === "paused") {
-          clearInterval(pollInterval);
+          // Clear progress ref to reset stall detector when resumed
+          // But keep polling so UI updates when job resumes
           lastProgressRef.current = null;
         }
       } catch (error) {
