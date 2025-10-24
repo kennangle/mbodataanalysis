@@ -33,6 +33,7 @@ This application supports enhanced AI interaction through slash commands for aut
 | `/gr`                   | Guardrails review          | Check policy compliance and violations          |
 | `/bug`                  | Bug reporting              | Capture and document issues systematically      |
 | `/unanswered`           | Find pending questions     | Identify unresolved questions in conversation   |
+| `/arch`                 | Architect consultation     | Consult with architect agent for review/guidance |
 
 ## Key Command Details
 
@@ -197,6 +198,18 @@ This application supports enhanced AI interaction through slash commands for aut
 - **Behavior**: Searches conversation thread, identifies AI questions lacking responses, presents organized list
 - **Example**: `/unanswered`
 
+### `/arch` - Architect Consultation
+
+- **Purpose**: Consult with the architect agent for code review, architectural guidance, or strategic recommendations
+- **Behavior**: Invokes the architect tool to analyze code, provide architectural insights, review implementations, suggest improvements, and validate design decisions
+- **Use Cases**:
+  - Review code quality and architecture patterns
+  - Get strategic recommendations for complex features
+  - Validate technical decisions and design patterns
+  - Analyze root causes of technical issues
+  - Plan complex refactoring or system improvements
+- **Example**: `/arch review the import worker architecture for potential improvements`
+
 ## Best Practices for Command Usage
 
 1. **Use the right command**: Choose the command that best matches your specific need
@@ -227,3 +240,4 @@ These commands are particularly valuable for maintaining the time tracking appli
 - **Linting**: `/es` enforces ESLint rules specific to time-safe utilities
 - **Bug Tracking**: `/bug` documents issues with break management, clock in/out functionality
 - **Performance Analysis**: `/anal performance` monitors database query performance for time entries
+- **Architecture Review**: `/arch` provides expert analysis of system design, code quality, and strategic technical decisions
