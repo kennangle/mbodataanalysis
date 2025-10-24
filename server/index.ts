@@ -89,6 +89,8 @@ app.use((req, res, next) => {
     if (interruptedJobs.length > 0) {
       console.log(`[Auto-Resume] Found ${interruptedJobs.length} interrupted import job(s), auto-resuming...`);
       
+      const { scheduledImports } = await import("@shared/schema");
+      
       for (const job of interruptedJobs) {
         // Get the progress to show what was preserved
         const progress = typeof job.progress === 'string' 
@@ -110,6 +112,25 @@ app.use((req, res, next) => {
             updatedAt: new Date(),
           })
           .where(eq(importJobs.id, job.id));
+        
+        // If this job belongs to a scheduled import, clear the error message in the UI
+        const scheduledImport = await db
+          .select()
+          .from(scheduledImports)
+          .where(eq(scheduledImports.organizationId, job.organizationId))
+          .limit(1);
+        
+        if (scheduledImport.length > 0 && scheduledImport[0].lastRunError?.includes("connection timeout")) {
+          await db
+            .update(scheduledImports)
+            .set({
+              lastRunStatus: "running",
+              lastRunError: null,
+            })
+            .where(eq(scheduledImports.organizationId, job.organizationId));
+          
+          console.log(`[Auto-Resume] Cleared scheduler error for org ${job.organizationId}`);
+        }
         
         // Queue the job for processing - this preserves all progress!
         await importWorker.processJob(job.id);
