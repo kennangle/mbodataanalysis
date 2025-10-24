@@ -156,6 +156,37 @@ export function registerMindbodyRoutes(app: Express) {
     }
   });
 
+  // Get all running/pending jobs (background jobs)
+  app.get("/api/mindbody/import/active-jobs", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.user as User)?.organizationId;
+
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const activeJobs = await storage.getActiveImportJobs(organizationId);
+
+      res.json(
+        activeJobs.map((job: any) => ({
+          id: job.id,
+          status: job.status,
+          dataTypes: job.dataTypes,
+          startDate: job.startDate,
+          endDate: job.endDate,
+          progress: safeJsonParse(job.progress, {}),
+          currentDataType: job.currentDataType,
+          error: job.error,
+          createdAt: job.createdAt,
+          updatedAt: job.updatedAt,
+        }))
+      );
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to fetch active jobs";
+      res.status(500).json({ error: errorMessage });
+    }
+  });
+
   app.get("/api/mindbody/import/history", requireAuth, async (req, res) => {
     try {
       const organizationId = (req.user as User)?.organizationId;

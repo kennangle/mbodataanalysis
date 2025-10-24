@@ -167,6 +167,7 @@ export interface IStorage {
   getImportJobs(organizationId: string, limit?: number): Promise<ImportJob[]>;
   updateImportJob(id: string, job: Partial<InsertImportJob>): Promise<void>;
   getActiveImportJob(organizationId: string): Promise<ImportJob | undefined>;
+  getActiveImportJobs(organizationId: string): Promise<ImportJob[]>;
   getStalledImportJobs(staleMinutes: number): Promise<ImportJob[]>;
   updateImportJobHeartbeat(id: string): Promise<void>;
   keepConnectionAlive(): Promise<void>;
@@ -936,6 +937,19 @@ export class DbStorage implements IStorage {
       .orderBy(desc(importJobs.createdAt))
       .limit(1);
     return result[0];
+  }
+
+  async getActiveImportJobs(organizationId: string): Promise<ImportJob[]> {
+    return await db
+      .select()
+      .from(importJobs)
+      .where(
+        and(
+          eq(importJobs.organizationId, organizationId),
+          sql`${importJobs.status} IN ('pending', 'running')`
+        )
+      )
+      .orderBy(desc(importJobs.createdAt));
   }
 
   async getStalledImportJobs(staleMinutes: number): Promise<ImportJob[]> {
