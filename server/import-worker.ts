@@ -153,7 +153,7 @@ export class ImportWorker {
 
     // Handle graceful shutdown signals
     const handleShutdown = async (signal: string) => {
-      console.log(`[ImportWorker] Received ${signal} signal, marking job as interrupted...`);
+      console.log(`[ImportWorker] Received ${signal} signal, leaving job in resumable state...`);
       
       // Stop watchdog
       if (this.watchdogInterval) {
@@ -167,21 +167,23 @@ export class ImportWorker {
             'Get import job during shutdown'
           );
           if (job && job.status === "running") {
+            // Leave status as "running" so auto-resume can pick it up
+            // Just clear the error field if any
             await withDatabaseRetry(
               () => storage.updateImportJob(this.currentJobId!, {
-                status: "failed",
-                error: `Import interrupted due to server ${signal === 'SIGTERM' ? 'restart' : 'error'}. Resume to continue from checkpoint.`,
+                error: null,
               }),
-              'Mark job as interrupted during shutdown'
+              'Clear error during shutdown'
             );
-            console.log(`[ImportWorker] Job ${this.currentJobId} marked as interrupted`);
+            console.log(`[ImportWorker] Job ${this.currentJobId} left in resumable state for auto-resume`);
           }
         } catch (error) {
-          console.error(`[ImportWorker] Failed to mark job as interrupted:`, error);
+          console.error(`[ImportWorker] Failed to update job during shutdown:`, error);
+          // Don't crash if we can't update - auto-resume will handle it
         }
       }
 
-      // Exit gracefully after marking job
+      // Exit gracefully after updating job
       if (signal === 'SIGTERM' || signal === 'SIGINT') {
         process.exit(0);
       }
