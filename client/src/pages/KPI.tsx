@@ -462,15 +462,8 @@ export default function KPI() {
                     {introConversion?.uniqueIntroBuyers || 0} Unique Intro Buyers
                   </div>
                 </div>
-                <div className="flex items-center gap-2 pl-8">
-                  <div 
-                    className="flex-1 bg-green-500 h-10 rounded-md flex items-center justify-center text-white font-semibold"
-                    style={{ 
-                      width: introConversion?.uniqueIntroBuyers 
-                        ? `${(Number(introConversion.converted) / Number(introConversion.uniqueIntroBuyers)) * 100}%`
-                        : '0%' 
-                    }}
-                  >
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 bg-green-500 h-10 rounded-md flex items-center justify-center text-white font-semibold">
                     {introConversion?.converted || 0} Converted ({introConversion?.conversionRate || 0}%)
                   </div>
                 </div>
