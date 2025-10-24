@@ -66,17 +66,23 @@ app.use((req, res, next) => {
   try {
     const { db } = await import("./db");
     const { importJobs } = await import("@shared/schema");
-    const { eq, or, inArray } = await import("drizzle-orm");
+    const { eq, or, and, like } = await import("drizzle-orm");
     const { importWorker } = await import("./import-worker");
 
-    // Find jobs that were interrupted (running or pending, but not paused)
+    // Find jobs that were interrupted:
+    // 1. Running or pending jobs (server crash before watchdog detected them)
+    // 2. Failed jobs with connection timeout error (watchdog detected stall after crash)
     const interruptedJobs = await db
       .select()
       .from(importJobs)
       .where(
         or(
           eq(importJobs.status, "running"),
-          eq(importJobs.status, "pending")
+          eq(importJobs.status, "pending"),
+          and(
+            eq(importJobs.status, "failed"),
+            like(importJobs.error, "%connection timeout%")
+          )
         )
       );
 
