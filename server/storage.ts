@@ -42,6 +42,39 @@ import {
 import { eq, and, desc, gte, lt, lte, sql } from "drizzle-orm";
 import { addDays } from "date-fns";
 
+// Database retry helper for Neon connection resilience
+async function withDatabaseRetry<T>(
+  operation: () => Promise<T>,
+  maxRetries: number = 3
+): Promise<T> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error: any) {
+      // Check if this is a connection-related error
+      const isConnectionError =
+        error?.code === '57P01' || // Connection terminated
+        error?.code === 'ECONNRESET' ||
+        error?.message?.includes('connection terminated') ||
+        error?.message?.includes('connection closed') ||
+        error?.message?.includes('connection lost');
+
+      // If it's the last attempt or not a connection error, throw
+      if (attempt === maxRetries || !isConnectionError) {
+        throw error;
+      }
+
+      // Exponential backoff: 1s, 2s, 4s
+      const delayMs = Math.pow(2, attempt) * 1000;
+      console.warn(
+        `[DB Retry] Connection error (${error?.code || 'unknown'}), retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries})...`
+      );
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+  throw new Error('Unreachable code');
+}
+
 export interface IStorage {
   getUserById(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
@@ -293,12 +326,16 @@ export class DbStorage implements IStorage {
   }
 
   async createStudent(student: InsertStudent): Promise<Student> {
-    const result = await db.insert(students).values(student).returning();
-    return result[0];
+    return await withDatabaseRetry(async () => {
+      const result = await db.insert(students).values(student).returning();
+      return result[0];
+    });
   }
 
   async updateStudent(id: string, student: Partial<InsertStudent>): Promise<void> {
-    await db.update(students).set(student).where(eq(students.id, id));
+    await withDatabaseRetry(async () => {
+      await db.update(students).set(student).where(eq(students.id, id));
+    });
   }
 
   async deleteStudent(id: string): Promise<void> {
@@ -352,8 +389,10 @@ export class DbStorage implements IStorage {
   }
 
   async createClass(classData: InsertClass): Promise<Class> {
-    const result = await db.insert(classes).values(classData).returning();
-    return result[0];
+    return await withDatabaseRetry(async () => {
+      const result = await db.insert(classes).values(classData).returning();
+      return result[0];
+    });
   }
 
   async updateClass(id: string, classData: Partial<InsertClass>): Promise<void> {
@@ -397,8 +436,10 @@ export class DbStorage implements IStorage {
   }
 
   async createClassSchedule(schedule: InsertClassSchedule): Promise<ClassSchedule> {
-    const result = await db.insert(classSchedules).values(schedule).returning();
-    return result[0];
+    return await withDatabaseRetry(async () => {
+      const result = await db.insert(classSchedules).values(schedule).returning();
+      return result[0];
+    });
   }
 
   async getAttendance(
@@ -436,32 +477,34 @@ export class DbStorage implements IStorage {
   }
 
   async createAttendance(attendanceData: InsertAttendance): Promise<Attendance> {
-    // Use ON CONFLICT with the unique index we created to prevent duplicates
-    const result = await db
-      .insert(attendance)
-      .values(attendanceData)
-      .onConflictDoNothing()
-      .returning();
-    
-    // If conflict occurred and nothing was inserted, fetch the existing record
-    if (result.length === 0) {
-      const existing = await db
-        .select()
-        .from(attendance)
-        .where(
-          and(
-            eq(attendance.organizationId, attendanceData.organizationId),
-            eq(attendance.studentId, attendanceData.studentId),
-            eq(attendance.scheduleId, attendanceData.scheduleId),
-            eq(attendance.status, 'attended'), // Match the partial index predicate
-            sql`${attendance.attendedAt}::date = ${attendanceData.attendedAt}::date`
+    return await withDatabaseRetry(async () => {
+      // Use ON CONFLICT with the unique index we created to prevent duplicates
+      const result = await db
+        .insert(attendance)
+        .values(attendanceData)
+        .onConflictDoNothing()
+        .returning();
+      
+      // If conflict occurred and nothing was inserted, fetch the existing record
+      if (result.length === 0) {
+        const existing = await db
+          .select()
+          .from(attendance)
+          .where(
+            and(
+              eq(attendance.organizationId, attendanceData.organizationId),
+              eq(attendance.studentId, attendanceData.studentId),
+              eq(attendance.scheduleId, attendanceData.scheduleId),
+              eq(attendance.status, 'attended'), // Match the partial index predicate
+              sql`${attendance.attendedAt}::date = ${attendanceData.attendedAt}::date`
+            )
           )
-        )
-        .limit(1);
-      return existing[0];
-    }
-    
-    return result[0];
+          .limit(1);
+        return existing[0];
+      }
+      
+      return result[0];
+    });
   }
 
   async getAttendanceCount(organizationId: string): Promise<number> {
@@ -500,61 +543,63 @@ export class DbStorage implements IStorage {
   }
 
   async upsertRevenue(revenueData: InsertRevenue): Promise<Revenue> {
-    // When mindbodyItemId is NULL, we need to check for duplicates manually
-    // because PostgreSQL unique constraints don't treat NULL values as equal
-    if (!revenueData.mindbodyItemId && revenueData.mindbodySaleId) {
-      // Check if record already exists
-      const existing = await db
-        .select()
-        .from(revenue)
-        .where(
-          and(
-            eq(revenue.organizationId, revenueData.organizationId),
-            eq(revenue.mindbodySaleId, revenueData.mindbodySaleId),
-            sql`${revenue.mindbodyItemId} IS NULL`
+    return await withDatabaseRetry(async () => {
+      // When mindbodyItemId is NULL, we need to check for duplicates manually
+      // because PostgreSQL unique constraints don't treat NULL values as equal
+      if (!revenueData.mindbodyItemId && revenueData.mindbodySaleId) {
+        // Check if record already exists
+        const existing = await db
+          .select()
+          .from(revenue)
+          .where(
+            and(
+              eq(revenue.organizationId, revenueData.organizationId),
+              eq(revenue.mindbodySaleId, revenueData.mindbodySaleId),
+              sql`${revenue.mindbodyItemId} IS NULL`
+            )
           )
-        )
-        .limit(1);
+          .limit(1);
 
-      if (existing.length > 0) {
-        // Update existing record
-        const updated = await db
-          .update(revenue)
-          .set({
-            studentId: revenueData.studentId,
-            amount: revenueData.amount,
-            type: revenueData.type,
-            description: revenueData.description,
-            transactionDate: revenueData.transactionDate,
-          })
-          .where(eq(revenue.id, existing[0].id))
-          .returning();
-        return updated[0];
+        if (existing.length > 0) {
+          // Update existing record
+          const updated = await db
+            .update(revenue)
+            .set({
+              studentId: revenueData.studentId,
+              amount: revenueData.amount,
+              type: revenueData.type,
+              description: revenueData.description,
+              transactionDate: revenueData.transactionDate,
+            })
+            .where(eq(revenue.id, existing[0].id))
+            .returning();
+          return updated[0];
+        }
       }
-    }
 
-    // For non-NULL mindbodyItemId, or if no existing record found, use regular upsert
-    if (revenueData.mindbodyItemId) {
-      const result = await db
-        .insert(revenue)
-        .values(revenueData)
-        .onConflictDoUpdate({
-          target: [revenue.organizationId, revenue.mindbodySaleId, revenue.mindbodyItemId],
-          set: {
-            studentId: revenueData.studentId,
-            amount: revenueData.amount,
-            type: revenueData.type,
-            description: revenueData.description,
-            transactionDate: revenueData.transactionDate,
-          },
-        })
-        .returning();
+      // For non-NULL mindbodyItemId, or if no existing record found, use regular upsert
+      if (revenueData.mindbodyItemId) {
+        const result = await db
+          .insert(revenue)
+          .values(revenueData)
+          .onConflictDoUpdate({
+            target: [revenue.organizationId, revenue.mindbodySaleId, revenue.mindbodyItemId],
+            set: {
+              studentId: revenueData.studentId,
+              amount: revenueData.amount,
+              type: revenueData.type,
+              description: revenueData.description,
+              transactionDate: revenueData.transactionDate,
+            },
+          })
+          .returning();
+        return result[0];
+      }
+
+      // Insert new record (no conflict possible)
+      const result = await db.insert(revenue).values(revenueData).returning();
       return result[0];
-    }
-
-    // Insert new record (no conflict possible)
-    const result = await db.insert(revenue).values(revenueData).returning();
-    return result[0];
+    });
   }
 
   async getSalesCount(organizationId: string): Promise<number> {
