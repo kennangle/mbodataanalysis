@@ -137,6 +137,11 @@ export function registerMindbodyRoutes(app: Express) {
         return res.status(404).json({ error: "No active import job" });
       }
 
+      // Prevent HTTP caching to ensure real-time progress updates across all browsers
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+
       res.json({
         id: activeJob.id,
         status: activeJob.status,
@@ -166,6 +171,11 @@ export function registerMindbodyRoutes(app: Express) {
       }
 
       const activeJobs = await storage.getActiveImportJobs(organizationId);
+
+      // Prevent HTTP caching to ensure real-time progress updates across all browsers
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
 
       res.json(
         activeJobs.map((job: any) => ({
@@ -197,6 +207,11 @@ export function registerMindbodyRoutes(app: Express) {
 
       const limit = parseInt(req.query.limit as string) || 10;
       const jobs = await storage.getImportJobs(organizationId, limit);
+
+      // Prevent HTTP caching to ensure real-time progress updates across all browsers
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
 
       res.json(
         jobs.map((job) => ({
@@ -345,6 +360,11 @@ export function registerMindbodyRoutes(app: Express) {
         visits: await storage.getAttendanceCount(organizationId),
         sales: await storage.getSalesCount(organizationId),
       };
+
+      // Prevent HTTP caching to ensure real-time progress updates across all browsers
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
 
       res.json({
         id: job.id,
