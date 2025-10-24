@@ -103,11 +103,12 @@ app.use((req, res, next) => {
         
         console.log(`[Auto-Resume] Resuming job ${job.id} from checkpoint: ${progressInfo}`);
         
-        // Update status to running (in case it was pending)
+        // Keep job as pending until worker starts processing it
+        // (prevents watchdog from incorrectly marking queued jobs as failed)
         await db
           .update(importJobs)
           .set({
-            status: "running",
+            status: "pending",
             error: null,
             updatedAt: new Date(),
           })

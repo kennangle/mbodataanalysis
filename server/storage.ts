@@ -946,7 +946,10 @@ export class DbStorage implements IStorage {
       .where(
         and(
           eq(importJobs.status, "running"),
-          sql`${importJobs.heartbeatAt} < ${staleThreshold} OR ${importJobs.heartbeatAt} IS NULL`
+          // Only fail jobs that have started processing (non-null heartbeat)
+          // Jobs with null heartbeat are queued, not stalled
+          sql`${importJobs.heartbeatAt} IS NOT NULL`,
+          sql`${importJobs.heartbeatAt} < ${staleThreshold}`
         )
       );
     return result;

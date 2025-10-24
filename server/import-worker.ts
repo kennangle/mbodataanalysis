@@ -126,8 +126,9 @@ export class ImportWorker {
 
   private async checkForStalledJobs(): Promise<void> {
     try {
-      // Query for running jobs with stale heartbeats (>3 minutes old)
-      const stalledJobs = await storage.getStalledImportJobs(3);
+      // Query for running jobs with stale heartbeats (>5 minutes old)
+      // Increased from 3 to 5 minutes for extra cushion
+      const stalledJobs = await storage.getStalledImportJobs(5);
       
       for (const job of stalledJobs) {
         console.log(`[Watchdog] Detected stalled job ${job.id} - last heartbeat: ${job.heartbeatAt}`);
