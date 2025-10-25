@@ -361,7 +361,7 @@ export class MindbodyService {
     startOffset: number = 0
   ): Promise<{ imported: number; updated: number; nextOffset: number; completed: boolean }> {
     const BATCH_SIZE = 200;
-    const BATCH_DELAY = 200; // 200ms delay between batches
+    const BATCH_DELAY = 0; // No delay - removed for faster imports
 
     // Fetch first page to get total count
     const endpoint = `/client/clients?LastModifiedDate=${startDate.toISOString()}&Limit=${BATCH_SIZE}&Offset=${startOffset}`;
@@ -439,7 +439,7 @@ export class MindbodyService {
     startOffset: number = 0
   ): Promise<{ imported: number; nextOffset: number; completed: boolean }> {
     const BATCH_SIZE = 200;
-    const BATCH_DELAY = 200; // 200ms delay between batches
+    const BATCH_DELAY = 0; // No delay - removed for faster imports
 
     // Fetch first page to get total count
     const endpoint = `/class/classes?StartDateTime=${startDate.toISOString()}&EndDateTime=${endDate.toISOString()}&Limit=${BATCH_SIZE}&Offset=${startOffset}`;
@@ -523,8 +523,8 @@ export class MindbodyService {
     startStudentIndex: number = 0,
     schedulesByTime?: Map<string, any> // Pass cached schedules to avoid reloading
   ): Promise<{ imported: number; nextStudentIndex: number; completed: boolean; schedulesByTime?: Map<string, any> }> {
-    const BATCH_SIZE = 100; // Process 100 students per batch
-    const BATCH_DELAY = 250; // 250ms delay between batches
+    const BATCH_SIZE = 200; // Increased from 100 to 200 for faster imports
+    const BATCH_DELAY = 0; // No delay - removed for faster imports
 
     // Get total student count without loading all students
     const totalStudents = await storage.getStudentCount(organizationId);
@@ -709,7 +709,7 @@ export class MindbodyService {
   ): Promise<{ imported: number; nextStudentIndex: number; completed: boolean }> {
     // Fetch sales at SITE LEVEL (not per-client) as ClientId filter may not be supported
     const SALES_BATCH_SIZE = 200; // Fetch 200 sales at a time
-    const BATCH_DELAY = 250;
+    const BATCH_DELAY = 0; // No delay - removed for faster imports
 
     // Load all students once for ID lookup
     const allStudents = cachedStudents || (await storage.getStudents(organizationId, 100000));
