@@ -102,7 +102,8 @@ export function registerReportRoutes(app: Express) {
       const classesMap = new Map();
       const scheduleToClassMap = new Map();
 
-      const students = await storage.getStudents(organizationId);
+      // Fetch ALL students without limit for report generation
+      const students = await storage.getStudents(organizationId, 1000000, 0);
       const classes = await storage.getClasses(organizationId);
       const schedules = await storage.getClassSchedules(organizationId);
 
@@ -299,9 +300,9 @@ export function registerReportRoutes(app: Express) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      // Fetch all data
+      // Fetch all data (use high limit for students to get complete dataset)
       const [students, classes, schedules, attendance, revenue] = await Promise.all([
-        storage.getStudents(organizationId),
+        storage.getStudents(organizationId, 1000000, 0),
         storage.getClasses(organizationId),
         storage.getClassSchedules(organizationId),
         storage.getAttendance(organizationId),
