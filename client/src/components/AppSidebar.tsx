@@ -10,6 +10,7 @@ import {
   UserCog,
   LogOut,
   TrendingUp,
+  FileWarning,
 } from "lucide-react";
 import {
   Sidebar,
@@ -43,6 +44,7 @@ const menuItems = [
       { title: "Students", url: "/students", icon: Users },
       { title: "Classes", url: "/classes", icon: Calendar },
       { title: "Reports", url: "/reports", icon: FileText },
+      { title: "Skipped Records", url: "/skipped-records", icon: FileWarning },
       { title: "Import Data", url: "/import", icon: Database },
     ],
   },

@@ -22,6 +22,7 @@ import Notifications from "@/pages/Notifications";
 import Reports from "@/pages/Reports";
 import Classes from "@/pages/Classes";
 import Users from "@/pages/Users";
+import SkippedRecords from "@/pages/SkippedRecords";
 
 function Router() {
   return (
@@ -38,6 +39,7 @@ function Router() {
       <Route path="/classes" component={Classes} />
       <Route path="/users" component={Users} />
       <Route path="/reports" component={Reports} />
+      <Route path="/skipped-records" component={SkippedRecords} />
       <Route path="/import" component={Import} />
       <Route path="/notifications" component={Notifications} />
       <Route path="/settings" component={Settings} />

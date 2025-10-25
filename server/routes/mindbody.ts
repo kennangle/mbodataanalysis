@@ -528,4 +528,36 @@ export function registerMindbodyRoutes(app: Express) {
       res.status(500).json({ error: errorMessage });
     }
   });
+
+  // Get skipped import records
+  app.get("/api/mindbody/import/skipped-records", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.user as User)?.organizationId;
+
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const dataType = req.query.dataType as string | undefined;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+
+      // Set cache headers to prevent browser caching
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+
+      const [records, total] = await Promise.all([
+        storage.getSkippedImportRecords(organizationId, dataType, limit),
+        storage.getSkippedImportRecordsCount(organizationId, dataType),
+      ]);
+
+      res.json({
+        records,
+        total,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to fetch skipped records";
+      res.status(500).json({ error: errorMessage });
+    }
+  });
 }
