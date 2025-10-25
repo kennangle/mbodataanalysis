@@ -5,6 +5,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { DashboardStats } from "@/components/DashboardStats";
+import { QuickStats } from "@/components/QuickStats";
 import { RevenueChart } from "@/components/RevenueChart";
 import { AttendanceChart } from "@/components/AttendanceChart";
 import { DataImportCard } from "@/components/DataImportCard";
@@ -120,6 +121,7 @@ export default function Dashboard() {
           </header>
           <main className="flex-1 overflow-y-auto p-6">
             <div className="max-w-screen-2xl mx-auto space-y-6">
+              <QuickStats />
               <DashboardStats />
 
               {/* Centralized Date Range Picker */}
