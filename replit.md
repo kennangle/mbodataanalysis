@@ -43,6 +43,8 @@ This platform is an enterprise-grade analytics solution for Mindbody data, encom
 - **AI-Powered Natural Language Queries**: OpenAI GPT-4o-mini with Function Calling for natural language questions, dynamic database querying, and data-driven insights using specialized functions.
 - **KPI Dashboard**: Tracks studio performance with KPIs like total revenue, active members, class utilization heatmap, conversion funnels, churn/retention, and class performance analysis, all with dynamic date filtering.
 - **Reports System**: Four comprehensive report types (Revenue, Attendance, Class Performance, Monthly Summary) with CSV export and customizable date ranges.
+- **Data Coverage Report**: Comprehensive diagnostics page (`/data-coverage`) showing record counts, date range coverage, monthly breakdowns for all data types, and data quality metrics including orphaned attendance records detection. Essential for identifying data integrity issues.
+- **Quick Stats Dashboard Widget**: Real-time monitoring widget on main Dashboard showing at-a-glance totals for students, classes, attendance, revenue, and latest import dates. Features 60-second auto-refresh, proper error handling with retry functionality, and loading states.
 - **Configurable Imports**: Allows users to specify date ranges and data types for selective data fetching.
 - **Revenue Import Strategy**: Prioritizes CSV import for historical data due to Mindbody API limitations, with scheduled API imports configured for "Last 1 Day" for ongoing synchronization.
 - **Students Data Management**: Comprehensive student roster management with advanced filtering and Excel export.
