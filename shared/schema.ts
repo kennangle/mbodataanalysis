@@ -255,6 +255,32 @@ export const insertImportJobSchema = createInsertSchema(importJobs).omit({
 export type InsertImportJob = z.infer<typeof insertImportJobSchema>;
 export type ImportJob = typeof importJobs.$inferSelect;
 
+export const skippedImportRecords = pgTable(
+  "skipped_import_records",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id").notNull(),
+    importJobId: uuid("import_job_id"),
+    dataType: text("data_type").notNull(), // "client", "class", "visit", "sale"
+    mindbodyId: text("mindbody_id").notNull(), // Mindbody record ID
+    reason: text("reason").notNull(), // Why it was skipped
+    rawData: text("raw_data"), // JSON of the raw Mindbody record
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    orgIdx: index("skipped_import_records_org_idx").on(table.organizationId),
+    jobIdx: index("skipped_import_records_job_idx").on(table.importJobId),
+    dataTypeIdx: index("skipped_import_records_data_type_idx").on(table.dataType),
+  })
+);
+
+export const insertSkippedImportRecordSchema = createInsertSchema(skippedImportRecords).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertSkippedImportRecord = z.infer<typeof insertSkippedImportRecordSchema>;
+export type SkippedImportRecord = typeof skippedImportRecords.$inferSelect;
+
 export const passwordResetTokens = pgTable(
   "password_reset_tokens",
   {
