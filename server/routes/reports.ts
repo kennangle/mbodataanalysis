@@ -418,13 +418,19 @@ export function registerReportRoutes(app: Express) {
         storage.getRevenue(organizationId),
       ]);
 
-      // Get latest import dates
+      // Get latest import dates (use reduce to avoid stack overflow with large datasets)
       const latestAttendance = attendanceRecords.length > 0
-        ? new Date(Math.max(...attendanceRecords.map(a => a.createdAt.getTime())))
+        ? new Date(attendanceRecords.reduce((max, a) => {
+            const time = a.createdAt.getTime();
+            return time > max ? time : max;
+          }, 0))
         : null;
 
       const latestRevenue = revenueStats.length > 0
-        ? new Date(Math.max(...revenueStats.map(r => r.createdAt.getTime())))
+        ? new Date(revenueStats.reduce((max, r) => {
+            const time = r.createdAt.getTime();
+            return time > max ? time : max;
+          }, 0))
         : null;
 
       res.json({
