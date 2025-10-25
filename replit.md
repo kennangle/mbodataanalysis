@@ -58,6 +58,26 @@ This platform is an enterprise-grade analytics solution for Mindbody data, encom
 - **Multi-Tenancy Design**: Complete data isolation per organization via `organizationId`, shared database with row-level separation.
 - **Multi-Site Support**: Each organization can connect to a different Mindbody site.
 
+## Recent Bug Fixes
+
+### Critical: Attendance Report "Unknown" Student Names (Oct 25, 2025)
+
+**Issue:** All 75,000+ attendance records showed "Unknown" instead of actual student names in CSV reports.
+
+**Root Cause:** The `getStudents()` method has a default limit of 100 records. When generating reports, the system:
+- Only loaded first 100 students into memory
+- Tried to match 6,455 unique student IDs from 317,484 attendance records
+- Only found matches for the first 100 students
+- All other records fell back to "Unknown"
+
+**Fix:** Updated report endpoints to fetch ALL students by passing limit=1,000,000:
+- `/api/reports/attendance` - Line 109
+- `/api/reports/data-coverage` - Line 308
+
+**Impact:** Attendance reports now correctly display all student names. Database has 36,517 students, comfortably within the new limit.
+
+**Note:** When using `storage.getStudents()` for reports or bulk operations, always pass a high limit (1000000, 0) to ensure complete dataset retrieval.
+
 ## External Dependencies
 
 - **Mindbody Public API**: For importing client, class, visit, and sales data.
