@@ -126,9 +126,9 @@ export class ImportWorker {
 
   private async checkForStalledJobs(): Promise<void> {
     try {
-      // Query for running jobs with stale heartbeats (>5 minutes old)
-      // Increased from 3 to 5 minutes for extra cushion
-      const stalledJobs = await storage.getStalledImportJobs(5);
+      // Query for running jobs with stale heartbeats (>10 minutes old)
+      // Increased to 10 minutes now that we have periodic heartbeats every 60s
+      const stalledJobs = await storage.getStalledImportJobs(10);
       
       for (const job of stalledJobs) {
         console.log(`[Watchdog] Detected stalled job ${job.id} - last heartbeat: ${job.heartbeatAt}`);
@@ -232,6 +232,9 @@ export class ImportWorker {
     // Log initial memory state
     logMemoryUsage(`Starting job ${jobId}`);
 
+    // Start periodic heartbeat to prevent watchdog false positives
+    let heartbeatInterval: NodeJS.Timeout | null = null;
+
     try {
       const job = await withDatabaseRetry(
         () => storage.getImportJob(jobId),
@@ -276,6 +279,18 @@ export class ImportWorker {
         }),
         'Set job status to running'
       );
+
+      // Start periodic heartbeat (every 60 seconds) to prevent watchdog false positives
+      // This ensures the watchdog knows the worker is alive even during long API calls
+      console.log(`[Import] Starting periodic heartbeat for job ${jobId}`);
+      heartbeatInterval = setInterval(async () => {
+        try {
+          await keepAliveAndHeartbeat(jobId, "periodic heartbeat");
+        } catch (error) {
+          console.warn(`[Import] Heartbeat failed for job ${jobId}:`, error);
+          // Don't crash - this is best-effort
+        }
+      }, 60000); // 60 seconds
 
       // Process clients
       if (dataTypes.includes("clients") && !progress.clients?.completed) {
@@ -407,6 +422,12 @@ export class ImportWorker {
         console.error(`Failed to mark job ${jobId} as failed:`, err);
       });
     } finally {
+      // Stop periodic heartbeat
+      if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+        console.log(`[Import] Stopped periodic heartbeat for job ${jobId}`);
+      }
+      
       this.isProcessing = false;
       this.currentJobId = null;
     }
