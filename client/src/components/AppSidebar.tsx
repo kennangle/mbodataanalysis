@@ -44,6 +44,7 @@ const menuItems = [
       { title: "Students", url: "/students", icon: Users },
       { title: "Classes", url: "/classes", icon: Calendar },
       { title: "Reports", url: "/reports", icon: FileText },
+      { title: "Data Coverage", url: "/data-coverage", icon: Database },
       { title: "Skipped Records", url: "/skipped-records", icon: FileWarning },
       { title: "Import Data", url: "/import", icon: Database },
     ],

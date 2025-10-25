@@ -290,4 +290,156 @@ export function registerReportRoutes(app: Express) {
       res.status(500).json({ error: "Failed to generate monthly summary" });
     }
   });
+
+  // Data Coverage Report - Diagnostic endpoint
+  app.get("/api/reports/data-coverage", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.user as User)?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      // Fetch all data
+      const [students, classes, schedules, attendance, revenue] = await Promise.all([
+        storage.getStudents(organizationId),
+        storage.getClasses(organizationId),
+        storage.getClassSchedules(organizationId),
+        storage.getAttendance(organizationId),
+        storage.getRevenue(organizationId),
+      ]);
+
+      // Find orphaned attendance records (studentId not in students table)
+      const studentIds = new Set(students.map(s => s.id));
+      const orphanedAttendance = attendance.filter(a => !studentIds.has(a.studentId));
+
+      // Calculate date ranges
+      const getDateRange = (records: Array<{ createdAt: Date }>) => {
+        if (records.length === 0) return { earliest: null, latest: null };
+        const dates = records.map(r => r.createdAt.getTime());
+        return {
+          earliest: new Date(Math.min(...dates)),
+          latest: new Date(Math.max(...dates)),
+        };
+      };
+
+      const attendanceDateRange = attendance.length > 0 ? {
+        earliest: new Date(Math.min(...attendance.map(a => a.attendedAt.getTime()))),
+        latest: new Date(Math.max(...attendance.map(a => a.attendedAt.getTime()))),
+      } : { earliest: null, latest: null };
+
+      const revenueDateRange = revenue.length > 0 ? {
+        earliest: new Date(Math.min(...revenue.map(r => r.transactionDate.getTime()))),
+        latest: new Date(Math.max(...revenue.map(r => r.transactionDate.getTime()))),
+      } : { earliest: null, latest: null };
+
+      // Monthly attendance breakdown
+      const attendanceByMonth = new Map<string, number>();
+      attendance.forEach(a => {
+        const monthKey = a.attendedAt.toISOString().substring(0, 7); // YYYY-MM
+        attendanceByMonth.set(monthKey, (attendanceByMonth.get(monthKey) || 0) + 1);
+      });
+
+      // Monthly revenue breakdown
+      const revenueByMonth = new Map<string, number>();
+      revenue.forEach(r => {
+        const monthKey = r.transactionDate.toISOString().substring(0, 7);
+        revenueByMonth.set(monthKey, (revenueByMonth.get(monthKey) || 0) + 1);
+      });
+
+      res.json({
+        summary: {
+          students: {
+            total: students.length,
+            dateRange: getDateRange(students),
+          },
+          classes: {
+            total: classes.length,
+            dateRange: getDateRange(classes),
+          },
+          schedules: {
+            total: schedules.length,
+            dateRange: getDateRange(schedules),
+          },
+          attendance: {
+            total: attendance.length,
+            attended: attendance.filter(a => a.status === "attended").length,
+            noShow: attendance.filter(a => a.status === "no-show").length,
+            orphaned: orphanedAttendance.length,
+            dateRange: attendanceDateRange,
+          },
+          revenue: {
+            total: revenue.length,
+            totalAmount: revenue.reduce((sum, r) => sum + parseFloat(r.amount), 0),
+            dateRange: revenueDateRange,
+          },
+        },
+        monthlyBreakdown: {
+          attendance: Array.from(attendanceByMonth.entries())
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .map(([month, count]) => ({ month, count })),
+          revenue: Array.from(revenueByMonth.entries())
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .map(([month, count]) => ({ month, count })),
+        },
+        dataQuality: {
+          orphanedAttendanceRecords: orphanedAttendance.length,
+          studentsWithoutAttendance: students.filter(s => 
+            !attendance.some(a => a.studentId === s.id)
+          ).length,
+          classesWithoutSchedules: classes.filter(c =>
+            !schedules.some(sch => sch.classId === c.id)
+          ).length,
+        },
+      });
+    } catch (error) {
+      console.error("Data coverage report error:", error);
+      res.status(500).json({ error: "Failed to generate data coverage report" });
+    }
+  });
+
+  // Quick Stats Dashboard
+  app.get("/api/reports/quick-stats", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.user as User)?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const [
+        studentCount,
+        classCount,
+        attendanceRecords,
+        revenueStats,
+      ] = await Promise.all([
+        storage.getStudentCount(organizationId),
+        storage.getClasses(organizationId),
+        storage.getAttendance(organizationId),
+        storage.getRevenue(organizationId),
+      ]);
+
+      // Get latest import dates
+      const latestAttendance = attendanceRecords.length > 0
+        ? new Date(Math.max(...attendanceRecords.map(a => a.createdAt.getTime())))
+        : null;
+
+      const latestRevenue = revenueStats.length > 0
+        ? new Date(Math.max(...revenueStats.map(r => r.createdAt.getTime())))
+        : null;
+
+      res.json({
+        totalStudents: studentCount,
+        totalClasses: classCount.length,
+        totalAttendance: attendanceRecords.length,
+        totalRevenue: revenueStats.reduce((sum, r) => sum + parseFloat(r.amount), 0),
+        revenueTransactions: revenueStats.length,
+        latestImports: {
+          attendance: latestAttendance,
+          revenue: latestRevenue,
+        },
+      });
+    } catch (error) {
+      console.error("Quick stats error:", error);
+      res.status(500).json({ error: "Failed to fetch quick stats" });
+    }
+  });
 }
