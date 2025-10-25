@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { apiRequest } from "@/lib/queryClient";
 import {
   Card,
   CardContent,
@@ -55,9 +56,7 @@ export default function SkippedRecords() {
       }
       params.set("limit", "1000");
 
-      const response = await fetch(`/api/mindbody/import/skipped-records?${params}`);
-      if (!response.ok) throw new Error("Failed to fetch skipped records");
-      return response.json();
+      return await apiRequest("GET", `/api/mindbody/import/skipped-records?${params}`);
     },
   });
 
