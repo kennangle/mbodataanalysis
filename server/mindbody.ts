@@ -187,6 +187,7 @@ export class MindbodyService {
     const apiKey = process.env.MINDBODY_API_KEY;
     const siteId = "133";
     const MAX_RETRIES = 3;
+    const REQUEST_TIMEOUT = 60000; // 60 second timeout
 
     if (!apiKey) {
       throw new Error("MINDBODY_API_KEY not configured");
@@ -195,74 +196,95 @@ export class MindbodyService {
     // Get user token for staff-level access
     const userToken = await this.getUserToken();
 
-    const response = await fetch(`${MINDBODY_API_BASE}${endpoint}`, {
-      ...options,
-      headers: {
-        ...options.headers,
-        "Content-Type": "application/json",
-        "Api-Key": apiKey,
-        SiteId: siteId,
-        Authorization: `Bearer ${userToken}`,
-      },
-    });
+    // Create AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
 
-    // Track API call
-    this.apiCallCounter++;
+    console.log(`[Mindbody API] Requesting: ${endpoint}`);
+    
+    try {
+      const response = await fetch(`${MINDBODY_API_BASE}${endpoint}`, {
+        ...options,
+        headers: {
+          ...options.headers,
+          "Content-Type": "application/json",
+          "Api-Key": apiKey,
+          SiteId: siteId,
+          Authorization: `Bearer ${userToken}`,
+        },
+        signal: controller.signal,
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Mindbody API error: ${response.status} - ${errorText}`);
-      console.error(`Request URL: ${MINDBODY_API_BASE}${endpoint}`);
+      clearTimeout(timeoutId);
 
-      // Clear cached token on authentication errors and retry once
-      if (response.status === 401) {
-        console.log("Authentication error detected, clearing token cache and retrying...");
-        this.cachedUserToken = null;
-        this.tokenExpiryTime = 0;
+      // Track API call
+      this.apiCallCounter++;
 
-        // Retry once with fresh token
-        const newToken = await this.getUserToken();
-        const retryResponse = await fetch(`${MINDBODY_API_BASE}${endpoint}`, {
-          ...options,
-          headers: {
-            ...options.headers,
-            "Content-Type": "application/json",
-            "Api-Key": apiKey,
-            SiteId: siteId,
-            Authorization: `Bearer ${newToken}`,
-          },
-        });
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Mindbody API error: ${response.status} - ${errorText}`);
+        console.error(`Request URL: ${MINDBODY_API_BASE}${endpoint}`);
 
-        if (!retryResponse.ok) {
-          const retryErrorText = await retryResponse.text();
-          console.error(`Mindbody API retry failed: ${retryResponse.status} - ${retryErrorText}`);
-          throw new Error(`Mindbody API error: ${retryResponse.statusText}`);
+        // Clear cached token on authentication errors and retry once
+        if (response.status === 401) {
+          console.log("Authentication error detected, clearing token cache and retrying...");
+          this.cachedUserToken = null;
+          this.tokenExpiryTime = 0;
+
+          // Retry once with fresh token
+          const newToken = await this.getUserToken();
+          const retryResponse = await fetch(`${MINDBODY_API_BASE}${endpoint}`, {
+            ...options,
+            headers: {
+              ...options.headers,
+              "Content-Type": "application/json",
+              "Api-Key": apiKey,
+              SiteId: siteId,
+              Authorization: `Bearer ${newToken}`,
+            },
+          });
+
+          if (!retryResponse.ok) {
+            const retryErrorText = await retryResponse.text();
+            console.error(`Mindbody API retry failed: ${retryResponse.status} - ${retryErrorText}`);
+            throw new Error(`Mindbody API error: ${retryResponse.statusText}`);
+          }
+
+          // Track retry API call
+          this.apiCallCounter++;
+
+          return await retryResponse.json();
         }
 
-        // Track retry API call
-        this.apiCallCounter++;
+        // Retry on 500/503 errors with exponential backoff
+        if ((response.status === 500 || response.status === 503) && retryCount < MAX_RETRIES) {
+          const backoffMs = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+          console.log(
+            `Mindbody API ${response.status} error, retrying in ${backoffMs}ms (attempt ${retryCount + 1}/${MAX_RETRIES})...`
+          );
 
-        return await retryResponse.json();
+          // Wait for backoff period
+          await new Promise((resolve) => setTimeout(resolve, backoffMs));
+
+          // Retry the request
+          return this.makeAuthenticatedRequest(organizationId, endpoint, options, retryCount + 1);
+        }
+
+        throw new Error(`Mindbody API error: ${response.statusText}`);
       }
 
-      // Retry on 500/503 errors with exponential backoff
-      if ((response.status === 500 || response.status === 503) && retryCount < MAX_RETRIES) {
-        const backoffMs = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
-        console.log(
-          `Mindbody API ${response.status} error, retrying in ${backoffMs}ms (attempt ${retryCount + 1}/${MAX_RETRIES})...`
-        );
-
-        // Wait for backoff period
-        await new Promise((resolve) => setTimeout(resolve, backoffMs));
-
-        // Retry the request
-        return this.makeAuthenticatedRequest(organizationId, endpoint, options, retryCount + 1);
+      return await response.json();
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      
+      // Handle timeout error
+      if (error.name === 'AbortError') {
+        console.error(`[Mindbody API] Request timeout after ${REQUEST_TIMEOUT/1000}s: ${endpoint}`);
+        throw new Error(`Mindbody API request timeout (${REQUEST_TIMEOUT/1000}s): ${endpoint}`);
       }
-
-      throw new Error(`Mindbody API error: ${response.statusText}`);
+      
+      throw error;
     }
-
-    return await response.json();
   }
 
   // API call tracking methods
@@ -385,6 +407,12 @@ export class MindbodyService {
     // Process this batch
     for (const client of clients) {
       try {
+        // Skip clients with missing critical data (name)
+        if (!client.FirstName || !client.LastName) {
+          console.warn(`Skipping client ${client.Id}: Missing name (FirstName: ${client.FirstName}, LastName: ${client.LastName})`);
+          continue;
+        }
+
         const existingStudent = studentMap.get(client.Id);
 
         if (existingStudent) {
