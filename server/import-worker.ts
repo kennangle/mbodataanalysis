@@ -473,7 +473,8 @@ export class ImportWorker {
             'Update import progress (clients)'
           );
         },
-        progress.clients.current || 0
+        progress.clients.current || 0,
+        job.id // Pass jobId for skipped record tracking
       );
 
       progress.clients.imported += batchResult.imported;

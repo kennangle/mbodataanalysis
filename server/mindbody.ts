@@ -380,7 +380,8 @@ export class MindbodyService {
     startDate: Date,
     endDate: Date,
     onProgress: (current: number, total: number) => Promise<void>,
-    startOffset: number = 0
+    startOffset: number = 0,
+    jobId?: string
   ): Promise<{ imported: number; updated: number; nextOffset: number; completed: boolean }> {
     const BATCH_SIZE = 200;
     const BATCH_DELAY = 0; // No delay - removed for faster imports
@@ -409,7 +410,24 @@ export class MindbodyService {
       try {
         // Skip clients with missing critical data (name)
         if (!client.FirstName || !client.LastName) {
-          console.warn(`Skipping client ${client.Id}: Missing name (FirstName: ${client.FirstName}, LastName: ${client.LastName})`);
+          const reason = `Missing name (FirstName: ${client.FirstName || 'null'}, LastName: ${client.LastName || 'null'})`;
+          console.warn(`Skipping client ${client.Id}: ${reason}`);
+          
+          // Log to database for reporting
+          try {
+            await storage.createSkippedImportRecord({
+              organizationId,
+              importJobId: jobId || null,
+              dataType: "client",
+              mindbodyId: client.Id,
+              reason,
+              rawData: JSON.stringify(client),
+            });
+          } catch (dbError) {
+            // Don't fail the import if logging skipped record fails
+            console.error(`Failed to log skipped client ${client.Id}:`, dbError);
+          }
+          
           continue;
         }
 

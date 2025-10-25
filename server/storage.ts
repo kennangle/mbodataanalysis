@@ -9,6 +9,7 @@ import {
   revenue,
   aiQueries,
   importJobs,
+  skippedImportRecords,
   passwordResetTokens,
   webhookSubscriptions,
   webhookEvents,
@@ -31,6 +32,8 @@ import {
   type InsertAIQuery,
   type ImportJob,
   type InsertImportJob,
+  type SkippedImportRecord,
+  type InsertSkippedImportRecord,
   type PasswordResetToken,
   type WebhookSubscription,
   type InsertWebhookSubscription,
@@ -171,6 +174,15 @@ export interface IStorage {
   getStalledImportJobs(staleMinutes: number): Promise<ImportJob[]>;
   updateImportJobHeartbeat(id: string): Promise<void>;
   keepConnectionAlive(): Promise<void>;
+
+  // Skipped Import Records
+  createSkippedImportRecord(record: InsertSkippedImportRecord): Promise<SkippedImportRecord>;
+  getSkippedImportRecords(
+    organizationId: string,
+    dataType?: string,
+    limit?: number
+  ): Promise<SkippedImportRecord[]>;
+  getSkippedImportRecordsCount(organizationId: string, dataType?: string): Promise<number>;
 
   // Webhooks
   createWebhookSubscription(subscription: InsertWebhookSubscription): Promise<WebhookSubscription>;
@@ -989,6 +1001,50 @@ export class DbStorage implements IStorage {
   async keepConnectionAlive(): Promise<void> {
     // Execute a simple query to keep the database connection alive
     await db.execute(sql`SELECT 1`);
+  }
+
+  async createSkippedImportRecord(record: InsertSkippedImportRecord): Promise<SkippedImportRecord> {
+    const result = await db.insert(skippedImportRecords).values(record).returning();
+    return result[0];
+  }
+
+  async getSkippedImportRecords(
+    organizationId: string,
+    dataType?: string,
+    limit: number = 100
+  ): Promise<SkippedImportRecord[]> {
+    const whereConditions = dataType
+      ? and(
+          eq(skippedImportRecords.organizationId, organizationId),
+          eq(skippedImportRecords.dataType, dataType)
+        )
+      : eq(skippedImportRecords.organizationId, organizationId);
+
+    return await db
+      .select()
+      .from(skippedImportRecords)
+      .where(whereConditions)
+      .orderBy(desc(skippedImportRecords.createdAt))
+      .limit(limit);
+  }
+
+  async getSkippedImportRecordsCount(
+    organizationId: string,
+    dataType?: string
+  ): Promise<number> {
+    const whereConditions = dataType
+      ? and(
+          eq(skippedImportRecords.organizationId, organizationId),
+          eq(skippedImportRecords.dataType, dataType)
+        )
+      : eq(skippedImportRecords.organizationId, organizationId);
+
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(skippedImportRecords)
+      .where(whereConditions);
+
+    return Number(result[0]?.count || 0);
   }
 
   async createWebhookSubscription(
