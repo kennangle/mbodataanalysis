@@ -100,6 +100,19 @@ export function registerReportRoutes(app: Express) {
       // Use efficient JOIN query to get attendance with student and class names
       const attendanceData = await storage.getAttendanceWithDetails(organizationId, startDate, queryEndDate);
 
+      // DIAGNOSTIC LOGGING FOR PRODUCTION DEBUG
+      console.log('[ATTENDANCE REPORT DEBUG]', {
+        totalRecords: attendanceData.length,
+        sampleRecords: attendanceData.slice(0, 5).map(a => ({
+          firstName: a.studentFirstName,
+          lastName: a.studentLastName,
+          className: a.className,
+          date: a.attendedAt
+        })),
+        nullNameCount: attendanceData.filter(a => !a.studentFirstName || !a.studentLastName).length,
+        hasNameCount: attendanceData.filter(a => a.studentFirstName && a.studentLastName).length
+      });
+
       const csv = [
         "Date,Student,Class,Status",
         ...attendanceData.map((a) => {

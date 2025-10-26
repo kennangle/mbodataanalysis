@@ -4882,6 +4882,17 @@ function registerReportRoutes(app2) {
         queryEndDate = addDays2(endDate, 1);
       }
       const attendanceData = await storage.getAttendanceWithDetails(organizationId, startDate, queryEndDate);
+      console.log("[ATTENDANCE REPORT DEBUG]", {
+        totalRecords: attendanceData.length,
+        sampleRecords: attendanceData.slice(0, 5).map((a) => ({
+          firstName: a.studentFirstName,
+          lastName: a.studentLastName,
+          className: a.className,
+          date: a.attendedAt
+        })),
+        nullNameCount: attendanceData.filter((a) => !a.studentFirstName || !a.studentLastName).length,
+        hasNameCount: attendanceData.filter((a) => a.studentFirstName && a.studentLastName).length
+      });
       const csv = [
         "Date,Student,Class,Status",
         ...attendanceData.map((a) => {
