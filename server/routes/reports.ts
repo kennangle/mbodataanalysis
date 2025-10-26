@@ -107,9 +107,13 @@ export function registerReportRoutes(app: Express) {
       const classes = await storage.getClasses(organizationId);
       const schedules = await storage.getClassSchedules(organizationId);
 
+      console.log(`[Attendance Report] Loaded ${students.length} students, ${classes.length} classes, ${schedules.length} schedules for org ${organizationId}`);
+
       students.forEach((s) => studentsMap.set(s.id, `${s.firstName} ${s.lastName}`));
       classes.forEach((c) => classesMap.set(c.id, c.name));
       schedules.forEach((sch) => scheduleToClassMap.set(sch.id, sch.classId));
+      
+      console.log(`[Attendance Report] Built maps: ${studentsMap.size} students, ${classesMap.size} classes, ${scheduleToClassMap.size} schedules`);
 
       const csv = [
         "Date,Student,Class,Status",
