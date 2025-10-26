@@ -60,23 +60,29 @@ This platform is an enterprise-grade analytics solution for Mindbody data, encom
 
 ## Recent Bug Fixes
 
-### Critical: Attendance Report "Unknown" Student Names (Oct 25, 2025)
+### Critical: Attendance Report "Unknown" Student Names - RESOLVED (Oct 26, 2025)
 
-**Issue:** All 75,000+ attendance records showed "Unknown" instead of actual student names in CSV reports.
+**Issue:** Attendance reports showed mostly "Unknown" instead of actual student names in CSV reports, despite database containing 36,517 students and 317,484 attendance records with zero orphaned records.
 
-**Root Cause:** The `getStudents()` method has a default limit of 100 records. When generating reports, the system:
-- Only loaded first 100 students into memory
-- Tried to match 6,455 unique student IDs from 317,484 attendance records
-- Only found matches for the first 100 students
-- All other records fell back to "Unknown"
+**Root Cause:** Loading 36,517 students into Node.js memory (using `storage.getStudents(organizationId, 1000000, 0)`) was timing out or exhausting memory limits in production environment. The in-memory Map approach of matching student IDs to names failed when the students array was incomplete due to timeout.
 
-**Fix:** Updated report endpoints to fetch ALL students by passing limit=1,000,000:
-- `/api/reports/attendance` - Line 109
-- `/api/reports/data-coverage` - Line 308
+**Solution Implemented:**
+1. **Replaced in-memory Map with SQL JOIN**: Created `getAttendanceWithDetails()` method in storage.ts that uses LEFT JOIN to fetch attendance records with student names and class names in a single database query, eliminating the need to load 36K+ students into Node memory.
 
-**Impact:** Attendance reports now correctly display all student names. Database has 36,517 students, comfortably within the new limit.
+2. **Efficient data quality checks**: Added SQL-based helper methods:
+   - `getOrphanedAttendanceCount()`: Uses LEFT JOIN to count attendance records with invalid student IDs
+   - `getStudentsWithoutAttendanceCount()`: Counts students who never attended
+   - `getClassesWithoutSchedulesCount()`: Counts classes without schedules
 
-**Note:** When using `storage.getStudents()` for reports or bulk operations, always pass a high limit (1000000, 0) to ensure complete dataset retrieval.
+3. **Fixed stack overflow**: Replaced `Math.max(...array)` with `reduce()` for finding latest dates to handle large datasets (317K+ records).
+
+**Files Modified:**
+- `server/storage.ts`: Added 4 new efficient query methods
+- `server/routes/reports.ts`: Updated `/api/reports/attendance` and `/api/reports/data-coverage` to use JOIN queries
+
+**Impact:** Attendance reports now correctly display all student names without memory/timeout issues. Solution is production-ready and scales to large datasets.
+
+**Architecture Note:** For large datasets, always prefer SQL JOINs and aggregations over loading entire tables into Node memory. The database is optimized for these operations.
 
 ## External Dependencies
 
