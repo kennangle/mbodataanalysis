@@ -122,6 +122,28 @@ const QUERY_TOOLS = [
   {
     type: "function",
     function: {
+      name: "get_student_statistics",
+      description: "Get statistics about students including total count, active members, new students in a time period, status breakdown",
+      parameters: {
+        type: "object",
+        properties: {
+          include_breakdown: {
+            type: "boolean",
+            description: "Whether to include detailed breakdown by status (default true)"
+          },
+          time_period: {
+            type: "string",
+            enum: ["all_time", "past_year", "past_month"],
+            description: "Time period for counting new students (default all_time)"
+          }
+        },
+        required: []
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
       name: "execute_custom_query",
       description: "Execute a custom aggregation or complex query on the database. Use when other functions don't fit the question.",
       parameters: {
@@ -281,6 +303,83 @@ export class OpenAIService {
               count: r.count
             })) : null
           });
+        }
+        
+        case "get_student_statistics": {
+          const { include_breakdown = true, time_period = "all_time" } = args;
+          
+          // Get total student count
+          const totalStudents = await db
+            .select({ count: sql<number>`count(*)::int` })
+            .from(students)
+            .where(eq(students.organizationId, organizationId));
+          
+          // Get active students (status = 'active')
+          const activeStudents = await db
+            .select({ count: sql<number>`count(*)::int` })
+            .from(students)
+            .where(
+              and(
+                eq(students.organizationId, organizationId),
+                eq(students.status, "active")
+              )
+            );
+          
+          // Get students with memberships (membershipType is not null and not empty)
+          const studentsWithMemberships = await db
+            .select({ count: sql<number>`count(*)::int` })
+            .from(students)
+            .where(
+              and(
+                eq(students.organizationId, organizationId),
+                sql`${students.membershipType} IS NOT NULL AND ${students.membershipType} != ''`
+              )
+            );
+          
+          let newStudents = 0;
+          if (time_period !== "all_time") {
+            const cutoffDate = time_period === "past_year" ? oneYearAgo : oneMonthAgo;
+            const newStudentResult = await db
+              .select({ count: sql<number>`count(*)::int` })
+              .from(students)
+              .where(
+                and(
+                  eq(students.organizationId, organizationId),
+                  gte(students.joinDate, cutoffDate)
+                )
+              );
+            newStudents = newStudentResult[0]?.count || 0;
+          }
+          
+          const result: any = {
+            total_students: totalStudents[0]?.count || 0,
+            active_students: activeStudents[0]?.count || 0,
+            students_with_memberships: studentsWithMemberships[0]?.count || 0,
+            time_period
+          };
+          
+          if (time_period !== "all_time") {
+            result.new_students = newStudents;
+          }
+          
+          // Get status breakdown if requested
+          if (include_breakdown) {
+            const statusBreakdown = await db
+              .select({
+                status: students.status,
+                count: sql<number>`count(*)::int`
+              })
+              .from(students)
+              .where(eq(students.organizationId, organizationId))
+              .groupBy(students.status);
+            
+            result.status_breakdown = statusBreakdown.map(s => ({
+              status: s.status,
+              count: s.count
+            }));
+          }
+          
+          return JSON.stringify(result);
         }
         
         default:
