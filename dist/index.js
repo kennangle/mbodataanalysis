@@ -4819,24 +4819,35 @@ function registerReportRoutes(app2) {
       const startDate = /* @__PURE__ */ new Date("2024-12-31");
       const endDate = /* @__PURE__ */ new Date("2025-01-01");
       const attendanceData = await storage.getAttendanceWithDetails(organizationId, startDate, endDate);
+      const totalStudents = await storage.getStudentCount(organizationId);
+      const totalAttendance = await storage.getAttendanceCount(organizationId);
+      const orphanedAttendance = await storage.getOrphanedAttendanceCount(organizationId);
       const diagnostic = {
-        databaseQuery: "getAttendanceWithDetails with LEFT JOIN",
-        dateRange: "2024-12-31 to 2025-01-01",
-        totalRecords: attendanceData.length,
-        recordsWithNames: attendanceData.filter((a) => a.studentFirstName && a.studentLastName).length,
-        recordsWithoutNames: attendanceData.filter((a) => !a.studentFirstName || !a.studentLastName).length,
-        sampleRecordsWithNames: attendanceData.filter((a) => a.studentFirstName && a.studentLastName).slice(0, 10).map((a) => ({
-          firstName: a.studentFirstName,
-          lastName: a.studentLastName,
-          className: a.className,
-          date: a.attendedAt.toISOString()
-        })),
-        sampleRecordsWithoutNames: attendanceData.filter((a) => !a.studentFirstName || !a.studentLastName).slice(0, 10).map((a) => ({
-          firstName: a.studentFirstName,
-          lastName: a.studentLastName,
-          className: a.className,
-          date: a.attendedAt.toISOString()
-        }))
+        databaseCounts: {
+          totalStudents,
+          totalAttendance,
+          orphanedAttendance,
+          orphanedPercentage: totalAttendance > 0 ? (orphanedAttendance / totalAttendance * 100).toFixed(2) + "%" : "0%"
+        },
+        attendanceQuery: {
+          databaseQuery: "getAttendanceWithDetails with LEFT JOIN",
+          dateRange: "2024-12-31 to 2025-01-01",
+          totalRecords: attendanceData.length,
+          recordsWithNames: attendanceData.filter((a) => a.studentFirstName && a.studentLastName).length,
+          recordsWithoutNames: attendanceData.filter((a) => !a.studentFirstName || !a.studentLastName).length,
+          sampleRecordsWithNames: attendanceData.filter((a) => a.studentFirstName && a.studentLastName).slice(0, 5).map((a) => ({
+            firstName: a.studentFirstName,
+            lastName: a.studentLastName,
+            className: a.className,
+            date: a.attendedAt.toISOString()
+          })),
+          sampleRecordsWithoutNames: attendanceData.filter((a) => !a.studentFirstName || !a.studentLastName).slice(0, 5).map((a) => ({
+            firstName: a.studentFirstName,
+            lastName: a.studentLastName,
+            className: a.className,
+            date: a.attendedAt.toISOString()
+          }))
+        }
       };
       res.json(diagnostic);
     } catch (error) {
