@@ -5,6 +5,52 @@ import type { User } from "@shared/schema";
 import { addDays } from "date-fns";
 
 export function registerReportRoutes(app: Express) {
+  // DIAGNOSTIC ENDPOINT - Shows what production database actually has
+  app.get("/api/reports/diagnostic", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.user as User)?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      // Get sample data from Dec 31, 2024
+      const startDate = new Date('2024-12-31');
+      const endDate = new Date('2025-01-01');
+      
+      const attendanceData = await storage.getAttendanceWithDetails(organizationId, startDate, endDate);
+      
+      const diagnostic = {
+        databaseQuery: "getAttendanceWithDetails with LEFT JOIN",
+        dateRange: "2024-12-31 to 2025-01-01",
+        totalRecords: attendanceData.length,
+        recordsWithNames: attendanceData.filter(a => a.studentFirstName && a.studentLastName).length,
+        recordsWithoutNames: attendanceData.filter(a => !a.studentFirstName || !a.studentLastName).length,
+        sampleRecordsWithNames: attendanceData
+          .filter(a => a.studentFirstName && a.studentLastName)
+          .slice(0, 10)
+          .map(a => ({
+            firstName: a.studentFirstName,
+            lastName: a.studentLastName,
+            className: a.className,
+            date: a.attendedAt.toISOString()
+          })),
+        sampleRecordsWithoutNames: attendanceData
+          .filter(a => !a.studentFirstName || !a.studentLastName)
+          .slice(0, 10)
+          .map(a => ({
+            firstName: a.studentFirstName,
+            lastName: a.studentLastName,
+            className: a.className,
+            date: a.attendedAt.toISOString()
+          }))
+      };
+
+      res.json(diagnostic);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message, stack: error.stack });
+    }
+  });
+
   // Report Generation Endpoints
   app.get("/api/reports/revenue", requireAuth, async (req, res) => {
     try {

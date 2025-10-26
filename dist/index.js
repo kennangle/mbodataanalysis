@@ -4810,6 +4810,39 @@ function registerDashboardRoutes(app2) {
 init_storage();
 import { addDays as addDays2 } from "date-fns";
 function registerReportRoutes(app2) {
+  app2.get("/api/reports/diagnostic", requireAuth, async (req, res) => {
+    try {
+      const organizationId = req.user?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const startDate = /* @__PURE__ */ new Date("2024-12-31");
+      const endDate = /* @__PURE__ */ new Date("2025-01-01");
+      const attendanceData = await storage.getAttendanceWithDetails(organizationId, startDate, endDate);
+      const diagnostic = {
+        databaseQuery: "getAttendanceWithDetails with LEFT JOIN",
+        dateRange: "2024-12-31 to 2025-01-01",
+        totalRecords: attendanceData.length,
+        recordsWithNames: attendanceData.filter((a) => a.studentFirstName && a.studentLastName).length,
+        recordsWithoutNames: attendanceData.filter((a) => !a.studentFirstName || !a.studentLastName).length,
+        sampleRecordsWithNames: attendanceData.filter((a) => a.studentFirstName && a.studentLastName).slice(0, 10).map((a) => ({
+          firstName: a.studentFirstName,
+          lastName: a.studentLastName,
+          className: a.className,
+          date: a.attendedAt.toISOString()
+        })),
+        sampleRecordsWithoutNames: attendanceData.filter((a) => !a.studentFirstName || !a.studentLastName).slice(0, 10).map((a) => ({
+          firstName: a.studentFirstName,
+          lastName: a.studentLastName,
+          className: a.className,
+          date: a.attendedAt.toISOString()
+        }))
+      };
+      res.json(diagnostic);
+    } catch (error) {
+      res.status(500).json({ error: error.message, stack: error.stack });
+    }
+  });
   app2.get("/api/reports/revenue", requireAuth, async (req, res) => {
     try {
       const organizationId = req.user?.organizationId;
