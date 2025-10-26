@@ -97,30 +97,16 @@ export function registerReportRoutes(app: Express) {
         queryEndDate = addDays(endDate, 1);
       }
 
-      const attendanceData = await storage.getAttendance(organizationId, startDate, queryEndDate);
-      const studentsMap = new Map();
-      const classesMap = new Map();
-      const scheduleToClassMap = new Map();
-
-      // Fetch ALL students without limit for report generation
-      const students = await storage.getStudents(organizationId, 1000000, 0);
-      const classes = await storage.getClasses(organizationId);
-      const schedules = await storage.getClassSchedules(organizationId);
-
-      console.log(`[Attendance Report] Loaded ${students.length} students, ${classes.length} classes, ${schedules.length} schedules for org ${organizationId}`);
-
-      students.forEach((s) => studentsMap.set(s.id, `${s.firstName} ${s.lastName}`));
-      classes.forEach((c) => classesMap.set(c.id, c.name));
-      schedules.forEach((sch) => scheduleToClassMap.set(sch.id, sch.classId));
-      
-      console.log(`[Attendance Report] Built maps: ${studentsMap.size} students, ${classesMap.size} classes, ${scheduleToClassMap.size} schedules`);
+      // Use efficient JOIN query to get attendance with student and class names
+      const attendanceData = await storage.getAttendanceWithDetails(organizationId, startDate, queryEndDate);
 
       const csv = [
         "Date,Student,Class,Status",
         ...attendanceData.map((a) => {
-          const studentName = studentsMap.get(a.studentId) || "Unknown";
-          const classId = scheduleToClassMap.get(a.scheduleId);
-          const className = classId ? classesMap.get(classId) || "Unknown" : "Unknown";
+          const studentName = a.studentFirstName && a.studentLastName 
+            ? `${a.studentFirstName} ${a.studentLastName}` 
+            : "Unknown";
+          const className = a.className || "Unknown";
           return `${a.attendedAt.toISOString().split("T")[0]},"${studentName}","${className}","${a.status}"`;
         }),
       ].join("\n");
@@ -304,37 +290,34 @@ export function registerReportRoutes(app: Express) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      // Fetch all data (use high limit for students to get complete dataset)
-      const [students, classes, schedules, attendance, revenue] = await Promise.all([
-        storage.getStudents(organizationId, 1000000, 0),
+      // Fetch data efficiently without loading all students into memory
+      const [studentCount, classes, schedules, attendance, revenue, orphanedCount, studentsWithoutAttendance, classesWithoutSchedules] = await Promise.all([
+        storage.getStudentCount(organizationId),
         storage.getClasses(organizationId),
         storage.getClassSchedules(organizationId),
         storage.getAttendance(organizationId),
         storage.getRevenue(organizationId),
+        storage.getOrphanedAttendanceCount(organizationId),
+        storage.getStudentsWithoutAttendanceCount(organizationId),
+        storage.getClassesWithoutSchedulesCount(organizationId),
       ]);
 
-      // Find orphaned attendance records (studentId not in students table)
-      const studentIds = new Set(students.map(s => s.id));
-      const orphanedAttendance = attendance.filter(a => !studentIds.has(a.studentId));
-
-      // Calculate date ranges
+      // Calculate date ranges efficiently without spread operators for large arrays
       const getDateRange = (records: Array<{ createdAt: Date }>) => {
         if (records.length === 0) return { earliest: null, latest: null };
-        const dates = records.map(r => r.createdAt.getTime());
-        return {
-          earliest: new Date(Math.min(...dates)),
-          latest: new Date(Math.max(...dates)),
-        };
+        const earliest = records.reduce((min, r) => r.createdAt < min ? r.createdAt : min, records[0].createdAt);
+        const latest = records.reduce((max, r) => r.createdAt > max ? r.createdAt : max, records[0].createdAt);
+        return { earliest, latest };
       };
 
       const attendanceDateRange = attendance.length > 0 ? {
-        earliest: new Date(Math.min(...attendance.map(a => a.attendedAt.getTime()))),
-        latest: new Date(Math.max(...attendance.map(a => a.attendedAt.getTime()))),
+        earliest: attendance.reduce((min, a) => a.attendedAt < min ? a.attendedAt : min, attendance[0].attendedAt),
+        latest: attendance.reduce((max, a) => a.attendedAt > max ? a.attendedAt : max, attendance[0].attendedAt),
       } : { earliest: null, latest: null };
 
       const revenueDateRange = revenue.length > 0 ? {
-        earliest: new Date(Math.min(...revenue.map(r => r.transactionDate.getTime()))),
-        latest: new Date(Math.max(...revenue.map(r => r.transactionDate.getTime()))),
+        earliest: revenue.reduce((min, r) => r.transactionDate < min ? r.transactionDate : min, revenue[0].transactionDate),
+        latest: revenue.reduce((max, r) => r.transactionDate > max ? r.transactionDate : max, revenue[0].transactionDate),
       } : { earliest: null, latest: null };
 
       // Monthly attendance breakdown
@@ -354,8 +337,8 @@ export function registerReportRoutes(app: Express) {
       res.json({
         summary: {
           students: {
-            total: students.length,
-            dateRange: getDateRange(students),
+            total: studentCount,
+            dateRange: { earliest: null, latest: null },
           },
           classes: {
             total: classes.length,
@@ -369,7 +352,7 @@ export function registerReportRoutes(app: Express) {
             total: attendance.length,
             attended: attendance.filter(a => a.status === "attended").length,
             noShow: attendance.filter(a => a.status === "no-show").length,
-            orphaned: orphanedAttendance.length,
+            orphaned: orphanedCount,
             dateRange: attendanceDateRange,
           },
           revenue: {
@@ -387,13 +370,9 @@ export function registerReportRoutes(app: Express) {
             .map(([month, count]) => ({ month, count })),
         },
         dataQuality: {
-          orphanedAttendanceRecords: orphanedAttendance.length,
-          studentsWithoutAttendance: students.filter(s => 
-            !attendance.some(a => a.studentId === s.id)
-          ).length,
-          classesWithoutSchedules: classes.filter(c =>
-            !schedules.some(sch => sch.classId === c.id)
-          ).length,
+          orphanedAttendanceRecords: orphanedCount,
+          studentsWithoutAttendance: studentsWithoutAttendance,
+          classesWithoutSchedules: classesWithoutSchedules,
         },
       });
     } catch (error) {

@@ -528,6 +528,89 @@ export class DbStorage implements IStorage {
     return Number(result[0].count);
   }
 
+  async getAttendanceWithDetails(
+    organizationId: string,
+    startDate?: Date,
+    endDate?: Date
+  ): Promise<{
+    attendedAt: Date;
+    status: string;
+    studentFirstName: string | null;
+    studentLastName: string | null;
+    className: string | null;
+  }[]> {
+    const conditions: any[] = [eq(attendance.organizationId, organizationId)];
+
+    if (startDate) {
+      conditions.push(gte(attendance.attendedAt, startDate));
+    }
+
+    if (endDate) {
+      conditions.push(lte(attendance.attendedAt, endDate));
+    }
+
+    const whereClause = conditions.length === 1 ? conditions[0] : and(...conditions);
+
+    const result = await db
+      .select({
+        attendedAt: attendance.attendedAt,
+        status: attendance.status,
+        studentFirstName: students.firstName,
+        studentLastName: students.lastName,
+        className: classes.name,
+      })
+      .from(attendance)
+      .leftJoin(students, eq(attendance.studentId, students.id))
+      .leftJoin(classSchedules, eq(attendance.scheduleId, classSchedules.id))
+      .leftJoin(classes, eq(classSchedules.classId, classes.id))
+      .where(whereClause)
+      .orderBy(desc(attendance.attendedAt));
+
+    return result;
+  }
+
+  async getOrphanedAttendanceCount(organizationId: string): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(attendance)
+      .leftJoin(students, eq(attendance.studentId, students.id))
+      .where(
+        and(
+          eq(attendance.organizationId, organizationId),
+          sql`${students.id} IS NULL`
+        )
+      );
+    return Number(result[0].count);
+  }
+
+  async getStudentsWithoutAttendanceCount(organizationId: string): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(students)
+      .leftJoin(attendance, eq(students.id, attendance.studentId))
+      .where(
+        and(
+          eq(students.organizationId, organizationId),
+          sql`${attendance.id} IS NULL`
+        )
+      );
+    return Number(result[0].count);
+  }
+
+  async getClassesWithoutSchedulesCount(organizationId: string): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(classes)
+      .leftJoin(classSchedules, eq(classes.id, classSchedules.classId))
+      .where(
+        and(
+          eq(classes.organizationId, organizationId),
+          sql`${classSchedules.id} IS NULL`
+        )
+      );
+    return Number(result[0].count);
+  }
+
   async getRevenue(organizationId: string, startDate?: Date, endDate?: Date): Promise<Revenue[]> {
     if (startDate && endDate) {
       return await db
