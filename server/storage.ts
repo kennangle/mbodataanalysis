@@ -139,6 +139,7 @@ export interface IStorage {
   getAttendanceByStudent(studentId: string): Promise<Attendance[]>;
   createAttendance(attendance: InsertAttendance): Promise<Attendance>;
   getAttendanceCount(organizationId: string): Promise<number>;
+  deleteAllAttendance(organizationId: string): Promise<void>;
 
   getRevenue(organizationId: string, startDate?: Date, endDate?: Date): Promise<Revenue[]>;
   createRevenue(revenue: InsertRevenue): Promise<Revenue>;
@@ -526,6 +527,12 @@ export class DbStorage implements IStorage {
       .from(attendance)
       .where(eq(attendance.organizationId, organizationId));
     return Number(result[0].count);
+  }
+
+  async deleteAllAttendance(organizationId: string): Promise<void> {
+    await db
+      .delete(attendance)
+      .where(eq(attendance.organizationId, organizationId));
   }
 
   async getAttendanceWithDetails(

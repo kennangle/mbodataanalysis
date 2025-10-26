@@ -658,6 +658,9 @@ var init_storage = __esm({
         const result = await db.select({ count: sql`count(*)` }).from(attendance).where(eq(attendance.organizationId, organizationId));
         return Number(result[0].count);
       }
+      async deleteAllAttendance(organizationId) {
+        await db.delete(attendance).where(eq(attendance.organizationId, organizationId));
+      }
       async getAttendanceWithDetails(organizationId, startDate, endDate) {
         const conditions = [eq(attendance.organizationId, organizationId)];
         if (startDate) {
@@ -4810,6 +4813,29 @@ function registerDashboardRoutes(app2) {
 init_storage();
 import { addDays as addDays2 } from "date-fns";
 function registerReportRoutes(app2) {
+  app2.post("/api/reports/fix-orphaned-attendance", requireAuth, async (req, res) => {
+    try {
+      const organizationId = req.user?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const totalAttendance = await storage.getAttendanceCount(organizationId);
+      const orphanedAttendance = await storage.getOrphanedAttendanceCount(organizationId);
+      await storage.deleteAllAttendance(organizationId);
+      res.json({
+        success: true,
+        message: "All attendance records deleted. You can now re-import from Mindbody to rebuild with correct student links.",
+        deleted: {
+          totalRecords: totalAttendance,
+          orphanedRecords: orphanedAttendance,
+          orphanedPercentage: totalAttendance > 0 ? (orphanedAttendance / totalAttendance * 100).toFixed(2) + "%" : "0%"
+        },
+        nextStep: "Go to Data Import page and import Visits/Attendance data"
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message, stack: error.stack });
+    }
+  });
   app2.get("/api/reports/diagnostic", requireAuth, async (req, res) => {
     try {
       const organizationId = req.user?.organizationId;

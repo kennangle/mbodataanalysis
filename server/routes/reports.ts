@@ -5,6 +5,36 @@ import type { User } from "@shared/schema";
 import { addDays } from "date-fns";
 
 export function registerReportRoutes(app: Express) {
+  // FIX ENDPOINT - Deletes all attendance to prepare for re-import
+  app.post("/api/reports/fix-orphaned-attendance", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.user as User)?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      // Get counts before deletion
+      const totalAttendance = await storage.getAttendanceCount(organizationId);
+      const orphanedAttendance = await storage.getOrphanedAttendanceCount(organizationId);
+
+      // Delete all attendance records for this organization
+      await storage.deleteAllAttendance(organizationId);
+
+      res.json({
+        success: true,
+        message: "All attendance records deleted. You can now re-import from Mindbody to rebuild with correct student links.",
+        deleted: {
+          totalRecords: totalAttendance,
+          orphanedRecords: orphanedAttendance,
+          orphanedPercentage: totalAttendance > 0 ? ((orphanedAttendance / totalAttendance) * 100).toFixed(2) + '%' : '0%'
+        },
+        nextStep: "Go to Data Import page and import Visits/Attendance data"
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message, stack: error.stack });
+    }
+  });
+
   // DIAGNOSTIC ENDPOINT - Shows what production database actually has
   app.get("/api/reports/diagnostic", requireAuth, async (req, res) => {
     try {
