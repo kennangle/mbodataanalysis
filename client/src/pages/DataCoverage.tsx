@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import {
   Card,
@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -25,8 +26,11 @@ import {
   Calendar,
   Users,
   DollarSign,
-  School
+  School,
+  Trash2
 } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface DataCoverageResponse {
   summary: {
@@ -67,8 +71,40 @@ interface DataCoverageResponse {
 }
 
 export default function DataCoverage() {
+  const { toast } = useToast();
   const { data, isLoading, error } = useQuery<DataCoverageResponse>({
     queryKey: ["/api/reports/data-coverage"],
+  });
+
+  const fixOrphanedAttendance = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/reports/fix-orphaned-attendance");
+      const result = await response.json() as {
+        success: boolean;
+        message: string;
+        deleted: {
+          totalRecords: number;
+          orphanedRecords: number;
+          orphanedPercentage: string;
+        };
+        nextStep: string;
+      };
+      return result;
+    },
+    onSuccess: (result) => {
+      toast({
+        title: "Success",
+        description: `Deleted ${result.deleted.totalRecords} attendance records (${result.deleted.orphanedPercentage} were orphaned). ${result.nextStep}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/reports/data-coverage"] });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to fix orphaned attendance",
+      });
+    },
   });
 
   const formatDate = (dateStr: string | null) => {
@@ -111,9 +147,22 @@ export default function DataCoverage() {
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Data Quality Issues Detected</AlertTitle>
               <AlertDescription>
-                <div className="mt-2 space-y-1">
+                <div className="mt-2 space-y-3">
                   {data.dataQuality.orphanedAttendanceRecords > 0 && (
-                    <div>• {data.dataQuality.orphanedAttendanceRecords} attendance records reference missing students</div>
+                    <div className="space-y-2">
+                      <div>• {data.dataQuality.orphanedAttendanceRecords} attendance records reference missing students</div>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => fixOrphanedAttendance.mutate()}
+                        disabled={fixOrphanedAttendance.isPending}
+                        data-testid="button-fix-orphaned-attendance"
+                        className="bg-destructive/10 border-destructive/20 hover:bg-destructive/20"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        {fixOrphanedAttendance.isPending ? "Deleting..." : "Delete All Attendance & Re-import"}
+                      </Button>
+                    </div>
                   )}
                   {data.dataQuality.studentsWithoutAttendance > 0 && (
                     <div>• {data.dataQuality.studentsWithoutAttendance} students have no attendance records</div>
