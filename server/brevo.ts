@@ -1,13 +1,5 @@
 import * as brevo from "@getbrevo/brevo";
 
-const apiInstance = new brevo.TransactionalEmailsApi();
-
-if (!process.env.BREVO_API_KEY) {
-  console.warn("BREVO_API_KEY not set. Password reset emails will not be sent.");
-} else {
-  apiInstance.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY);
-}
-
 export interface SendPasswordResetEmailParams {
   toEmail: string;
   toName: string;
@@ -23,6 +15,9 @@ export async function sendPasswordResetEmail({
     console.error("Cannot send password reset email: BREVO_API_KEY not configured");
     throw new Error("Email service not configured");
   }
+
+  const apiInstance = new brevo.TransactionalEmailsApi();
+  apiInstance.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY);
 
   const sendSmtpEmail = new brevo.SendSmtpEmail();
   sendSmtpEmail.subject = "Reset Your Password";
