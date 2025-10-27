@@ -210,29 +210,35 @@ export const setupAuth = (app: Express) => {
   });
 
   app.post("/api/auth/login", (req, res, next) => {
+    console.log("[Auth] Login attempt for:", req.body.email);
     passport.authenticate("local", (err: any, user: User | false, info: any) => {
       if (err) {
-        console.error("Login authentication error:", err);
+        console.error("[Auth] Login authentication error:", err);
         return res.status(500).json({ error: "Internal server error" });
       }
 
       if (!user) {
+        console.log("[Auth] Login failed for:", req.body.email, "Reason:", info?.message);
         return res.status(401).json({ error: info?.message || "Invalid email or password" });
       }
 
+      console.log("[Auth] User authenticated:", user.email);
       req.login(user, (err) => {
         if (err) {
-          console.error("Login session error:", err);
+          console.error("[Auth] Login session error:", err);
           return res.status(500).json({ error: "Login failed" });
         }
 
+        console.log("[Auth] Session created, session ID:", req.sessionID);
+        
         // Explicitly save session to ensure it's persisted before responding
         req.session.save((saveErr) => {
           if (saveErr) {
-            console.error("Session save error:", saveErr);
+            console.error("[Auth] Session save error:", saveErr);
             return res.status(500).json({ error: "Login failed" });
           }
 
+          console.log("[Auth] Session saved successfully");
           return res.json({
             id: user.id,
             email: user.email,
@@ -284,6 +290,7 @@ export const setupAuth = (app: Express) => {
   });
 
   app.get("/api/auth/me", (req, res) => {
+    console.log("[Auth] /me check - Session ID:", req.sessionID, "Authenticated:", req.isAuthenticated());
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
