@@ -205,6 +205,13 @@ export const setupAuth = (app: Express) => {
   });
 
   app.post("/api/auth/login", (req, res, next) => {
+    console.log("[Auth] Login request - Headers:", {
+      host: req.headers.host,
+      'x-forwarded-proto': req.headers['x-forwarded-proto'],
+      secure: req.secure,
+      protocol: req.protocol,
+    });
+    
     passport.authenticate("local", (err: any, user: User | false, info: any) => {
       if (err) {
         console.error("[Auth] Login authentication error:", err);
@@ -220,6 +227,14 @@ export const setupAuth = (app: Express) => {
           console.error("[Auth] Login session error:", err);
           return res.status(500).json({ error: "Login failed" });
         }
+
+        console.log("[Auth] Login successful - Session ID:", req.sessionID);
+        console.log("[Auth] Cookie settings:", req.session.cookie);
+        
+        // Log the actual Set-Cookie header that will be sent
+        res.on('finish', () => {
+          console.log("[Auth] Set-Cookie header:", res.getHeader('set-cookie'));
+        });
 
         return res.json({
           id: user.id,
@@ -271,6 +286,7 @@ export const setupAuth = (app: Express) => {
   });
 
   app.get("/api/auth/me", (req, res) => {
+    console.log("[Auth] /me check - Session ID:", req.sessionID, "Authenticated:", req.isAuthenticated(), "Cookie header:", req.headers.cookie);
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
