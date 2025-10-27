@@ -23,8 +23,9 @@ export const setupAuth = (app: Express) => {
 
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET,
-    resave: false,
+    resave: true,  // Changed to true to ensure session is saved on every request
     saveUninitialized: false,
+    rolling: true,  // Reset cookie maxAge on every request
     store: new PgSession({
       pool,
       tableName: "sessions",
@@ -35,6 +36,7 @@ export const setupAuth = (app: Express) => {
       httpOnly: true,
       secure: app.get("env") === "production",
       sameSite: "lax",
+      path: "/",  // Explicitly set path
     },
   };
 
