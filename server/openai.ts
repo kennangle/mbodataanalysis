@@ -193,10 +193,20 @@ export class OpenAIService {
           
           const student = matchingStudents[0];
           
-          // Get attendance records with date filtering
+          // Import class_schedules from schema
+          const { classSchedules } = await import("@shared/schema");
+          
+          // Get attendance records WITH class information
           let attendanceRecords = await db
-            .select()
+            .select({
+              attendedAt: attendance.attendedAt,
+              className: classes.name,
+              classDescription: classes.description,
+              scheduleStartTime: classSchedules.startTime,
+            })
             .from(attendance)
+            .leftJoin(classSchedules, eq(attendance.scheduleId, classSchedules.id))
+            .leftJoin(classes, eq(classSchedules.classId, classes.id))
             .where(
               and(
                 eq(attendance.organizationId, organizationId),
@@ -213,11 +223,24 @@ export class OpenAIService {
             attendanceRecords = attendanceRecords.filter(a => new Date(a.attendedAt) >= oneMonthAgo);
           }
           
+          // Get class types breakdown
+          const classTypeCounts = new Map<string, number>();
+          attendanceRecords.forEach(record => {
+            const className = record.className || "Unknown";
+            classTypeCounts.set(className, (classTypeCounts.get(className) || 0) + 1);
+          });
+          
           return JSON.stringify({
             student: `${student.firstName} ${student.lastName}`,
             total_classes: attendanceRecords.length,
             date_range,
-            most_recent: attendanceRecords[0]?.attendedAt || null
+            class_types: Array.from(classTypeCounts.entries())
+              .map(([name, count]) => ({ class_name: name, count }))
+              .sort((a, b) => b.count - a.count),
+            recent_classes: attendanceRecords.slice(0, 10).map(r => ({
+              date: r.attendedAt,
+              class: r.className || "Unknown"
+            }))
           });
         }
         
