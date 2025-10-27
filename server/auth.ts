@@ -22,10 +22,8 @@ export const setupAuth = (app: Express) => {
   }
 
   // CRITICAL: Set trust proxy BEFORE session middleware
-  // Replit runs behind a proxy, so we need this for secure cookies to work
-  if (app.get("env") === "production") {
-    app.set("trust proxy", 1);
-  }
+  // Replit ALWAYS runs behind a proxy (even in development), so we need this for secure cookies
+  app.set("trust proxy", 1);
 
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET,
