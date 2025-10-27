@@ -56,11 +56,33 @@ Your AI assistant has access to 7 specialized functions to analyze your Mindbody
 
 ---
 
-## 🔍 Custom/Complex Queries
+## 🔍 Custom/Complex Queries (NEW!)
 
-- "Show me inactive students"
-- "What are attendance trends over time?"
-- Any complex question that doesn't fit the above categories
+The AI can now handle advanced ad-hoc queries that combine multiple data sources:
+
+### Inactive Students
+- "Show me inactive students" (students who haven't attended in 30+ days)
+- "Which students haven't been to class recently?"
+- "List students with no recent attendance"
+
+### Revenue by Class Type
+- "Show me revenue per class type"
+- "Which classes generate the most revenue?"
+- "Revenue breakdown by class"
+
+### Attendance Trends
+- "Show me attendance trends over time"
+- "What are the attendance patterns for the past year?"
+- "How has attendance changed monthly?"
+
+### Student Retention
+- "Show me student retention data"
+- "Who are my most regular students?"
+- "Which students attend consistently?"
+
+### Other Complex Queries
+- Ask naturally about relationships between students, classes, attendance, and revenue
+- The AI will attempt to interpret and query your data appropriately
 
 ---
 

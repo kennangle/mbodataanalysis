@@ -382,6 +382,142 @@ export class OpenAIService {
           return JSON.stringify(result);
         }
         
+        case "execute_custom_query": {
+          const { query_type } = args;
+          const queryLower = query_type.toLowerCase();
+          
+          // Inactive students query
+          if (queryLower.includes("inactive") && queryLower.includes("student")) {
+            const inactiveStudents = await db
+              .select({
+                firstName: students.firstName,
+                lastName: students.lastName,
+                email: students.email,
+                status: students.status,
+                lastAttended: sql<Date>`MAX(${attendance.attendedAt})`
+              })
+              .from(students)
+              .leftJoin(attendance, eq(students.id, attendance.studentId))
+              .where(eq(students.organizationId, organizationId))
+              .groupBy(students.id, students.firstName, students.lastName, students.email, students.status)
+              .having(
+                sql`MAX(${attendance.attendedAt}) < ${oneMonthAgo} OR MAX(${attendance.attendedAt}) IS NULL`
+              )
+              .limit(50);
+            
+            return JSON.stringify({
+              query_type: "inactive_students",
+              count: inactiveStudents.length,
+              students: inactiveStudents.map(s => ({
+                name: `${s.firstName} ${s.lastName}`,
+                email: s.email,
+                status: s.status,
+                last_attended: s.lastAttended
+              }))
+            });
+          }
+          
+          // Revenue per class type
+          if (queryLower.includes("revenue") && queryLower.includes("class")) {
+            const revenueByClass = await db
+              .select({
+                className: classes.name,
+                totalRevenue: sql<number>`sum(cast(${revenue.amount} as numeric))`,
+                transactionCount: sql<number>`count(*)::int`
+              })
+              .from(revenue)
+              .leftJoin(classes, sql`${revenue.description} ILIKE '%' || ${classes.name} || '%'`)
+              .where(eq(revenue.organizationId, organizationId))
+              .groupBy(classes.name)
+              .orderBy(desc(sql`sum(cast(${revenue.amount} as numeric))`))
+              .limit(20);
+            
+            return JSON.stringify({
+              query_type: "revenue_per_class",
+              results: revenueByClass.map(r => ({
+                class: r.className || "Other",
+                revenue: Number(r.totalRevenue || 0),
+                transactions: r.transactionCount
+              }))
+            });
+          }
+          
+          // Attendance trends
+          if (queryLower.includes("attendance") && queryLower.includes("trend")) {
+            const monthlyAttendance = await db
+              .select({
+                month: sql<string>`TO_CHAR(${attendance.attendedAt}, 'YYYY-MM')`,
+                count: sql<number>`count(*)::int`
+              })
+              .from(attendance)
+              .where(
+                and(
+                  eq(attendance.organizationId, organizationId),
+                  eq(attendance.status, "attended"),
+                  gte(attendance.attendedAt, oneYearAgo)
+                )
+              )
+              .groupBy(sql`TO_CHAR(${attendance.attendedAt}, 'YYYY-MM')`)
+              .orderBy(sql`TO_CHAR(${attendance.attendedAt}, 'YYYY-MM')`);
+            
+            return JSON.stringify({
+              query_type: "attendance_trends",
+              time_period: "past_year",
+              monthly_data: monthlyAttendance.map(m => ({
+                month: m.month,
+                attendance_count: m.count
+              }))
+            });
+          }
+          
+          // Student retention (students who attended multiple months)
+          if (queryLower.includes("retention") || queryLower.includes("regular")) {
+            const retentionData = await db
+              .select({
+                studentId: attendance.studentId,
+                firstName: students.firstName,
+                lastName: students.lastName,
+                monthsActive: sql<number>`COUNT(DISTINCT TO_CHAR(${attendance.attendedAt}, 'YYYY-MM'))::int`,
+                totalClasses: sql<number>`count(*)::int`
+              })
+              .from(attendance)
+              .innerJoin(students, eq(attendance.studentId, students.id))
+              .where(
+                and(
+                  eq(attendance.organizationId, organizationId),
+                  eq(attendance.status, "attended"),
+                  gte(attendance.attendedAt, new Date(now.getFullYear(), now.getMonth() - 6, 1))
+                )
+              )
+              .groupBy(attendance.studentId, students.firstName, students.lastName)
+              .having(sql`COUNT(DISTINCT TO_CHAR(${attendance.attendedAt}, 'YYYY-MM')) >= 3`)
+              .orderBy(desc(sql`count(*)`))
+              .limit(30);
+            
+            return JSON.stringify({
+              query_type: "student_retention",
+              time_period: "past_6_months",
+              retained_students: retentionData.map(s => ({
+                name: `${s.firstName} ${s.lastName}`,
+                months_active: s.monthsActive,
+                total_classes: s.totalClasses
+              }))
+            });
+          }
+          
+          // Generic fallback - provide summary stats
+          return JSON.stringify({
+            query_type,
+            message: "Query type not specifically implemented. Try being more specific or use one of the other query functions.",
+            suggestions: [
+              "Ask about 'inactive students'",
+              "Ask about 'revenue per class type'",
+              "Ask about 'attendance trends'",
+              "Ask about 'student retention' or 'regular students'"
+            ]
+          });
+        }
+        
         default:
           return JSON.stringify({ error: `Function ${functionName} not implemented yet. Please ask a different question or try rephrasing.` });
       }
