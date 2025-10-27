@@ -189,20 +189,13 @@ export const setupAuth = (app: Express) => {
           return next(err);
         }
 
-        // Explicitly save session to ensure it's persisted before responding
-        req.session.save((saveErr) => {
-          if (saveErr) {
-            console.error("Registration session save error:", saveErr);
-            return res.status(500).json({ error: "Registration failed" });
-          }
-
-          return res.json({
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            role: user.role,
-            organizationId: user.organizationId,
-          });
+        // Let the session middleware handle saving (resave: true)
+        return res.json({
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          organizationId: user.organizationId,
         });
       });
     } catch (error) {
@@ -233,21 +226,13 @@ export const setupAuth = (app: Express) => {
 
         console.log("[Auth] Session created, session ID:", req.sessionID);
         
-        // Explicitly save session to ensure it's persisted before responding
-        req.session.save((saveErr) => {
-          if (saveErr) {
-            console.error("[Auth] Session save error:", saveErr);
-            return res.status(500).json({ error: "Login failed" });
-          }
-
-          console.log("[Auth] Session saved successfully");
-          return res.json({
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            role: user.role,
-            organizationId: user.organizationId,
-          });
+        // Let the session middleware handle saving (resave: true)
+        return res.json({
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          organizationId: user.organizationId,
         });
       });
     })(req, res, next);
