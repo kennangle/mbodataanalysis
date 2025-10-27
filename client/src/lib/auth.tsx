@@ -63,11 +63,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const userData = await response.json();
-    setUser(userData);
     
     // Give the browser time to process the Set-Cookie header
-    // This prevents race condition where subsequent requests don't include the cookie
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Increased to 300ms for more reliable cookie persistence
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    setUser(userData);
   };
 
   const register = async (
