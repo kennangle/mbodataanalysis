@@ -30,14 +30,14 @@ export default function Login() {
 
     try {
       await login(email, password);
-      // Force a full page reload to ensure session cookie is properly set
-      window.location.href = "/dashboard";
+      setLocation("/dashboard");
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Login failed",
         description: error instanceof Error ? error.message : "Please check your credentials",
       });
+    } finally {
       setIsLoading(false);
     }
   };
