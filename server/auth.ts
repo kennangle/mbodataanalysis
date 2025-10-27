@@ -230,6 +230,12 @@ export const setupAuth = (app: Express) => {
         }
 
         console.log("[Auth] Session created, session ID:", req.sessionID);
+        console.log("[Auth] Session data:", JSON.stringify(req.session, null, 2));
+        
+        // Manually set Set-Cookie header to debug
+        res.on('finish', () => {
+          console.log("[Auth] Response headers sent:", JSON.stringify(res.getHeaders(), null, 2));
+        });
         
         // Let the session middleware handle saving (resave: true)
         return res.json({
