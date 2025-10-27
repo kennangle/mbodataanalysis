@@ -36,14 +36,14 @@ export default function Register() {
         title: "Account created!",
         description: "Welcome to Mindbody Analytics",
       });
-      setLocation("/dashboard");
+      // Force a full page reload to ensure session cookie is properly set
+      window.location.href = "/dashboard";
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Registration failed",
         description: error instanceof Error ? error.message : "Please try again",
       });
-    } finally {
       setIsLoading(false);
     }
   };
