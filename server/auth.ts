@@ -21,6 +21,9 @@ export const setupAuth = (app: Express) => {
     throw new Error("SESSION_SECRET environment variable must be set");
   }
 
+  const isProduction = app.get("env") === "production";
+  console.log("[Auth Setup] Environment:", app.get("env"), "NODE_ENV:", process.env.NODE_ENV, "Production mode:", isProduction);
+
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET,
     resave: true,  // Changed to true to ensure session is saved on every request
@@ -34,11 +37,13 @@ export const setupAuth = (app: Express) => {
     cookie: {
       maxAge: 30 * 24 * 60 * 60 * 1000,
       httpOnly: true,
-      secure: app.get("env") === "production",
+      secure: false,  // Force to false for now to debug
       sameSite: "lax",
       path: "/",  // Explicitly set path
     },
   };
+
+  console.log("[Auth Setup] Cookie settings:", JSON.stringify(sessionSettings.cookie, null, 2));
 
   if (app.get("env") === "production") {
     app.set("trust proxy", 1);
