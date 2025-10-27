@@ -182,6 +182,8 @@ export function registerDashboardRoutes(app: Express) {
       }
 
       const data = await storage.getMonthlyRevenueTrend(organizationId, startDate, endDate);
+      console.log(`[Revenue Trend] Returning ${data.length} data points for ${startDate?.toISOString()} to ${endDate?.toISOString()}`);
+      console.log(`[Revenue Trend] Sample data:`, data.slice(0, 3), '...', data.slice(-3));
       res.json(data);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch revenue trend" });
