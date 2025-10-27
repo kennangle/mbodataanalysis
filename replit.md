@@ -40,7 +40,7 @@ This platform is an enterprise-grade analytics solution for Mindbody data, encom
 - **Automatic Pagination**: Generic helper for efficient retrieval of all records from the Mindbody API.
 - **User Management**: Admin interface for CRUD operations, role-based access, and multi-tenancy support.
 - **Dashboard & Analytics**: Displays real-time data with interactive charts for revenue, growth, and class attendance, including quick date range selectors.
-- **AI-Powered Natural Language Queries**: OpenAI GPT-4o-mini with Function Calling for natural language questions, dynamic database querying, and data-driven insights using specialized functions.
+- **AI-Powered Natural Language Queries**: OpenAI GPT-4o-mini with Function Calling for natural language questions, dynamic database querying, and data-driven insights using specialized functions. Features conversational interface with follow-up question support, chat-style message history, auto-scroll, and conversation management (Oct 27, 2025).
 - **KPI Dashboard**: Tracks studio performance with KPIs like total revenue, active members, class utilization heatmap, conversion funnels, churn/retention, and class performance analysis, all with dynamic date filtering.
 - **Reports System**: Four comprehensive report types (Revenue, Attendance, Class Performance, Monthly Summary) with CSV export and customizable date ranges.
 - **Data Coverage Report**: Comprehensive diagnostics page (`/data-coverage`) showing record counts, date range coverage, monthly breakdowns for all data types, and data quality metrics including orphaned attendance records detection. Essential for identifying data integrity issues.
@@ -57,6 +57,40 @@ This platform is an enterprise-grade analytics solution for Mindbody data, encom
 - **Deployment Type**: Autoscale for development, Reserved VM recommended for production.
 - **Multi-Tenancy Design**: Complete data isolation per organization via `organizationId`, shared database with row-level separation.
 - **Multi-Site Support**: Each organization can connect to a different Mindbody site.
+
+## Recent Updates
+
+### Enhancement: Conversational AI with Follow-up Question Support (Oct 27, 2025)
+
+**Feature:** Upgraded AI query interface from single-question mode to full conversational interface supporting multi-turn dialogues.
+
+**Implementation Details:**
+1. **Backend Enhancements** (`server/routes/ai.ts`, `server/openai.ts`):
+   - Added `conversationHistory` parameter to `/api/ai/query` endpoint
+   - Comprehensive security validation: limits history to 20 messages, validates each entry has role ∈ {"user", "assistant"} only (prevents system message injection), enforces content length ≤2000 chars per message
+   - OpenAI service threads conversation history into prompts, enabling context-aware follow-up responses
+
+2. **Frontend Redesign** (`client/src/components/AIQueryInterface.tsx`):
+   - Chat-style UI with message bubbles (user messages right-aligned blue, AI responses left-aligned with sparkle icon)
+   - ScrollArea component for conversation history with auto-scroll to latest messages
+   - Clear conversation button for starting fresh
+   - Character counter and improved placeholder text
+   - Maintains local conversation state and sends full history with each query
+
+3. **Security Measures**:
+   - Server-side validation prevents malicious clients from injecting system messages or overriding AI instructions
+   - Content sanitization (trimming, length limits) before forwarding to OpenAI
+   - Rate limiting through existing monthly query limit (1000 queries/month)
+
+**User Experience:**
+- Users can now ask follow-up questions like "What about last month?" or "Show me more details" without repeating context
+- Conversation persists until cleared, enabling exploratory data analysis
+- Natural chat interface familiar to ChatGPT users
+
+**Files Modified:**
+- `server/routes/ai.ts`: Added conversation history validation
+- `server/openai.ts`: Updated generateInsight to accept and use conversation history
+- `client/src/components/AIQueryInterface.tsx`: Complete redesign with chat UI
 
 ## Recent Bug Fixes
 
