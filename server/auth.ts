@@ -186,12 +186,21 @@ export const setupAuth = (app: Express) => {
         if (err) {
           return next(err);
         }
-        return res.json({
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          organizationId: user.organizationId,
+
+        // Explicitly save session to ensure it's persisted before responding
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error("Registration session save error:", saveErr);
+            return res.status(500).json({ error: "Registration failed" });
+          }
+
+          return res.json({
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            organizationId: user.organizationId,
+          });
         });
       });
     } catch (error) {
@@ -217,12 +226,20 @@ export const setupAuth = (app: Express) => {
           return res.status(500).json({ error: "Login failed" });
         }
 
-        return res.json({
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          organizationId: user.organizationId,
+        // Explicitly save session to ensure it's persisted before responding
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error("Session save error:", saveErr);
+            return res.status(500).json({ error: "Login failed" });
+          }
+
+          return res.json({
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            organizationId: user.organizationId,
+          });
         });
       });
     })(req, res, next);
