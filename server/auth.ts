@@ -21,14 +21,11 @@ export const setupAuth = (app: Express) => {
     throw new Error("SESSION_SECRET environment variable must be set");
   }
 
-  const isProduction = app.get("env") === "production";
-  console.log("[Auth Setup] Environment:", app.get("env"), "NODE_ENV:", process.env.NODE_ENV, "Production mode:", isProduction);
-
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET,
-    resave: true,  // Changed to true to ensure session is saved on every request
+    resave: true,
     saveUninitialized: false,
-    rolling: true,  // Reset cookie maxAge on every request
+    rolling: true,
     store: new PgSession({
       pool,
       tableName: "sessions",
@@ -37,13 +34,11 @@ export const setupAuth = (app: Express) => {
     cookie: {
       maxAge: 30 * 24 * 60 * 60 * 1000,
       httpOnly: true,
-      secure: false,  // Force to false for now to debug
+      secure: app.get("env") === "production",
       sameSite: "lax",
-      path: "/",  // Explicitly set path
+      path: "/",
     },
   };
-
-  console.log("[Auth Setup] Cookie settings:", JSON.stringify(sessionSettings.cookie, null, 2));
 
   if (app.get("env") === "production") {
     app.set("trust proxy", 1);
@@ -210,7 +205,6 @@ export const setupAuth = (app: Express) => {
   });
 
   app.post("/api/auth/login", (req, res, next) => {
-    console.log("[Auth] Login attempt for:", req.body.email);
     passport.authenticate("local", (err: any, user: User | false, info: any) => {
       if (err) {
         console.error("[Auth] Login authentication error:", err);
@@ -218,26 +212,15 @@ export const setupAuth = (app: Express) => {
       }
 
       if (!user) {
-        console.log("[Auth] Login failed for:", req.body.email, "Reason:", info?.message);
         return res.status(401).json({ error: info?.message || "Invalid email or password" });
       }
 
-      console.log("[Auth] User authenticated:", user.email);
       req.login(user, (err) => {
         if (err) {
           console.error("[Auth] Login session error:", err);
           return res.status(500).json({ error: "Login failed" });
         }
 
-        console.log("[Auth] Session created, session ID:", req.sessionID);
-        console.log("[Auth] Session data:", JSON.stringify(req.session, null, 2));
-        
-        // Manually set Set-Cookie header to debug
-        res.on('finish', () => {
-          console.log("[Auth] Response headers sent:", JSON.stringify(res.getHeaders(), null, 2));
-        });
-        
-        // Let the session middleware handle saving (resave: true)
         return res.json({
           id: user.id,
           email: user.email,
@@ -288,7 +271,6 @@ export const setupAuth = (app: Express) => {
   });
 
   app.get("/api/auth/me", (req, res) => {
-    console.log("[Auth] /me check - Session ID:", req.sessionID, "Authenticated:", req.isAuthenticated());
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
@@ -304,8 +286,6 @@ export const setupAuth = (app: Express) => {
 
   // Google OAuth routes
   app.get("/api/auth/google", (req, res, next) => {
-    console.log("[Google OAuth] Initiating Google login from:", req.headers.host);
-    console.log("[Google OAuth] User-Agent:", req.headers["user-agent"]);
     passport.authenticate("google", { scope: ["profile", "email"] })(req, res, next);
   });
 

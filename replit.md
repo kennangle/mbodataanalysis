@@ -60,6 +60,26 @@ This platform is an enterprise-grade analytics solution for Mindbody data, encom
 
 ## Recent Updates
 
+### Critical Fix: Double-Login Authentication Issue - RESOLVED (Oct 27, 2025)
+
+**Issue:** Users required two login attempts to successfully authenticate, blocking commercial release.
+
+**Root Cause:** Race condition between login response and page navigation. The frontend immediately redirected to `/dashboard` after receiving login response, but the browser hadn't finished processing the `Set-Cookie` header. Subsequent API requests lacked the session cookie, causing 401 errors.
+
+**Solution Implemented:**
+1. **Frontend fix** (`client/src/lib/auth.tsx`): Added 100ms delay after successful login to allow browser to process Set-Cookie header before redirecting
+2. **Session configuration** (`server/auth.ts`): 
+   - Set `resave: true` for reliable session persistence
+   - Set `rolling: true` to extend session on each request
+   - Explicit `path: "/"` on cookie to ensure it's sent with all requests
+   - Removed manual `req.session.save()` calls to prevent race conditions
+
+**Impact:** Single-login authentication now works reliably, making the platform production-ready for commercial use.
+
+**Files Modified:**
+- `client/src/lib/auth.tsx`: Added post-login delay
+- `server/auth.ts`: Optimized session configuration
+
 ### Enhancement: Conversational AI with Follow-up Question Support (Oct 27, 2025)
 
 **Feature:** Upgraded AI query interface from single-question mode to full conversational interface supporting multi-turn dialogues.
