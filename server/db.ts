@@ -12,7 +12,7 @@ if (!process.env.DATABASE_URL) {
 // Configure pool for long-running operations (e.g., data imports)
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  max: 10, // Maximum number of clients in the pool
+  max: 20, // Maximum number of clients in the pool (increased for concurrent imports + user requests)
   idleTimeoutMillis: 30000, // Close idle clients after 30 seconds (increased from default 10s)
   connectionTimeoutMillis: 10000, // Timeout for establishing new connection
 });
