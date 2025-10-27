@@ -19,6 +19,7 @@ export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [resetLink, setResetLink] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +36,11 @@ export default function ForgotPassword() {
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to send reset email");
+      }
+
+      // If the server returns a resetLink (dev mode when email fails), capture it
+      if (data.resetLink) {
+        setResetLink(data.resetLink);
       }
 
       setIsSuccess(true);
@@ -78,12 +84,26 @@ export default function ForgotPassword() {
               <div className="flex flex-col items-center gap-4 py-6">
                 <CheckCircle2 className="h-16 w-16 text-green-500" />
                 <div className="text-center space-y-2">
-                  <h3 className="font-semibold text-lg">Check your email</h3>
+                  <h3 className="font-semibold text-lg">
+                    {resetLink ? "Reset Link Ready" : "Check your email"}
+                  </h3>
                   <p className="text-sm text-muted-foreground">
-                    If an account exists for {email}, you will receive a password reset link
-                    shortly.
+                    {resetLink ? (
+                      "Email service is unavailable. Use the link below to reset your password:"
+                    ) : (
+                      <>If an account exists for {email}, you will receive a password reset link shortly.</>
+                    )}
                   </p>
                 </div>
+                {resetLink && (
+                  <Button
+                    onClick={() => (window.location.href = resetLink)}
+                    data-testid="button-use-reset-link"
+                    className="w-full"
+                  >
+                    Reset Password Now
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   onClick={() => (window.location.href = "/login")}

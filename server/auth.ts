@@ -325,13 +325,25 @@ export const setupAuth = (app: Express) => {
 
       const resetLink = `${req.protocol}://${req.get("host")}/reset-password?token=${token}`;
 
-      await sendPasswordResetEmail({
-        toEmail: user.email,
-        toName: user.name,
-        resetLink,
-      });
-
-      res.json({ message: "If the email exists, a reset link has been sent" });
+      try {
+        await sendPasswordResetEmail({
+          toEmail: user.email,
+          toName: user.name,
+          resetLink,
+        });
+        res.json({ message: "If the email exists, a reset link has been sent" });
+      } catch (emailError) {
+        console.error("Failed to send password reset email:", emailError);
+        // In development, return the reset link directly so user can still reset password
+        if (process.env.NODE_ENV !== "production") {
+          return res.json({
+            message: "Email service unavailable. Use this link to reset your password:",
+            resetLink: resetLink,
+          });
+        }
+        // In production, still return success message for security
+        res.json({ message: "If the email exists, a reset link has been sent" });
+      }
     } catch (error) {
       console.error("Forgot password error:", error);
       res.status(500).json({ error: "Failed to process request" });
