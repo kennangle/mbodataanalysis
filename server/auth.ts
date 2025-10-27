@@ -25,6 +25,10 @@ export const setupAuth = (app: Express) => {
   // Replit ALWAYS runs behind a proxy (even in development), so we need this for secure cookies
   app.set("trust proxy", 1);
 
+  // Detect if we're in Replit environment (runs in iframe, needs SameSite=none)
+  // Replit sets REPL_ID in both dev and production, so we can use that
+  const isReplit = !!process.env.REPL_ID;
+  
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET,
     resave: true,
@@ -38,11 +42,20 @@ export const setupAuth = (app: Express) => {
     cookie: {
       maxAge: 30 * 24 * 60 * 60 * 1000,
       httpOnly: true,
-      secure: app.get("env") === "production",
-      sameSite: "lax",
+      // CRITICAL: In Replit (iframe context), we need SameSite=none + secure=true
+      // for cookies to work across the iframe boundary
+      secure: isReplit ? true : (app.get("env") === "production"),
+      sameSite: isReplit ? "none" : "lax",
       path: "/",
     },
   };
+  
+  console.log("[Auth] Session cookie configuration:", {
+    isReplit,
+    secure: sessionSettings.cookie?.secure,
+    sameSite: sessionSettings.cookie?.sameSite,
+    environment: app.get("env"),
+  });
 
   app.use(session(sessionSettings));
   app.use(passport.initialize());
