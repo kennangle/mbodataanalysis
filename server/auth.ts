@@ -21,6 +21,12 @@ export const setupAuth = (app: Express) => {
     throw new Error("SESSION_SECRET environment variable must be set");
   }
 
+  // CRITICAL: Set trust proxy BEFORE session middleware
+  // Replit runs behind a proxy, so we need this for secure cookies to work
+  if (app.get("env") === "production") {
+    app.set("trust proxy", 1);
+  }
+
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET,
     resave: true,
@@ -39,10 +45,6 @@ export const setupAuth = (app: Express) => {
       path: "/",
     },
   };
-
-  if (app.get("env") === "production") {
-    app.set("trust proxy", 1);
-  }
 
   app.use(session(sessionSettings));
   app.use(passport.initialize());
