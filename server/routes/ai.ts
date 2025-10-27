@@ -13,7 +13,7 @@ export function registerAIRoutes(app: Express) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const { query } = req.body;
+      const { query, conversationHistory } = req.body;
       if (!query || typeof query !== "string" || query.trim().length === 0) {
         return res.status(400).json({ error: "Query is required" });
       }
@@ -22,7 +22,10 @@ export function registerAIRoutes(app: Express) {
         return res.status(400).json({ error: "Query too long (max 500 characters)" });
       }
 
-      const result = await openaiService.generateInsight(organizationId, userId, query);
+      // Validate conversation history if provided
+      const history = Array.isArray(conversationHistory) ? conversationHistory : [];
+      
+      const result = await openaiService.generateInsight(organizationId, userId, query, history);
 
       res.json(result);
     } catch (error) {

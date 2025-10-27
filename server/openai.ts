@@ -530,7 +530,8 @@ export class OpenAIService {
   async generateInsight(
     organizationId: string,
     userId: string,
-    query: string
+    query: string,
+    conversationHistory: Array<{ role: string; content: string }> = []
   ): Promise<{ response: string; tokensUsed: number }> {
     const recentQueries = await storage.getAIQueries(organizationId, 100);
     const thisMonthQueries = recentQueries.filter((q) => {
@@ -553,13 +554,21 @@ export class OpenAIService {
         role: "system",
         content: `You are an AI assistant for analyzing Mindbody studio data (students, classes, attendance, revenue). 
 You have access to database query tools. Call the appropriate tools to get real data, then provide insights based on the results.
-Be specific, data-driven, and actionable in your responses.`
-      },
-      {
-        role: "user",
-        content: query
+Be specific, data-driven, and actionable in your responses.
+When the user asks follow-up questions, refer to the conversation history to provide contextual answers.`
       }
     ];
+
+    // Add conversation history (previous messages)
+    if (conversationHistory.length > 0) {
+      messages.push(...conversationHistory);
+    }
+
+    // Add the new user query
+    messages.push({
+      role: "user",
+      content: query
+    });
 
     let totalTokensUsed = 0;
     let finalResponse = "";
