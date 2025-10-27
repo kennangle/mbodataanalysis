@@ -779,20 +779,20 @@ export class DbStorage implements IStorage {
     ];
 
     if (useDaily) {
-      // Daily aggregation for short date ranges
+      // Daily aggregation for short date ranges (use UTC timezone for consistency)
       const revenueByDay = await db
         .select({
-          day: sql<string>`to_char(${revenue.transactionDate}, 'YYYY-MM-DD')`,
+          day: sql<string>`to_char(${revenue.transactionDate} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`,
           total: sql<number>`sum(CAST(${revenue.amount} AS NUMERIC))`,
         })
         .from(revenue)
         .where(and(...whereConditions))
-        .groupBy(sql`to_char(${revenue.transactionDate}, 'YYYY-MM-DD')`);
+        .groupBy(sql`to_char(${revenue.transactionDate} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`);
 
       // Get active students per day (students who attended class that day)
       const activeStudentsByDay = await db
         .select({
-          day: sql<string>`to_char(${attendance.attendedAt}, 'YYYY-MM-DD')`,
+          day: sql<string>`to_char(${attendance.attendedAt} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`,
           count: sql<number>`count(distinct ${attendance.studentId})`,
         })
         .from(attendance)
@@ -803,7 +803,7 @@ export class DbStorage implements IStorage {
             lt(attendance.attendedAt, nextDay)
           )
         )
-        .groupBy(sql`to_char(${attendance.attendedAt}, 'YYYY-MM-DD')`);
+        .groupBy(sql`to_char(${attendance.attendedAt} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`);
 
       const revenueMap = new Map(
         revenueByDay.map((r) => [r.day, Number(r.total || 0)])
