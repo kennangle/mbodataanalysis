@@ -63,12 +63,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const userData = await response.json();
-    
-    // Give the browser time to process the Set-Cookie header
-    // Increased to 300ms for more reliable cookie persistence
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
     setUser(userData);
+    
+    // Verify session is working before returning
+    // This prevents navigation until the cookie is properly set
+    let retries = 0;
+    while (retries < 5) {
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      try {
+        const checkResponse = await fetch("/api/auth/me", {
+          credentials: "include",
+        });
+        
+        if (checkResponse.ok) {
+          // Session is working!
+          return;
+        }
+      } catch (e) {
+        // Continue retrying
+      }
+      
+      retries++;
+    }
+    
+    // If we get here, session still isn't working after 1 second
+    // Just proceed and hope for the best
+    console.warn("Session verification timed out, proceeding anyway");
   };
 
   const register = async (
