@@ -23,7 +23,40 @@ export function registerAIRoutes(app: Express) {
       }
 
       // Validate conversation history if provided
-      const history = Array.isArray(conversationHistory) ? conversationHistory : [];
+      const history: Array<{ role: string; content: string }> = [];
+      
+      if (Array.isArray(conversationHistory)) {
+        // Limit history to last 20 messages (10 exchanges) to prevent token overflow
+        if (conversationHistory.length > 20) {
+          return res.status(400).json({ error: "Conversation history too long (max 20 messages)" });
+        }
+
+        // Validate each history entry
+        for (const entry of conversationHistory) {
+          // Must be an object with role and content
+          if (typeof entry !== "object" || entry === null) {
+            return res.status(400).json({ error: "Invalid conversation history format" });
+          }
+
+          const { role, content } = entry;
+
+          // Role must be "user" or "assistant" only (prevent system message injection)
+          if (role !== "user" && role !== "assistant") {
+            return res.status(400).json({ error: "Invalid role in conversation history. Only 'user' and 'assistant' are allowed." });
+          }
+
+          // Content must be a non-empty string with reasonable length
+          if (typeof content !== "string" || content.trim().length === 0) {
+            return res.status(400).json({ error: "Invalid content in conversation history" });
+          }
+
+          if (content.length > 2000) {
+            return res.status(400).json({ error: "Conversation history message too long (max 2000 characters per message)" });
+          }
+
+          history.push({ role, content: content.trim() });
+        }
+      }
       
       const result = await openaiService.generateInsight(organizationId, userId, query, history);
 
