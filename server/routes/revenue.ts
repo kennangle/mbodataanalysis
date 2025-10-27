@@ -278,11 +278,21 @@ export function registerRevenueRoutes(app: Express) {
 
       let imported = 0;
       let skipped = 0;
+      let updated = 0;
       const errors: string[] = [];
       const rows = parseResult.data as any[];
 
       console.log(`[CSV Import] Starting import of ${rows.length} rows...`);
       const startTime = Date.now();
+
+      // Create import job for tracking
+      const importJob = await storage.createImportJob({
+        organizationId,
+        dataTypes: ["revenue"],
+        startDate: new Date("2000-01-01"), // CSV doesn't have predefined date range
+        endDate: new Date(),
+        status: "in_progress",
+      });
 
       // Initialize progress tracking
       importProgressMap.set(organizationId, {
@@ -410,7 +420,7 @@ export function registerRevenueRoutes(app: Express) {
       // Log final summary
       const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
       console.log(
-        `[CSV Import] Completed: ${imported} imported, ${skipped} skipped, ${rows.length} total in ${totalTime}s`
+        `[CSV Import] Completed: ${imported} processed, ${skipped} skipped, ${rows.length} total in ${totalTime}s`
       );
 
       // Log errors for debugging
@@ -421,15 +431,22 @@ export function registerRevenueRoutes(app: Express) {
         );
       }
 
+      // Update import job with completion status
+      await storage.updateImportJob(importJob.id, {
+        status: "completed",
+        error: errors.length > 0 ? `${errors.length} rows had errors. First error: ${errors[0]}` : null,
+      });
+
       // Clear progress tracking
       importProgressMap.delete(organizationId);
 
       res.json({
         success: true,
-        imported,
+        processed: imported, // Total rows processed successfully (includes both new inserts and updates)
         skipped,
         total: parseResult.data.length,
-        errors: errors.length > 0 ? errors.slice(0, 10) : undefined, // Return first 10 errors
+        totalErrors: errors.length,
+        errors: errors.length > 0 ? errors.slice(0, 20) : undefined, // Return first 20 errors for visibility
       });
     } catch (error: any) {
       console.error("CSV import error:", error);
@@ -438,6 +455,19 @@ export function registerRevenueRoutes(app: Express) {
       const organizationId = (req.user as User)?.organizationId;
       if (organizationId) {
         importProgressMap.delete(organizationId);
+      }
+
+      // Update import job as failed if it was created
+      try {
+        const importJob = await storage.getActiveImportJob(organizationId!);
+        if (importJob) {
+          await storage.updateImportJob(importJob.id, {
+            status: "failed",
+            error: error.message,
+          });
+        }
+      } catch (e) {
+        // Ignore error updating job status
       }
 
       res.status(500).json({ error: "Failed to import CSV", details: error.message });

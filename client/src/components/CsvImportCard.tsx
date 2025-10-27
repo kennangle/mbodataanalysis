@@ -8,10 +8,11 @@ import { useToast } from "@/hooks/use-toast";
 
 interface CsvImportResult {
   success: boolean;
-  imported: number;
-  skipped: number;
-  total: number;
-  errors?: string[];
+  processed: number; // Total rows processed successfully (includes inserts and updates)
+  skipped: number; // Rows that failed validation
+  total: number; // Total rows in CSV
+  totalErrors: number; // Total number of errors
+  errors?: string[]; // First 20 error messages
 }
 
 interface ImportProgress {
@@ -136,9 +137,21 @@ export function CsvImportCard() {
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/revenue-trend"] });
 
+      // Build detailed description with error information
+      let description = `Processed ${data.processed} of ${data.total} rows successfully.`;
+      if (data.skipped > 0) {
+        description += ` ${data.skipped} rows had validation errors.`;
+      }
+      if (data.errors && data.errors.length > 0) {
+        description += `\n\nFirst error: ${data.errors[0]}`;
+        if (data.totalErrors > 1) {
+          description += `\n(+${data.totalErrors - 1} more errors - check Import History for details)`;
+        }
+      }
+
       toast({
-        title: "CSV Import Complete",
-        description: `Successfully imported ${data.imported} of ${data.total} records. ${data.skipped} skipped.`,
+        title: data.skipped > 0 ? "CSV Import Completed with Errors" : "CSV Import Complete",
+        description,
         variant: data.skipped > 0 ? "default" : "default",
       });
     },
