@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +16,7 @@ import { BarChart3, Loader2, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function ForgotPassword() {
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -97,7 +99,20 @@ export default function ForgotPassword() {
                 </div>
                 {resetLink && (
                   <Button
-                    onClick={() => (window.location.href = resetLink)}
+                    onClick={() => {
+                      // Extract token from resetLink
+                      try {
+                        const url = new URL(resetLink);
+                        const token = url.searchParams.get('token');
+                        if (token) {
+                          setLocation(`/reset-password?token=${token}`);
+                        } else {
+                          window.location.href = resetLink;
+                        }
+                      } catch {
+                        window.location.href = resetLink;
+                      }
+                    }}
                     data-testid="button-use-reset-link"
                     className="w-full"
                   >
