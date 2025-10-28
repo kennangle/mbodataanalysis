@@ -1,9 +1,9 @@
-import cron from "node-cron";
+import cron, { type ScheduledTask } from "node-cron";
 import { storage } from "./storage";
 import { subDays } from "date-fns";
 
 interface ScheduledJobInfo {
-  task: cron.ScheduledTask;
+  task: ScheduledTask;
   schedule: string;
 }
 
