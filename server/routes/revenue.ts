@@ -136,6 +136,7 @@ export function registerRevenueRoutes(app: Express) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
+      console.log(`[Progress Check] Org ${organizationId}, map size: ${importProgressMap.size}, has progress: ${importProgressMap.has(organizationId)}`);
       const progress = importProgressMap.get(organizationId);
       if (!progress) {
         return res.status(404).json({ error: "No import in progress" });
@@ -243,6 +244,7 @@ export function registerRevenueRoutes(app: Express) {
       }
 
       // Initialize progress tracking early so frontend can show "Initializing..." properly
+      console.log(`[CSV Import] Initializing progress tracking for org ${organizationId}`);
       const startTime = Date.now();
       importProgressMap.set(organizationId, {
         total: 0, // Will update after parsing
@@ -251,6 +253,7 @@ export function registerRevenueRoutes(app: Express) {
         skipped: 0,
         startTime,
       });
+      console.log(`[CSV Import] Progress tracking initialized, map size: ${importProgressMap.size}`);
 
       // Parse CSV (handle BOM if present)
       let csvText = req.file.buffer.toString("utf-8");
