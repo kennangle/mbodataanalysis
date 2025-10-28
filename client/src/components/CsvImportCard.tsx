@@ -30,6 +30,7 @@ export function CsvImportCard() {
   const [progress, setProgress] = useState<ImportProgress | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const progressIntervalRef = useRef<number | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -93,6 +94,7 @@ export function CsvImportCard() {
 
       // Create abort controller with 5 minute timeout for large files
       const controller = new AbortController();
+      abortControllerRef.current = controller;
       const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000); // 5 minutes
 
       try {
@@ -115,14 +117,13 @@ export function CsvImportCard() {
       } catch (error: any) {
         clearTimeout(timeoutId);
         if (error.name === "AbortError") {
-          throw new Error(
-            "Import timed out - file may be too large. Try splitting into smaller files."
-          );
+          throw new Error("Import cancelled");
         }
         throw error;
       } finally {
         // Stop polling when import completes or fails
         stopProgressPolling();
+        abortControllerRef.current = null;
       }
     },
     onSuccess: (data) => {
@@ -191,6 +192,17 @@ export function CsvImportCard() {
     setImportResult(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
+    }
+  };
+
+  const handleCancel = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      stopProgressPolling();
+      toast({
+        title: "Import Cancelled",
+        description: "The import has been stopped.",
+      });
     }
   };
 
@@ -327,11 +339,10 @@ export function CsvImportCard() {
                     </Button>
                     <Button
                       variant="outline"
-                      onClick={handleReset}
-                      disabled={importMutation.isPending}
+                      onClick={importMutation.isPending ? handleCancel : handleReset}
                       data-testid="button-cancel"
                     >
-                      Cancel
+                      {importMutation.isPending ? "Cancel" : "Cancel"}
                     </Button>
                   </div>
                 </>
