@@ -222,8 +222,9 @@ export function registerRevenueRoutes(app: Express) {
 
   // Import revenue from CSV (optimized - no student matching to prevent timeout)
   app.post("/api/revenue/import-csv", requireAuth, upload.single("file"), async (req, res) => {
+    const organizationId = (req.user as User)?.organizationId;
+    
     try {
-      const organizationId = (req.user as User)?.organizationId;
       if (!organizationId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
