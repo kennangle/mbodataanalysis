@@ -6,30 +6,31 @@ import { Progress } from "@/components/ui/progress";
 import { Upload, CheckCircle, AlertCircle, Loader2, FileSpreadsheet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-interface CsvImportResult {
+interface CsvImportResponse {
   success: boolean;
-  processed: number; // Total rows processed successfully (includes inserts and updates)
-  skipped: number; // Rows that failed validation
-  total: number; // Total rows in CSV
-  totalErrors: number; // Total number of errors
-  errors?: string[]; // First 20 error messages
+  jobId: string;
+  totalRows: number;
+  message: string;
 }
 
 interface ImportProgress {
+  status: "idle" | "in_progress";
   total: number;
   processed: number;
   imported: number;
   skipped: number;
-  percentage: number;
-  elapsed: number;
+  elapsedSeconds?: number;
+  estimatedSecondsLeft?: number;
+  rowsPerSecond?: number;
 }
 
 export function CsvImportCard() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [importResult, setImportResult] = useState<CsvImportResult | null>(null);
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [progress, setProgress] = useState<ImportProgress | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const progressIntervalRef = useRef<number | null>(null);
+  const jobPollingIntervalRef = useRef<number | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -44,12 +45,7 @@ export function CsvImportCard() {
       if (response.ok) {
         const data = (await response.json()) as ImportProgress;
         setProgress(data);
-      } else if (response.status === 404) {
-        // Import completed or not started
-        if (progressIntervalRef.current) {
-          clearInterval(progressIntervalRef.current);
-          progressIntervalRef.current = null;
-        }
+      } else {
         setProgress(null);
       }
     } catch (error) {
@@ -57,30 +53,80 @@ export function CsvImportCard() {
     }
   };
 
-  const startProgressPolling = () => {
-    // Clear any existing interval
-    if (progressIntervalRef.current) {
-      clearInterval(progressIntervalRef.current);
-    }
+  // Poll for job completion
+  const pollJobStatus = async (jobId: string) => {
+    try {
+      const response = await fetch("/api/import-jobs", {
+        credentials: "include",
+      });
 
-    // Poll every 500ms for smooth progress updates
-    progressIntervalRef.current = window.setInterval(pollProgress, 500);
+      if (response.ok) {
+        const jobs = await response.json();
+        const job = jobs.find((j: any) => j.id === jobId);
+
+        if (job) {
+          if (job.status === "completed") {
+            stopPolling();
+            setActiveJobId(null);
+            queryClient.invalidateQueries({ queryKey: ["/api/revenue"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/dashboard/revenue-trend"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/import-jobs"] });
+
+            const progress = job.progress ? JSON.parse(job.progress) : null;
+            const totalRows = progress?.revenue?.total || 0;
+            const processedRows = progress?.revenue?.current || 0;
+
+            toast({
+              title: job.error ? "CSV Import Completed with Errors" : "CSV Import Complete",
+              description: job.error 
+                ? `Processed ${processedRows} of ${totalRows} rows. ${job.error}`
+                : `Successfully imported ${processedRows} revenue records with student matching.`,
+              variant: job.error ? "default" : "default",
+            });
+          } else if (job.status === "failed") {
+            stopPolling();
+            setActiveJobId(null);
+            toast({
+              title: "CSV Import Failed",
+              description: job.error || "Unknown error occurred",
+              variant: "destructive",
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Failed to poll job status:", error);
+    }
   };
 
-  const stopProgressPolling = () => {
+  const startPolling = (jobId: string) => {
+    // Clear any existing intervals
+    stopPolling();
+
+    // Poll progress every 500ms for smooth updates
+    progressIntervalRef.current = window.setInterval(pollProgress, 500);
+    
+    // Poll job status every 2 seconds
+    jobPollingIntervalRef.current = window.setInterval(() => pollJobStatus(jobId), 2000);
+  };
+
+  const stopPolling = () => {
     if (progressIntervalRef.current) {
       clearInterval(progressIntervalRef.current);
       progressIntervalRef.current = null;
     }
+    if (jobPollingIntervalRef.current) {
+      clearInterval(jobPollingIntervalRef.current);
+      jobPollingIntervalRef.current = null;
+    }
     setProgress(null);
   };
 
-  // Cleanup interval on unmount
+  // Cleanup intervals on unmount
   useEffect(() => {
     return () => {
-      if (progressIntervalRef.current) {
-        clearInterval(progressIntervalRef.current);
-      }
+      stopPolling();
     };
   }, []);
 
@@ -89,71 +135,33 @@ export function CsvImportCard() {
       const formData = new FormData();
       formData.append("file", file);
 
-      // Start polling for progress
-      startProgressPolling();
+      // Use fetch directly for multipart/form-data
+      const response = await fetch("/api/revenue/import-csv", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
 
-      // Create abort controller with 5 minute timeout for large files
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
-      const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000); // 5 minutes
-
-      try {
-        // Use fetch directly for multipart/form-data instead of apiRequest
-        const response = await fetch("/api/revenue/import-csv", {
-          method: "POST",
-          body: formData,
-          credentials: "include", // Include session cookie
-          signal: controller.signal,
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.details || error.error || "Import failed");
-        }
-
-        return (await response.json()) as CsvImportResult;
-      } catch (error: any) {
-        clearTimeout(timeoutId);
-        if (error.name === "AbortError") {
-          throw new Error("Import cancelled");
-        }
-        throw error;
-      } finally {
-        // Stop polling when import completes or fails
-        stopProgressPolling();
-        abortControllerRef.current = null;
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.details || error.error || "Import failed");
       }
+
+      return (await response.json()) as CsvImportResponse;
     },
     onSuccess: (data) => {
-      setImportResult(data);
       setSelectedFile(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
 
-      // Invalidate revenue queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ["/api/revenue"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/revenue-trend"] });
-
-      // Build detailed description with error information
-      let description = `Processed ${data.processed} of ${data.total} rows successfully.`;
-      if (data.skipped > 0) {
-        description += ` ${data.skipped} rows had validation errors.`;
-      }
-      if (data.errors && data.errors.length > 0) {
-        description += `\n\nFirst error: ${data.errors[0]}`;
-        if (data.totalErrors > 1) {
-          description += `\n(+${data.totalErrors - 1} more errors - check Import History for details)`;
-        }
-      }
+      // Store job ID and start polling
+      setActiveJobId(data.jobId);
+      startPolling(data.jobId);
 
       toast({
-        title: data.skipped > 0 ? "CSV Import Completed with Errors" : "CSV Import Complete",
-        description,
-        variant: data.skipped > 0 ? "default" : "default",
+        title: "CSV Import Started",
+        description: `Processing ${data.totalRows} rows in background with student matching. You can monitor progress here or in Import History.`,
       });
     },
     onError: (error: Error) => {
@@ -177,7 +185,6 @@ export function CsvImportCard() {
         return;
       }
       setSelectedFile(file);
-      setImportResult(null);
     }
   };
 
@@ -189,22 +196,16 @@ export function CsvImportCard() {
 
   const handleReset = () => {
     setSelectedFile(null);
-    setImportResult(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   };
 
-  const handleCancel = () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      stopProgressPolling();
-      toast({
-        title: "Import Cancelled",
-        description: "The import has been stopped.",
-      });
-    }
-  };
+  const percentage = progress && progress.total > 0 
+    ? Math.round((progress.processed / progress.total) * 100) 
+    : 0;
+
+  const isImporting = importMutation.isPending || (!!activeJobId && progress !== null && progress.status === "in_progress");
 
   return (
     <Card data-testid="card-csv-import">
@@ -216,55 +217,46 @@ export function CsvImportCard() {
               CSV Revenue Import
             </CardTitle>
             <CardDescription>
-              Import historical revenue data from exported CSV files
+              Import historical revenue data from exported CSV files with student matching
             </CardDescription>
           </div>
-          {importResult && (
-            <CheckCircle className="h-6 w-6 text-green-600" data-testid="icon-success" />
-          )}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!importResult ? (
-          <>
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">
-                Upload a CSV file exported from Mindbody Business Intelligence with revenue/sales
-                data.
-              </p>
-              <div className="bg-muted/50 p-3 rounded-md text-xs space-y-1">
-                <p className="font-medium">Expected CSV columns (flexible names):</p>
-                <ul className="list-disc list-inside space-y-0.5 text-muted-foreground">
-                  <li>
-                    <span className="font-medium">Date</span> (or "Sale Date", "Transaction Date") -
-                    Required
-                  </li>
-                  <li>
-                    <span className="font-medium">Amount</span> (or "Total", "Price") - Required
-                  </li>
-                  <li>
-                    <span className="font-medium">Type</span> (or "Category", "Payment Method") -
-                    Optional
-                  </li>
-                  <li>
-                    <span className="font-medium">Description</span> (or "Item", "Product",
-                    "Service") - Optional
-                  </li>
-                  <li>
-                    <span className="font-medium">Client Email</span> (or "Email") - Optional, for
-                    student matching
-                  </li>
-                  <li>
-                    <span className="font-medium">Client Name</span> (or "Client") - Optional, for
-                    student matching
-                  </li>
-                  <li>
-                    <span className="font-medium">Sale ID</span> (or "SaleId", "ID") - Optional,
-                    prevents duplicates
-                  </li>
-                </ul>
-              </div>
+        <>
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Upload a CSV file exported from Mindbody Business Intelligence with revenue/sales
+              data. Includes automatic student matching for AI insights.
+            </p>
+            <div className="bg-muted/50 p-3 rounded-md text-xs space-y-1">
+              <p className="font-medium">Expected CSV columns (flexible names):</p>
+              <ul className="list-disc list-inside space-y-0.5 text-muted-foreground">
+                <li>
+                  <span className="font-medium">Date</span> (or "Sale Date", "Transaction Date") -
+                  Required
+                </li>
+                <li>
+                  <span className="font-medium">Amount</span> (or "Total", "Price") - Required
+                </li>
+                <li>
+                  <span className="font-medium">Client ID</span> or <span className="font-medium">Email</span> - For student matching
+                </li>
+                <li>
+                  <span className="font-medium">Type</span> (or "Category", "Payment Method") -
+                  Optional
+                </li>
+                <li>
+                  <span className="font-medium">Description</span> (or "Item", "Product") -
+                  Optional
+                </li>
+                <li>
+                  <span className="font-medium">Sale ID</span> (or "SaleId") - Optional,
+                  prevents duplicates
+                </li>
+              </ul>
             </div>
+          </div>
 
             <div className="space-y-3">
               <input
@@ -288,20 +280,20 @@ export function CsvImportCard() {
 
               {selectedFile && (
                 <>
-                  {importMutation.isPending && (
+                  {isImporting && (
                     <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-md p-4 space-y-3">
                       {progress ? (
                         <>
                           <div className="flex items-center justify-between text-sm">
                             <span className="text-blue-900 dark:text-blue-100 font-medium">
-                              Processing CSV...
+                              Processing CSV with student matching...
                             </span>
                             <span className="text-blue-700 dark:text-blue-200 font-mono">
-                              {progress.percentage}%
+                              {percentage}%
                             </span>
                           </div>
                           <Progress
-                            value={progress.percentage}
+                            value={percentage}
                             className="h-2"
                             data-testid="progress-import"
                           />
@@ -310,17 +302,22 @@ export function CsvImportCard() {
                               {progress.processed.toLocaleString()} /{" "}
                               {progress.total.toLocaleString()} rows
                             </span>
-                            <span>{Math.floor(progress.elapsed)}s elapsed</span>
+                            {progress.elapsedSeconds !== undefined && (
+                              <span>{progress.elapsedSeconds}s elapsed</span>
+                            )}
                           </div>
                           <div className="text-xs text-blue-700 dark:text-blue-300">
                             {progress.imported.toLocaleString()} imported •{" "}
                             {progress.skipped.toLocaleString()} skipped
+                            {progress.rowsPerSecond !== undefined && progress.rowsPerSecond > 0 && (
+                              <span> • {progress.rowsPerSecond} rows/sec</span>
+                            )}
                           </div>
                         </>
                       ) : (
                         <p className="text-sm text-blue-900 dark:text-blue-100">
                           <Loader2 className="inline h-4 w-4 animate-spin mr-2" />
-                          Initializing import... This may take several minutes for large files.
+                          Starting background import...
                         </p>
                       )}
                     </div>
@@ -328,69 +325,29 @@ export function CsvImportCard() {
                   <div className="flex gap-2">
                     <Button
                       onClick={handleImport}
-                      disabled={importMutation.isPending}
+                      disabled={isImporting}
                       className="flex-1"
                       data-testid="button-import-csv"
                     >
-                      {importMutation.isPending && (
+                      {isImporting && (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       )}
-                      {importMutation.isPending ? "Importing..." : "Import CSV"}
+                      {isImporting ? "Processing..." : "Start Import"}
                     </Button>
-                    <Button
-                      variant="outline"
-                      onClick={importMutation.isPending ? handleCancel : handleReset}
-                      data-testid="button-cancel"
-                    >
-                      {importMutation.isPending ? "Cancel" : "Cancel"}
-                    </Button>
+                    {!isImporting && (
+                      <Button
+                        variant="outline"
+                        onClick={handleReset}
+                        data-testid="button-cancel"
+                      >
+                        Cancel
+                      </Button>
+                    )}
                   </div>
                 </>
               )}
             </div>
           </>
-        ) : (
-          <div className="space-y-3">
-            <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-md p-4">
-              <h3 className="font-semibold text-green-900 dark:text-green-100 mb-2 flex items-center gap-2">
-                <CheckCircle className="h-5 w-5" />
-                Import Completed Successfully
-              </h3>
-              <div className="text-sm space-y-1 text-green-800 dark:text-green-200">
-                <p data-testid="text-imported">
-                  <span className="font-medium">Imported:</span> {importResult.processed} records
-                </p>
-                <p data-testid="text-skipped">
-                  <span className="font-medium">Skipped:</span> {importResult.skipped} records
-                </p>
-                <p data-testid="text-total">
-                  <span className="font-medium">Total:</span> {importResult.total} records
-                </p>
-              </div>
-            </div>
-
-            {importResult.errors && importResult.errors.length > 0 && (
-              <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900 rounded-md p-4">
-                <h4 className="font-semibold text-yellow-900 dark:text-yellow-100 mb-2 flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4" />
-                  Import Warnings ({importResult.errors.length}{" "}
-                  {importResult.errors.length > 1 ? "errors" : "error"})
-                </h4>
-                <ul className="text-xs space-y-1 text-yellow-800 dark:text-yellow-200 max-h-32 overflow-y-auto">
-                  {importResult.errors.map((error, index) => (
-                    <li key={index} className="font-mono">
-                      {error}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            <Button onClick={handleReset} className="w-full" data-testid="button-import-another">
-              Import Another File
-            </Button>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

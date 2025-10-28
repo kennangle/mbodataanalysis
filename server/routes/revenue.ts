@@ -327,8 +327,11 @@ export function registerRevenueRoutes(app: Express) {
       const estimatedSecondsLeft = rowsPerSecond > 0 ? remainingRows / rowsPerSecond : 0;
 
       res.json({
-        status: "in_progress",
-        ...progress,
+        status: "in_progress", // Critical: Frontend depends on this for UI visibility
+        total: progress.total,
+        processed: progress.processed,
+        imported: progress.imported,
+        skipped: progress.skipped,
         elapsedSeconds: Math.floor(elapsedSeconds),
         estimatedSecondsLeft: Math.floor(estimatedSecondsLeft),
         rowsPerSecond: Math.floor(rowsPerSecond),
