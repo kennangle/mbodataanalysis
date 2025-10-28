@@ -28,6 +28,12 @@ export const setupAuth = (app: Express) => {
   // Detect if we're in Replit environment (runs in iframe, needs SameSite=none)
   // Replit sets REPL_ID in both dev and production, so we can use that
   const isReplit = !!process.env.REPL_ID;
+  const isDevelopment = process.env.NODE_ENV === "development";
+  
+  // In development, use lax to avoid iframe cookie issues
+  // In production (published), use none for cross-origin support
+  const sameSiteValue = isDevelopment ? "lax" : (isReplit ? "none" : "lax");
+  const secureValue = isDevelopment ? false : (isReplit ? true : (app.get("env") === "production"));
   
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET,
@@ -42,16 +48,15 @@ export const setupAuth = (app: Express) => {
     cookie: {
       maxAge: 30 * 24 * 60 * 60 * 1000,
       httpOnly: true,
-      // CRITICAL: In Replit (iframe context), we need SameSite=none + secure=true
-      // for cookies to work across the iframe boundary
-      secure: isReplit ? true : (app.get("env") === "production"),
-      sameSite: isReplit ? "none" : "lax",
+      secure: secureValue,
+      sameSite: sameSiteValue,
       path: "/",
     },
   };
   
   console.log("[Auth] Session cookie configuration:", {
     isReplit,
+    isDevelopment,
     secure: sessionSettings.cookie?.secure,
     sameSite: sessionSettings.cookie?.sameSite,
     environment: app.get("env"),
