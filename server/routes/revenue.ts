@@ -242,6 +242,16 @@ export function registerRevenueRoutes(app: Express) {
         });
       }
 
+      // Initialize progress tracking early so frontend can show "Initializing..." properly
+      const startTime = Date.now();
+      importProgressMap.set(organizationId, {
+        total: 0, // Will update after parsing
+        processed: 0,
+        imported: 0,
+        skipped: 0,
+        startTime,
+      });
+
       // Parse CSV (handle BOM if present)
       let csvText = req.file.buffer.toString("utf-8");
       // Remove BOM if present
@@ -256,13 +266,14 @@ export function registerRevenueRoutes(app: Express) {
       });
 
       if (parseResult.errors.length > 0) {
+        importProgressMap.delete(organizationId); // Clean up on error
         return res.status(400).json({
           error: "CSV parsing failed",
           details: parseResult.errors,
         });
       }
 
-      // Get student maps for matching by Mindbody ID, email, or name
+      // Get student maps for matching by Mindbody ID, email, or name (this can take 10-20 seconds for 36K+ students)
       const students = await storage.getStudents(organizationId);
       const studentMapByMindbodyId = new Map(
         students.filter((s) => s.mindbodyClientId).map((s) => [s.mindbodyClientId!, s.id])
@@ -283,7 +294,6 @@ export function registerRevenueRoutes(app: Express) {
       const rows = parseResult.data as any[];
 
       console.log(`[CSV Import] Starting import of ${rows.length} rows...`);
-      const startTime = Date.now();
 
       // Create import job for tracking
       const importJob = await storage.createImportJob({
@@ -294,7 +304,7 @@ export function registerRevenueRoutes(app: Express) {
         status: "in_progress",
       });
 
-      // Initialize progress tracking
+      // Update progress tracking with actual row count (initialized earlier with total=0)
       importProgressMap.set(organizationId, {
         total: rows.length,
         processed: 0,
