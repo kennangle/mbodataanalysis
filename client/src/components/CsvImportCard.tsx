@@ -204,7 +204,7 @@ export function CsvImportCard() {
     ? Math.round((progress.processed / progress.total) * 100) 
     : 0;
 
-  const isImporting = importMutation.isPending || (!!activeJobId && progress !== null && progress.status === "in_progress");
+  const isImporting = importMutation.isPending || (!!activeJobId && progress?.status === "in_progress");
 
   return (
     <Card data-testid="card-csv-import">
