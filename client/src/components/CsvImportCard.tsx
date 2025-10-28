@@ -347,7 +347,7 @@ export function CsvImportCard() {
               </h3>
               <div className="text-sm space-y-1 text-green-800 dark:text-green-200">
                 <p data-testid="text-imported">
-                  <span className="font-medium">Imported:</span> {importResult.imported} records
+                  <span className="font-medium">Imported:</span> {importResult.processed} records
                 </p>
                 <p data-testid="text-skipped">
                   <span className="font-medium">Skipped:</span> {importResult.skipped} records
