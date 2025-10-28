@@ -220,7 +220,7 @@ export function registerRevenueRoutes(app: Express) {
     limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit for large CSV files
   });
 
-  // Import revenue from CSV
+  // Import revenue from CSV (optimized - no student matching to prevent timeout)
   app.post("/api/revenue/import-csv", requireAuth, upload.single("file"), async (req, res) => {
     try {
       const organizationId = (req.user as User)?.organizationId;
@@ -243,18 +243,6 @@ export function registerRevenueRoutes(app: Express) {
         });
       }
 
-      // Initialize progress tracking early so frontend can show "Initializing..." properly
-      console.log(`[CSV Import] Initializing progress tracking for org ${organizationId}`);
-      const startTime = Date.now();
-      importProgressMap.set(organizationId, {
-        total: 0, // Will update after parsing
-        processed: 0,
-        imported: 0,
-        skipped: 0,
-        startTime,
-      });
-      console.log(`[CSV Import] Progress tracking initialized, map size: ${importProgressMap.size}`);
-
       // Parse CSV (handle BOM if present)
       let csvText = req.file.buffer.toString("utf-8");
       // Remove BOM if present
@@ -269,26 +257,26 @@ export function registerRevenueRoutes(app: Express) {
       });
 
       if (parseResult.errors.length > 0) {
-        importProgressMap.delete(organizationId); // Clean up on error
         return res.status(400).json({
           error: "CSV parsing failed",
           details: parseResult.errors,
         });
       }
 
-      // Get student maps for matching by Mindbody ID, email, or name (this can take 10-20 seconds for 36K+ students)
-      const students = await storage.getStudents(organizationId);
-      const studentMapByMindbodyId = new Map(
-        students.filter((s) => s.mindbodyClientId).map((s) => [s.mindbodyClientId!, s.id])
-      );
-      const studentMapByEmail = new Map(
-        students.filter((s) => s.email).map((s) => [s.email!.toLowerCase(), s.id])
-      );
-      const studentMapByName = new Map(
-        students
-          .filter((s) => s.firstName && s.lastName)
-          .map((s) => [`${s.firstName.toLowerCase()} ${s.lastName.toLowerCase()}`, s.id])
-      );
+      const startTime = Date.now();
+      // Initialize progress tracking early
+      console.log(`[CSV Import] Starting import for org ${organizationId}`);
+      importProgressMap.set(organizationId, {
+        total: parseResult.data.length,
+        processed: 0,
+        imported: 0,
+        skipped: 0,
+        startTime,
+      });
+
+      // NOTE: Student matching temporarily disabled to prevent memory issues with 36K+ students
+      // Revenue will import without student linkage for now
+      console.log(`[CSV Import] Processing ${parseResult.data.length} rows (student matching disabled)`);
 
       let imported = 0;
       let skipped = 0;
@@ -383,33 +371,8 @@ export function registerRevenueRoutes(app: Express) {
             continue;
           }
 
-          // Try to match student by Mindbody Client ID, email, or name
-          let studentId: string | null = null;
-          const clientId = row["Client ID"] || row["ClientID"] || row["Client Id"];
-          const clientEmail = row["Client Email"] || row["Email"] || row["ClientEmail"];
-          let clientName = row["Client"] || row["Client Name"] || row["ClientName"];
-
-          // First, try matching by Mindbody Client ID (most accurate)
-          if (clientId) {
-            studentId = studentMapByMindbodyId.get(clientId) || null;
-          }
-
-          // If no match, try email
-          if (!studentId && clientEmail) {
-            studentId = studentMapByEmail.get(clientEmail.toLowerCase()) || null;
-          }
-
-          // If no match, try name (handle "Last, First" format from Mindbody)
-          if (!studentId && clientName) {
-            // Convert "Last, First" to "First Last" for matching
-            if (clientName.includes(",")) {
-              const parts = clientName.split(",").map((p: string) => p.trim());
-              if (parts.length === 2) {
-                clientName = `${parts[1]} ${parts[0]}`; // "First Last"
-              }
-            }
-            studentId = studentMapByName.get(clientName.toLowerCase()) || null;
-          }
+          // Skip student matching for now (disabled to prevent memory issues)
+          const studentId: string | null = null;
 
           // Import with upsert to prevent duplicates
           await storage.upsertRevenue({
@@ -455,17 +418,16 @@ export function registerRevenueRoutes(app: Express) {
 
       res.json({
         success: true,
-        processed: imported, // Total rows processed successfully (includes both new inserts and updates)
+        processed: imported,
         skipped,
         total: parseResult.data.length,
         totalErrors: errors.length,
-        errors: errors.length > 0 ? errors.slice(0, 20) : undefined, // Return first 20 errors for visibility
+        errors: errors.length > 0 ? errors.slice(0, 20) : undefined,
       });
     } catch (error: any) {
       console.error("CSV import error:", error);
 
       // Clear progress on error
-      const organizationId = (req.user as User)?.organizationId;
       if (organizationId) {
         importProgressMap.delete(organizationId);
       }
