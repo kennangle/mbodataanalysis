@@ -56,13 +56,12 @@ export function CsvImportCard() {
   // Poll for job completion
   const pollJobStatus = async (jobId: string) => {
     try {
-      const response = await fetch("/api/import-jobs", {
+      const response = await fetch(`/api/mindbody/import/${jobId}/status`, {
         credentials: "include",
       });
 
       if (response.ok) {
-        const jobs = await response.json();
-        const job = jobs.find((j: any) => j.id === jobId);
+        const job = await response.json();
 
         if (job) {
           if (job.status === "completed") {
@@ -71,7 +70,7 @@ export function CsvImportCard() {
             queryClient.invalidateQueries({ queryKey: ["/api/revenue"] });
             queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
             queryClient.invalidateQueries({ queryKey: ["/api/dashboard/revenue-trend"] });
-            queryClient.invalidateQueries({ queryKey: ["/api/import-jobs"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/mindbody/import/history"] });
 
             const progress = job.progress ? JSON.parse(job.progress) : null;
             const totalRows = progress?.revenue?.total || 0;
