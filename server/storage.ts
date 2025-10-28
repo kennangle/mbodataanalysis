@@ -438,7 +438,7 @@ export class DbStorage implements IStorage {
           and(
             eq(classSchedules.organizationId, organizationId),
             gte(classSchedules.startTime, startDate),
-            lt(classSchedules.startTime, endDate)
+            lte(classSchedules.startTime, endDate)
           )
         );
     }
@@ -469,7 +469,7 @@ export class DbStorage implements IStorage {
           and(
             eq(attendance.organizationId, organizationId),
             gte(attendance.attendedAt, startDate),
-            lt(attendance.attendedAt, endDate)
+            lte(attendance.attendedAt, endDate)
           )
         )
         .orderBy(desc(attendance.attendedAt));
@@ -553,7 +553,7 @@ export class DbStorage implements IStorage {
     }
 
     if (endDate) {
-      conditions.push(lt(attendance.attendedAt, endDate));
+      conditions.push(lte(attendance.attendedAt, endDate));
     }
 
     const whereClause = conditions.length === 1 ? conditions[0] : and(...conditions);
@@ -627,7 +627,7 @@ export class DbStorage implements IStorage {
           and(
             eq(revenue.organizationId, organizationId),
             gte(revenue.transactionDate, startDate),
-            lt(revenue.transactionDate, endDate)
+            lte(revenue.transactionDate, endDate)
           )
         )
         .orderBy(desc(revenue.transactionDate));
@@ -937,7 +937,7 @@ export class DbStorage implements IStorage {
       whereConditions.push(gte(classSchedules.startTime, startDate));
     }
     if (endDate) {
-      whereConditions.push(lt(classSchedules.startTime, endDate));
+      whereConditions.push(lte(classSchedules.startTime, endDate));
     }
 
     const result = await db
