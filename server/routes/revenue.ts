@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { storage } from "../storage";
+import { storage, type IStorage } from "../storage";
 import { requireAuth } from "../auth";
 import { insertRevenueSchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
@@ -316,27 +316,64 @@ export function registerRevenueRoutes(app: Express) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
+      // First check in-memory map (fast path for same process)
       const progress = importProgressMap.get(organizationId);
-      if (!progress) {
+      if (progress) {
+        const elapsedSeconds = (Date.now() - progress.startTime) / 1000;
+        const rowsPerSecond = progress.processed > 0 ? progress.processed / elapsedSeconds : 0;
+        const remainingRows = progress.total - progress.processed;
+        const estimatedSecondsLeft = rowsPerSecond > 0 ? remainingRows / rowsPerSecond : 0;
+
+        return res.json({
+          status: "in_progress",
+          total: progress.total,
+          processed: progress.processed,
+          imported: progress.imported,
+          skipped: progress.skipped,
+          elapsedSeconds: Math.floor(elapsedSeconds),
+          estimatedSecondsLeft: Math.floor(estimatedSecondsLeft),
+          rowsPerSecond: Math.floor(rowsPerSecond),
+        });
+      }
+
+      // Fallback: Check database for running CSV import jobs (for production multi-instance)
+      const runningJobs = await storage.getActiveImportJobs(organizationId);
+      const revenueJob = runningJobs.find(job => 
+        job.dataTypes?.includes("revenue") && job.csvData
+      );
+
+      if (!revenueJob || !revenueJob.progress) {
         return res.json({ status: "idle" });
       }
 
-      const elapsedSeconds = (Date.now() - progress.startTime) / 1000;
-      const rowsPerSecond = progress.processed > 0 ? progress.processed / elapsedSeconds : 0;
-      const remainingRows = progress.total - progress.processed;
+      // Parse progress from database
+      const jobProgress = typeof revenueJob.progress === 'string' 
+        ? JSON.parse(revenueJob.progress) 
+        : revenueJob.progress;
+      
+      const revenueProgress = jobProgress.revenue || {};
+      const current = revenueProgress.current || 0;
+      const total = revenueProgress.total || 0;
+
+      // Calculate elapsed time from job start
+      const startTime = revenueJob.startDate ? new Date(revenueJob.startDate).getTime() : Date.now();
+      const elapsedSeconds = (Date.now() - startTime) / 1000;
+      const rowsPerSecond = current > 0 && elapsedSeconds > 0 ? current / elapsedSeconds : 0;
+      const remainingRows = total - current;
       const estimatedSecondsLeft = rowsPerSecond > 0 ? remainingRows / rowsPerSecond : 0;
 
-      res.json({
-        status: "in_progress", // Critical: Frontend depends on this for UI visibility
-        total: progress.total,
-        processed: progress.processed,
-        imported: progress.imported,
-        skipped: progress.skipped,
+      return res.json({
+        status: "in_progress",
+        total,
+        processed: current,
+        imported: current, // Approximate - we don't track imported/skipped separately in DB
+        skipped: 0,
         elapsedSeconds: Math.floor(elapsedSeconds),
         estimatedSecondsLeft: Math.floor(estimatedSecondsLeft),
         rowsPerSecond: Math.floor(rowsPerSecond),
       });
     } catch (error) {
+      console.error("[Progress] Error fetching progress:", error);
       res.status(500).json({ error: "Failed to get import progress" });
     }
   });
@@ -407,8 +444,8 @@ async function processRevenueCSVBackground(
 
       // Build lookup maps
       for (const student of studentBatch) {
-        if (student.mindbodyId) {
-          studentLookupByMindbodyId.set(student.mindbodyId, student.id);
+        if (student.mindbodyClientId) {
+          studentLookupByMindbodyId.set(student.mindbodyClientId, student.id);
         }
         if (student.email) {
           studentLookupByEmail.set(student.email.toLowerCase(), student.id);
