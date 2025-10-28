@@ -57,6 +57,7 @@ This platform is an enterprise-grade analytics solution for Mindbody data, encom
 - **Deployment Type**: Autoscale for development, Reserved VM recommended for production.
 - **Multi-Tenancy Design**: Complete data isolation per organization via `organizationId`, shared database with row-level separation.
 - **Multi-Site Support**: Each organization can connect to a different Mindbody site.
+- **Organization ID**: `1907753f-c82b-4228-bae0-380fb08a009a` (Yoga Health Centre)
 
 ## Recent Updates
 
