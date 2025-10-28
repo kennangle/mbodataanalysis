@@ -60,6 +60,48 @@ This platform is an enterprise-grade analytics solution for Mindbody data, encom
 
 ## Recent Updates
 
+### Enhancement: Background CSV Import with Chunked Student Matching (Oct 28, 2025)
+
+**Feature:** Refactored CSV revenue import to use background job processing with chunked student matching, enabling reliable imports of large datasets with full student linkage for AI insights.
+
+**Implementation Details:**
+
+1. **Schema Changes** (`shared/schema.ts`):
+   - Added `csvData` field to `import_jobs` table for storing base64-encoded CSV data
+
+2. **Backend Architecture** (`server/routes/revenue.ts`):
+   - **Async Job Pattern**: CSV upload creates import job and returns immediately with job ID
+   - **Background Worker**: `processRevenueCSVBackground()` function processes CSV asynchronously:
+     - Loads students in batches of 1000 to avoid memory exhaustion
+     - Builds in-memory lookup maps (by Mindbody ID and email)
+     - Processes CSV rows with automatic student matching
+     - Updates progress every 100 rows, logs every 1000 rows
+     - Handles errors gracefully with detailed error messages
+   - **Progress Tracking**: `/api/revenue/import-progress` endpoint provides real-time updates
+
+3. **Frontend Updates** (`client/src/components/CsvImportCard.tsx`):
+   - Dual polling system: progress (500ms) + job status (2s)
+   - Real-time progress display with percentage, rows/sec, elapsed time
+   - Toast notifications on completion with error details
+   - Simplified UI without blocking "completed" section
+
+**Benefits:**
+- ✅ No timeout issues for large CSV files (22K+ rows)
+- ✅ Student matching works reliably (36K+ students)
+- ✅ AI queries can now identify students and their class types
+- ✅ Real-time progress tracking with detailed metrics
+- ✅ Memory-efficient chunked processing
+
+**Technical Decisions:**
+- Base64 encoding for CSV storage (simple, upgradeable to gzip)
+- 1000-student batch size balances memory and performance
+- Two-tier polling prevents UI flicker while maintaining responsiveness
+
+**Files Modified:**
+- `shared/schema.ts`: Added csvData field to import_jobs
+- `server/routes/revenue.ts`: Refactored to background job pattern
+- `client/src/components/CsvImportCard.tsx`: Updated for async polling
+
 ### Critical Fix: Double-Login Authentication Issue - RESOLVED (Oct 27, 2025)
 
 **Issue:** Users required two login attempts to successfully authenticate, blocking commercial release.
