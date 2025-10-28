@@ -236,6 +236,7 @@ export const importJobs = pgTable(
     currentDataType: text("current_data_type"), // Which data type is currently processing
     currentOffset: integer("current_offset").default(0), // Current pagination offset
     error: text("error"), // Error message if failed
+    csvData: text("csv_data"), // Compressed CSV data for background processing
     pausedAt: timestamp("paused_at"), // When the import was paused
     heartbeatAt: timestamp("heartbeat_at"), // Last worker heartbeat - updated every minute
     createdAt: timestamp("created_at").defaultNow().notNull(),

@@ -220,7 +220,7 @@ export function registerRevenueRoutes(app: Express) {
     limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit for large CSV files
   });
 
-  // Import revenue from CSV (optimized - no student matching to prevent timeout)
+  // Import revenue from CSV (background job with chunked student matching)
   app.post("/api/revenue/import-csv", requireAuth, upload.single("file"), async (req, res) => {
     const organizationId = (req.user as User)?.organizationId;
     
@@ -244,7 +244,7 @@ export function registerRevenueRoutes(app: Express) {
         });
       }
 
-      // Parse CSV (handle BOM if present)
+      // Parse CSV to validate format (handle BOM if present)
       let csvText = req.file.buffer.toString("utf-8");
       // Remove BOM if present
       if (csvText.charCodeAt(0) === 0xfeff) {
@@ -264,189 +264,295 @@ export function registerRevenueRoutes(app: Express) {
         });
       }
 
-      const startTime = Date.now();
-      // Initialize progress tracking early
-      console.log(`[CSV Import] Starting import for org ${organizationId}`);
-      importProgressMap.set(organizationId, {
-        total: parseResult.data.length,
-        processed: 0,
-        imported: 0,
-        skipped: 0,
-        startTime,
-      });
+      if (parseResult.data.length === 0) {
+        return res.status(400).json({
+          error: "CSV file is empty",
+          details: "No data rows found in CSV",
+        });
+      }
 
-      // NOTE: Student matching temporarily disabled to prevent memory issues with 36K+ students
-      // Revenue will import without student linkage for now
-      console.log(`[CSV Import] Processing ${parseResult.data.length} rows (student matching disabled)`);
+      // Compress CSV data for storage (base64 encode for now - could use gzip in future)
+      const csvDataCompressed = Buffer.from(csvText).toString("base64");
 
-      let imported = 0;
-      let skipped = 0;
-      let updated = 0;
-      const errors: string[] = [];
-      const rows = parseResult.data as any[];
-
-      console.log(`[CSV Import] Starting import of ${rows.length} rows...`);
-
-      // Create import job for tracking
+      // Create import job with CSV data
       const importJob = await storage.createImportJob({
         organizationId,
         dataTypes: ["revenue"],
-        startDate: new Date("2000-01-01"), // CSV doesn't have predefined date range
+        startDate: new Date("2000-01-01"),
         endDate: new Date(),
-        status: "in_progress",
+        status: "pending",
+        csvData: csvDataCompressed,
+        progress: JSON.stringify({
+          revenue: { current: 0, total: parseResult.data.length }
+        }),
       });
 
-      // Update progress tracking with actual row count (initialized earlier with total=0)
-      importProgressMap.set(organizationId, {
-        total: rows.length,
-        processed: 0,
-        imported: 0,
-        skipped: 0,
-        startTime,
+      console.log(`[CSV Import] Created background job ${importJob.id} for ${parseResult.data.length} rows`);
+
+      // Start background processing (non-blocking)
+      processRevenueCSVBackground(importJob.id, organizationId, storage).catch(err => {
+        console.error("[CSV Import] Background processing error:", err);
       });
 
-      for (let index = 0; index < rows.length; index++) {
-        const row = rows[index];
-
-        // Update progress on every row for real-time accuracy
-        importProgressMap.set(organizationId, {
-          total: rows.length,
-          processed: index + 1, // +1 because we're processing this row now
-          imported,
-          skipped,
-          startTime,
-        });
-
-        // Log progress every 1000 rows
-        if (index > 0 && index % 1000 === 0) {
-          const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-          console.log(
-            `[CSV Import] Progress: ${index}/${rows.length} rows processed (${elapsed}s, ${imported} imported, ${skipped} skipped)`
-          );
-        }
-        try {
-          // Map CSV columns to revenue fields (flexible column matching)
-          // Mindbody format: "Sale ID", "Item Total", "Client ID", "Client", "Item name", "Payment Method"
-          const saleId = row["Sale ID"] || row["SaleId"] || row["ID"] || null;
-          const itemId = row["Item ID"] || row["ItemId"] || null;
-          const amountStr = row["Item Total"] || row["Amount"] || row["Total"] || row["Price"];
-
-          // Validate amount is present
-          if (!amountStr || amountStr.toString().trim() === "") {
-            errors.push(`Row ${index + 1}: Missing amount field`);
-            skipped++;
-            continue;
-          }
-
-          // Clean and validate amount
-          const cleanedAmount = amountStr.toString().replace(/[^0-9.-]/g, "");
-          const amount = parseFloat(cleanedAmount);
-          if (isNaN(amount)) {
-            errors.push(`Row ${index + 1}: Invalid amount "${amountStr}"`);
-            skipped++;
-            continue;
-          }
-
-          const type = row["Payment Method"] || row["Type"] || row["Category"] || "Sale";
-          const description =
-            row["Item name"] ||
-            row["Description"] ||
-            row["Item"] ||
-            row["Product"] ||
-            row["Service"] ||
-            "";
-
-          // Handle various date formats
-          const dateStr =
-            row["Sale Date"] || row["Date"] || row["Transaction Date"] || row["SaleDate"];
-          if (!dateStr) {
-            errors.push(`Row ${index + 1}: Missing date field`);
-            skipped++;
-            continue;
-          }
-
-          const transactionDate = new Date(dateStr);
-          if (isNaN(transactionDate.getTime())) {
-            errors.push(`Row ${index + 1}: Invalid date "${dateStr}"`);
-            skipped++;
-            continue;
-          }
-
-          // Skip student matching for now (disabled to prevent memory issues)
-          const studentId: string | null = null;
-
-          // Import with upsert to prevent duplicates
-          await storage.upsertRevenue({
-            organizationId,
-            studentId,
-            mindbodySaleId: saleId,
-            mindbodyItemId: itemId,
-            amount: amount.toFixed(2), // Ensure 2 decimal places
-            type,
-            description,
-            transactionDate,
-          });
-
-          imported++;
-        } catch (error: any) {
-          errors.push(`Row ${index + 1}: ${error.message}`);
-          skipped++;
-        }
-      }
-
-      // Log final summary
-      const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
-      console.log(
-        `[CSV Import] Completed: ${imported} processed, ${skipped} skipped, ${rows.length} total in ${totalTime}s`
-      );
-
-      // Log errors for debugging
-      if (errors.length > 0) {
-        console.error(
-          `[CSV Import] Errors (showing first 10 of ${errors.length}):`,
-          errors.slice(0, 10)
-        );
-      }
-
-      // Update import job with completion status
-      await storage.updateImportJob(importJob.id, {
-        status: "completed",
-        error: errors.length > 0 ? `${errors.length} rows had errors. First error: ${errors[0]}` : null,
-      });
-
-      // Clear progress tracking
-      importProgressMap.delete(organizationId);
-
+      // Return immediately with job ID
       res.json({
         success: true,
-        processed: imported,
-        skipped,
-        total: parseResult.data.length,
-        totalErrors: errors.length,
-        errors: errors.length > 0 ? errors.slice(0, 20) : undefined,
+        jobId: importJob.id,
+        totalRows: parseResult.data.length,
+        message: "CSV import started in background. Check import history for progress.",
       });
+
     } catch (error: any) {
       console.error("CSV import error:", error);
-
-      // Clear progress on error
-      if (organizationId) {
-        importProgressMap.delete(organizationId);
-      }
-
-      // Update import job as failed if it was created
-      try {
-        const importJob = await storage.getActiveImportJob(organizationId!);
-        if (importJob) {
-          await storage.updateImportJob(importJob.id, {
-            status: "failed",
-            error: error.message,
-          });
-        }
-      } catch (e) {
-        // Ignore error updating job status
-      }
-
       res.status(500).json({ error: "Failed to import CSV", details: error.message });
     }
   });
+
+  // Get CSV import progress
+  app.get("/api/revenue/import-progress", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.user as User)?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const progress = importProgressMap.get(organizationId);
+      if (!progress) {
+        return res.json({ status: "idle" });
+      }
+
+      const elapsedSeconds = (Date.now() - progress.startTime) / 1000;
+      const rowsPerSecond = progress.processed > 0 ? progress.processed / elapsedSeconds : 0;
+      const remainingRows = progress.total - progress.processed;
+      const estimatedSecondsLeft = rowsPerSecond > 0 ? remainingRows / rowsPerSecond : 0;
+
+      res.json({
+        status: "in_progress",
+        ...progress,
+        elapsedSeconds: Math.floor(elapsedSeconds),
+        estimatedSecondsLeft: Math.floor(estimatedSecondsLeft),
+        rowsPerSecond: Math.floor(rowsPerSecond),
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get import progress" });
+    }
+  });
+}
+
+// Background worker for CSV import with chunked student matching
+async function processRevenueCSVBackground(
+  jobId: string,
+  organizationId: string,
+  storage: IStorage
+) {
+  const startTime = Date.now();
+  console.log(`[CSV Background Worker] Starting job ${jobId} for org ${organizationId}`);
+
+  try {
+    // Update job status to running
+    await storage.updateImportJob(jobId, { status: "running" });
+
+    // Fetch the job to get CSV data
+    const job = await storage.getImportJob(jobId);
+    if (!job || !job.csvData) {
+      throw new Error("Import job not found or CSV data missing");
+    }
+
+    // Decompress CSV data
+    const csvText = Buffer.from(job.csvData, "base64").toString("utf-8");
+
+    // Parse CSV
+    const parseResult = Papa.parse(csvText, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: (header: string) => header.trim(),
+    });
+
+    const rows = parseResult.data as any[];
+    console.log(`[CSV Background Worker] Processing ${rows.length} rows with student matching`);
+
+    // Initialize progress
+    importProgressMap.set(organizationId, {
+      total: rows.length,
+      processed: 0,
+      imported: 0,
+      skipped: 0,
+      startTime,
+    });
+
+    let imported = 0;
+    let skipped = 0;
+    const errors: string[] = [];
+    const STUDENT_BATCH_SIZE = 1000;
+
+    // Pre-build student lookup map in chunks to avoid memory issues
+    console.log(`[CSV Background Worker] Building student lookup map...`);
+    const studentLookupByMindbodyId = new Map<string, string>(); // mindbodyId -> studentId
+    const studentLookupByEmail = new Map<string, string>(); // email -> studentId
+
+    // Fetch students in batches
+    let studentOffset = 0;
+    let hasMoreStudents = true;
+
+    while (hasMoreStudents) {
+      const studentBatch = await storage.getStudents(organizationId, STUDENT_BATCH_SIZE, studentOffset);
+      
+      if (studentBatch.length === 0) {
+        hasMoreStudents = false;
+        break;
+      }
+
+      // Build lookup maps
+      for (const student of studentBatch) {
+        if (student.mindbodyId) {
+          studentLookupByMindbodyId.set(student.mindbodyId, student.id);
+        }
+        if (student.email) {
+          studentLookupByEmail.set(student.email.toLowerCase(), student.id);
+        }
+      }
+
+      studentOffset += studentBatch.length;
+      console.log(`[CSV Background Worker] Loaded ${studentOffset} students into lookup map`);
+
+      if (studentBatch.length < STUDENT_BATCH_SIZE) {
+        hasMoreStudents = false;
+      }
+    }
+
+    console.log(`[CSV Background Worker] Student lookup complete: ${studentLookupByMindbodyId.size} by ID, ${studentLookupByEmail.size} by email`);
+
+    // Process rows with student matching
+    for (let index = 0; index < rows.length; index++) {
+      const row = rows[index];
+
+      // Update progress
+      importProgressMap.set(organizationId, {
+        total: rows.length,
+        processed: index + 1,
+        imported,
+        skipped,
+        startTime,
+      });
+
+      // Update job progress every 100 rows
+      if (index > 0 && index % 100 === 0) {
+        await storage.updateImportJob(jobId, {
+          progress: JSON.stringify({
+            revenue: { current: index, total: rows.length }
+          }),
+        });
+      }
+
+      // Log progress every 1000 rows
+      if (index > 0 && index % 1000 === 0) {
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        console.log(
+          `[CSV Background Worker] Progress: ${index}/${rows.length} (${elapsed}s, ${imported} imported, ${skipped} skipped)`
+        );
+      }
+
+      try {
+        // Map CSV columns
+        const saleId = row["Sale ID"] || row["SaleId"] || row["ID"] || null;
+        const itemId = row["Item ID"] || row["ItemId"] || null;
+        const amountStr = row["Item Total"] || row["Amount"] || row["Total"] || row["Price"];
+
+        if (!amountStr || amountStr.toString().trim() === "") {
+          errors.push(`Row ${index + 1}: Missing amount`);
+          skipped++;
+          continue;
+        }
+
+        const cleanedAmount = amountStr.toString().replace(/[^0-9.-]/g, "");
+        const amount = parseFloat(cleanedAmount);
+        if (isNaN(amount)) {
+          errors.push(`Row ${index + 1}: Invalid amount "${amountStr}"`);
+          skipped++;
+          continue;
+        }
+
+        const dateStr = row["Sale Date"] || row["Date"] || row["Transaction Date"] || row["SaleDate"];
+        if (!dateStr) {
+          errors.push(`Row ${index + 1}: Missing date`);
+          skipped++;
+          continue;
+        }
+
+        const transactionDate = new Date(dateStr);
+        if (isNaN(transactionDate.getTime())) {
+          errors.push(`Row ${index + 1}: Invalid date "${dateStr}"`);
+          skipped++;
+          continue;
+        }
+
+        // Match student by Mindbody Client ID or email
+        let studentId: string | null = null;
+        const clientId = row["Client ID"] || row["ClientId"] || row["ClientID"];
+        const clientEmail = row["Email"] || row["Client Email"];
+
+        if (clientId) {
+          studentId = studentLookupByMindbodyId.get(clientId.toString()) || null;
+        }
+        if (!studentId && clientEmail) {
+          studentId = studentLookupByEmail.get(clientEmail.toString().toLowerCase()) || null;
+        }
+
+        const type = row["Payment Method"] || row["Type"] || row["Category"] || "Sale";
+        const description =
+          row["Item name"] ||
+          row["Description"] ||
+          row["Item"] ||
+          row["Product"] ||
+          row["Service"] ||
+          "";
+
+        // Upsert revenue
+        await storage.upsertRevenue({
+          organizationId,
+          studentId,
+          mindbodySaleId: saleId,
+          mindbodyItemId: itemId,
+          amount: amount.toFixed(2),
+          type,
+          description,
+          transactionDate,
+        });
+
+        imported++;
+      } catch (error: any) {
+        errors.push(`Row ${index + 1}: ${error.message}`);
+        skipped++;
+      }
+    }
+
+    // Final update
+    const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log(
+      `[CSV Background Worker] Completed: ${imported} imported, ${skipped} skipped, ${rows.length} total in ${totalTime}s`
+    );
+
+    await storage.updateImportJob(jobId, {
+      status: "completed",
+      error: errors.length > 0 ? `${errors.length} rows had errors. First: ${errors[0]}` : null,
+      progress: JSON.stringify({
+        revenue: { current: rows.length, total: rows.length }
+      }),
+    });
+
+    // Clear progress
+    importProgressMap.delete(organizationId);
+
+  } catch (error: any) {
+    console.error("[CSV Background Worker] Error:", error);
+
+    // Update job as failed
+    await storage.updateImportJob(jobId, {
+      status: "failed",
+      error: error.message,
+    });
+
+    // Clear progress
+    importProgressMap.delete(organizationId);
+  }
 }
