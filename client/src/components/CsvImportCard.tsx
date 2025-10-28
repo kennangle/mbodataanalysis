@@ -129,6 +129,43 @@ export function CsvImportCard() {
     };
   }, []);
 
+  // Check for active import on mount
+  useEffect(() => {
+    const checkForActiveImport = async () => {
+      try {
+        // Check if there's an active CSV import by checking progress
+        const progressResponse = await fetch("/api/revenue/import-progress", {
+          credentials: "include",
+        });
+
+        if (progressResponse.ok) {
+          const progressData = (await progressResponse.json()) as ImportProgress;
+          if (progressData.status === "in_progress") {
+            // There's an active import, fetch the job details
+            const jobsResponse = await fetch("/api/mindbody/import/active-jobs", {
+              credentials: "include",
+            });
+
+            if (jobsResponse.ok) {
+              const jobs = await jobsResponse.json();
+              // Find the revenue import job
+              const revenueJob = jobs.find((job: any) => job.dataTypes?.includes("revenue"));
+              
+              if (revenueJob) {
+                setActiveJobId(revenueJob.id);
+                startPolling(revenueJob.id);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Failed to check for active import:", error);
+      }
+    };
+
+    checkForActiveImport();
+  }, []);
+
   const importMutation = useMutation({
     mutationFn: async (file: File) => {
       const formData = new FormData();
