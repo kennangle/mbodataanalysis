@@ -11,7 +11,7 @@ This platform is an enterprise-grade analytics solution for Mindbody data, encom
 - Real-time analytics with interactive visualizations
 - AI-powered natural language query interface
 - Multi-tenancy for multiple organizations
-- Always use established React component libraries when possible (e.g., react-datepicker, react-table) instead of building custom components from scratch
+- **Component Library Preference**: In all cases where there is an existing widget, React component, or third-party library available, it is preferable to use it rather than building from scratch. This includes UI components (react-datepicker, react-timezone-select, react-table), charts (recharts), and utility libraries. Custom implementations should only be considered when no suitable existing solution exists
 
 ## System Architecture
 
