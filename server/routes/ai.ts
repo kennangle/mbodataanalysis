@@ -14,13 +14,28 @@ export function registerAIRoutes(app: Express) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const { query, conversationHistory, fileIds } = req.body;
+      const { query, conversationHistory, fileIds, conversationId, saveToHistory } = req.body;
       if (!query || typeof query !== "string" || query.trim().length === 0) {
         return res.status(400).json({ error: "Query is required" });
       }
 
       if (query.length > 500) {
         return res.status(400).json({ error: "Query too long (max 500 characters)" });
+      }
+
+      // Verify conversation ownership if conversationId is provided
+      let activeConversation = null;
+      if (conversationId && typeof conversationId === "string") {
+        activeConversation = await storage.getConversation(conversationId);
+        
+        if (activeConversation) {
+          // Verify ownership
+          if (activeConversation.organizationId !== organizationId || activeConversation.userId !== userId) {
+            return res.status(403).json({ error: "Access denied to conversation" });
+          }
+        } else {
+          return res.status(404).json({ error: "Conversation not found" });
+        }
       }
 
       // Validate conversation history if provided
@@ -77,7 +92,49 @@ export function registerAIRoutes(app: Express) {
       
       const result = await openaiService.generateInsight(organizationId, userId, query, history, fileContext);
 
-      res.json(result);
+      // Save messages to conversation if requested
+      let savedConversationId: string | undefined;
+      if (saveToHistory !== false) { // Default to true
+        try {
+          // Create new conversation if none exists
+          if (!activeConversation) {
+            // Generate title from first 50 characters of query
+            const title = query.trim().substring(0, 50) + (query.length > 50 ? "..." : "");
+            activeConversation = await storage.createConversation({
+              organizationId,
+              userId,
+              title,
+            });
+          }
+
+          // Save user message
+          await storage.createConversationMessage({
+            conversationId: activeConversation.id,
+            role: "user",
+            content: query.trim(),
+          });
+
+          // Save assistant response
+          await storage.createConversationMessage({
+            conversationId: activeConversation.id,
+            role: "assistant",
+            content: result.response,
+          });
+
+          // Update conversation timestamp
+          await storage.updateConversation(activeConversation.id, {});
+
+          savedConversationId = activeConversation.id;
+        } catch (saveError) {
+          console.error("Error saving to conversation:", saveError);
+          // Don't fail the request if saving fails
+        }
+      }
+
+      res.json({
+        ...result,
+        ...(savedConversationId && { conversationId: savedConversationId }),
+      });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to generate AI insight";
       res.status(500).json({ error: errorMessage });
