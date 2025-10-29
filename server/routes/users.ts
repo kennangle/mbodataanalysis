@@ -157,4 +157,28 @@ export function registerUserRoutes(app: Express) {
       res.status(500).json({ error: "Failed to delete user" });
     }
   });
+
+  // Update current user's timezone
+  app.patch("/api/users/me/timezone", requireAuth, async (req, res) => {
+    try {
+      const currentUser = req.user as User;
+      if (!currentUser?.id) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const validation = insertUserSchema
+        .partial()
+        .pick({ timezone: true })
+        .safeParse(req.body);
+
+      if (!validation.success) {
+        return res.status(400).json({ error: fromZodError(validation.error).toString() });
+      }
+
+      await storage.updateUser(currentUser.id, validation.data);
+      res.json({ success: true, timezone: validation.data.timezone });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update timezone" });
+    }
+  });
 }

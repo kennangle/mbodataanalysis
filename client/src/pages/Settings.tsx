@@ -9,9 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { LogOut, Download, Database, Code2, CheckCircle, AlertTriangle, Loader2 } from "lucide-react";
+import { LogOut, Download, Database, Code2, CheckCircle, AlertTriangle, Loader2, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import TimezoneSelect, { type ITimezone } from "react-timezone-select";
 
 export default function Settings() {
   const { user, isLoading, logout } = useAuth();
@@ -21,6 +22,8 @@ export default function Settings() {
   const [isDownloadingCode, setIsDownloadingCode] = useState(false);
   const [integrityCheck, setIntegrityCheck] = useState<any>(null);
   const [isCheckingIntegrity, setIsCheckingIntegrity] = useState(false);
+  const [selectedTimezone, setSelectedTimezone] = useState<ITimezone>((user as any)?.timezone || "UTC");
+  const [isSavingTimezone, setIsSavingTimezone] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -169,6 +172,42 @@ export default function Settings() {
     }
   };
 
+  const handleSaveTimezone = async () => {
+    setIsSavingTimezone(true);
+    try {
+      const timezoneValue = typeof selectedTimezone === "string" 
+        ? selectedTimezone 
+        : selectedTimezone.value;
+
+      const response = await fetch("/api/users/me/timezone", {
+        method: "PATCH",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ timezone: timezoneValue }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update timezone");
+      }
+
+      toast({
+        title: "Success",
+        description: "Timezone updated successfully",
+      });
+    } catch (error) {
+      console.error("Timezone update error:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update timezone preference",
+      });
+    } finally {
+      setIsSavingTimezone(false);
+    }
+  };
+
   return (
     <SidebarProvider style={style as React.CSSProperties}>
       <div className="flex h-screen w-full">
@@ -219,6 +258,39 @@ export default function Settings() {
                   <div className="space-y-2">
                     <Label htmlFor="role">Role</Label>
                     <Input id="role" defaultValue={user.role} disabled data-testid="input-role" />
+                  </div>
+                  <Separator />
+                  <div className="space-y-2">
+                    <Label htmlFor="timezone">Timezone</Label>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Select your timezone for accurate date and time display
+                    </p>
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <TimezoneSelect
+                          value={selectedTimezone}
+                          onChange={setSelectedTimezone}
+                          data-testid="select-timezone"
+                        />
+                      </div>
+                      <Button
+                        onClick={handleSaveTimezone}
+                        disabled={isSavingTimezone}
+                        data-testid="button-save-timezone"
+                      >
+                        {isSavingTimezone ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Globe className="h-4 w-4 mr-2" />
+                            Save
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
