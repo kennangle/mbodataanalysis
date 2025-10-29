@@ -32,7 +32,7 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
 
 ### Core Features & Implementations
 
-- **Resumable Background Import System**: Asynchronous, checkpointed data imports with real-time progress, session resilience, and history tracking.
+- **Resumable Background Import System**: Asynchronous, checkpointed data imports with real-time progress, session resilience, and history tracking. Visit imports optimized to query by date range instead of per-student iteration, reducing 3-day imports from 10+ hours to under 30 minutes.
 - **Skipped Records Tracking & Reporting**: Logs, reports, and exports records failing validation during imports.
 - **Scheduled Automatic Imports**: Node-cron powered scheduler for automated imports with configurable schedules.
 - **Real-Time Webhook Integration**: Supports Mindbody webhooks for instant data synchronization with HMAC-SHA256 verification.
