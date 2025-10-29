@@ -69,6 +69,16 @@ export function AIQueryInterface() {
     setQuery("");
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Submit on Enter, allow Shift+Enter for new line
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (query.trim() && !mutation.isPending) {
+        mutation.mutate(query);
+      }
+    }
+  };
+
   return (
     <Card className="flex flex-col h-full min-h-[600px]">
       <CardHeader>
@@ -143,15 +153,21 @@ export function AIQueryInterface() {
             }
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
             className="min-h-[100px] resize-none"
             maxLength={500}
             disabled={mutation.isPending}
             data-testid="input-ai-query"
           />
           <div className="flex items-center justify-between gap-2">
-            <span className="text-xs text-muted-foreground">
-              {query.length}/500 characters
-            </span>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-xs text-muted-foreground">
+                {query.length}/500 characters
+              </span>
+              <span className="text-xs text-muted-foreground">
+                Press Enter to send, Shift+Enter for new line
+              </span>
+            </div>
             <Button
               type="submit"
               disabled={mutation.isPending || !query.trim()}
