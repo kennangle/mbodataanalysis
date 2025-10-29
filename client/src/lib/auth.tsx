@@ -7,6 +7,7 @@ interface User {
   name: string;
   role: string;
   organizationId: string | null;
+  timezone: string;
 }
 
 interface AuthContextType {
@@ -20,6 +21,7 @@ interface AuthContextType {
     organizationName?: string
   ) => Promise<void>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -124,7 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, register, logout, refreshUser: checkAuth }}>
       {children}
     </AuthContext.Provider>
   );

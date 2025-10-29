@@ -9,7 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { format } from "date-fns";
+import { formatDateTime, formatDateShort } from "@/lib/timezone";
+import { useAuth } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
 import {
   Collapsible,
@@ -85,6 +86,8 @@ const parseDateSafe = (dateStr: string): Date => {
 };
 
 export function DataImportCard() {
+  const { user } = useAuth();
+  const timezone = user?.timezone || "UTC";
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
   const [isLoadingActiveJob, setIsLoadingActiveJob] = useState(true);
@@ -729,8 +732,8 @@ export function DataImportCard() {
               </div>
               {displayJob.startDate && displayJob.endDate && (
                 <div className="text-xs text-muted-foreground">
-                  {format(parseDateSafe(displayJob.startDate), "MMM d, yyyy")} -{" "}
-                  {format(parseDateSafe(displayJob.endDate), "MMM d, yyyy")}
+                  {formatDateShort(displayJob.startDate, timezone)} -{" "}
+                  {formatDateShort(displayJob.endDate, timezone)}
                 </div>
               )}
               <Progress value={calculateProgress()} />
@@ -938,7 +941,7 @@ export function DataImportCard() {
                 </p>
                 {displayJob.pausedAt && (
                   <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
-                    {format(new Date(displayJob.pausedAt), "MMM d, yyyy 'at' h:mm a")}
+                    {formatDateTime(displayJob.pausedAt, timezone)}
                   </p>
                 )}
               </div>
@@ -1101,7 +1104,7 @@ export function DataImportCard() {
                           </Badge>
                           {job.createdAt && (
                             <span className="text-xs text-muted-foreground">
-                              Started {format(new Date(job.createdAt), "MMM d, yyyy 'at' h:mm a")}
+                              Started {formatDateTime(job.createdAt, timezone)}
                             </span>
                           )}
                         </div>
@@ -1109,8 +1112,8 @@ export function DataImportCard() {
                         {job.startDate && job.endDate && (
                           <div className="text-sm">
                             <span className="text-muted-foreground">
-                              Date Range: {format(parseDateSafe(job.startDate.toString()), "MMM d, yyyy")} -{" "}
-                              {format(parseDateSafe(job.endDate.toString()), "MMM d, yyyy")}
+                              Date Range: {formatDateShort(job.startDate, timezone)} -{" "}
+                              {formatDateShort(job.endDate, timezone)}
                             </span>
                           </div>
                         )}
@@ -1190,7 +1193,7 @@ export function DataImportCard() {
                           </Badge>
                           {job.createdAt && (
                             <span className="text-xs text-muted-foreground">
-                              {format(new Date(job.createdAt), "MMM d, yyyy 'at' h:mm a")}
+                              {formatDateTime(job.createdAt, timezone)}
                             </span>
                           )}
                         </div>
@@ -1198,8 +1201,8 @@ export function DataImportCard() {
                         {job.startDate && job.endDate && (
                           <div className="text-sm">
                             <span className="text-muted-foreground">
-                              {format(parseDateSafe(job.startDate.toString()), "MMM d, yyyy")} -{" "}
-                              {format(parseDateSafe(job.endDate.toString()), "MMM d, yyyy")}
+                              {formatDateShort(job.startDate, timezone)} -{" "}
+                              {formatDateShort(job.endDate, timezone)}
                             </span>
                           </div>
                         )}

@@ -15,7 +15,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import TimezoneSelect, { type ITimezone } from "react-timezone-select";
 
 export default function Settings() {
-  const { user, isLoading, logout } = useAuth();
+  const { user, isLoading, logout, refreshUser } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isDownloadingDb, setIsDownloadingDb] = useState(false);
@@ -24,6 +24,13 @@ export default function Settings() {
   const [isCheckingIntegrity, setIsCheckingIntegrity] = useState(false);
   const [selectedTimezone, setSelectedTimezone] = useState<ITimezone>((user as any)?.timezone || "UTC");
   const [isSavingTimezone, setIsSavingTimezone] = useState(false);
+
+  // Sync selectedTimezone when user data loads
+  useEffect(() => {
+    if (user && (user as any).timezone) {
+      setSelectedTimezone((user as any).timezone);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -191,6 +198,9 @@ export default function Settings() {
       if (!response.ok) {
         throw new Error("Failed to update timezone");
       }
+
+      // Refresh user context to get updated timezone
+      await refreshUser();
 
       toast({
         title: "Success",

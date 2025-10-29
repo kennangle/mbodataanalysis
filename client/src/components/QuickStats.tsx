@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { useAuth } from "@/lib/auth";
+import { formatDateShort, formatDateTime } from "@/lib/timezone";
 import {
   Card,
   CardContent,
@@ -32,6 +33,9 @@ interface QuickStatsResponse {
 }
 
 export function QuickStats() {
+  const { user } = useAuth();
+  const timezone = user?.timezone || "UTC";
+  
   const { data, isLoading, error, refetch, isRefetching } = useQuery<QuickStatsResponse>({
     queryKey: ["/api/reports/quick-stats"],
     refetchInterval: 60000, // Refresh every minute
@@ -120,7 +124,7 @@ export function QuickStats() {
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               {data.latestImports.attendance 
-                ? `Last: ${format(new Date(data.latestImports.attendance), "MMM d")}`
+                ? `Last: ${formatDateShort(data.latestImports.attendance, timezone)}`
                 : "No imports yet"}
             </p>
           </CardContent>
@@ -157,7 +161,7 @@ export function QuickStats() {
               <span className="text-sm text-muted-foreground">Attendance</span>
               <span className="text-sm font-medium" data-testid="text-latest-attendance">
                 {data.latestImports.attendance 
-                  ? format(new Date(data.latestImports.attendance), "MMM d, yyyy 'at' h:mm a")
+                  ? formatDateTime(data.latestImports.attendance, timezone)
                   : "Never imported"}
               </span>
             </div>
@@ -165,7 +169,7 @@ export function QuickStats() {
               <span className="text-sm text-muted-foreground">Revenue</span>
               <span className="text-sm font-medium" data-testid="text-latest-revenue">
                 {data.latestImports.revenue 
-                  ? format(new Date(data.latestImports.revenue), "MMM d, yyyy 'at' h:mm a")
+                  ? formatDateTime(data.latestImports.revenue, timezone)
                   : "Never imported"}
               </span>
             </div>
