@@ -405,9 +405,217 @@ export class OpenAIService {
           return JSON.stringify(result);
         }
         
+        case "get_class_statistics": {
+          const { metric } = args;
+          const { classSchedules } = await import("@shared/schema");
+          
+          switch (metric) {
+            case "most_popular": {
+              // Get classes with most attendance
+              const popularClasses = await db
+                .select({
+                  className: classes.name,
+                  classDescription: classes.description,
+                  totalAttendance: sql<number>`count(*)::int`
+                })
+                .from(attendance)
+                .leftJoin(classSchedules, eq(attendance.scheduleId, classSchedules.id))
+                .leftJoin(classes, eq(classSchedules.classId, classes.id))
+                .where(
+                  and(
+                    eq(attendance.organizationId, organizationId),
+                    eq(attendance.status, "attended")
+                  )
+                )
+                .groupBy(classes.name, classes.description)
+                .orderBy(desc(sql`count(*)`))
+                .limit(10);
+              
+              return JSON.stringify({
+                metric: "most_popular_classes",
+                classes: popularClasses.map(c => ({
+                  name: c.className || "Unknown",
+                  description: c.classDescription,
+                  total_attendance: c.totalAttendance
+                }))
+              });
+            }
+            
+            case "attendance_rate": {
+              // Get average attendance per class
+              const attendanceRates = await db
+                .select({
+                  className: classes.name,
+                  totalSessions: sql<number>`count(distinct ${classSchedules.id})::int`,
+                  totalAttendance: sql<number>`count(${attendance.id})::int`,
+                  avgAttendancePerSession: sql<number>`round(count(${attendance.id})::numeric / count(distinct ${classSchedules.id})::numeric, 1)`
+                })
+                .from(classSchedules)
+                .leftJoin(classes, eq(classSchedules.classId, classes.id))
+                .leftJoin(
+                  attendance, 
+                  and(
+                    eq(attendance.scheduleId, classSchedules.id),
+                    eq(attendance.status, "attended")
+                  )
+                )
+                .where(eq(classSchedules.organizationId, organizationId))
+                .groupBy(classes.name)
+                .orderBy(desc(sql`count(${attendance.id})`))
+                .limit(15);
+              
+              return JSON.stringify({
+                metric: "attendance_rate",
+                classes: attendanceRates.map(c => ({
+                  name: c.className || "Unknown",
+                  total_sessions: c.totalSessions,
+                  total_attendance: c.totalAttendance,
+                  avg_per_session: Number(c.avgAttendancePerSession || 0)
+                }))
+              });
+            }
+            
+            case "by_time_of_day": {
+              // Get attendance by hour of day
+              const timeOfDayStats = await db
+                .select({
+                  hour: sql<number>`EXTRACT(HOUR FROM ${classSchedules.startTime})::int`,
+                  totalClasses: sql<number>`count(distinct ${classSchedules.id})::int`,
+                  totalAttendance: sql<number>`count(${attendance.id})::int`
+                })
+                .from(classSchedules)
+                .leftJoin(
+                  attendance, 
+                  and(
+                    eq(attendance.scheduleId, classSchedules.id),
+                    eq(attendance.status, "attended")
+                  )
+                )
+                .where(eq(classSchedules.organizationId, organizationId))
+                .groupBy(sql`EXTRACT(HOUR FROM ${classSchedules.startTime})`)
+                .orderBy(sql`EXTRACT(HOUR FROM ${classSchedules.startTime})`);
+              
+              return JSON.stringify({
+                metric: "by_time_of_day",
+                time_slots: timeOfDayStats.map(t => ({
+                  hour: t.hour,
+                  time_slot: `${t.hour}:00-${t.hour + 1}:00`,
+                  total_classes: t.totalClasses,
+                  total_attendance: t.totalAttendance,
+                  avg_per_class: t.totalClasses > 0 ? Math.round(t.totalAttendance / t.totalClasses) : 0
+                }))
+              });
+            }
+            
+            case "underperforming": {
+              // Get classes with low attendance
+              const underperformingClasses = await db
+                .select({
+                  className: classes.name,
+                  totalSessions: sql<number>`count(distinct ${classSchedules.id})::int`,
+                  totalAttendance: sql<number>`count(${attendance.id})::int`,
+                  avgAttendance: sql<number>`round(count(${attendance.id})::numeric / count(distinct ${classSchedules.id})::numeric, 1)`
+                })
+                .from(classSchedules)
+                .leftJoin(classes, eq(classSchedules.classId, classes.id))
+                .leftJoin(
+                  attendance, 
+                  and(
+                    eq(attendance.scheduleId, classSchedules.id),
+                    eq(attendance.status, "attended")
+                  )
+                )
+                .where(eq(classSchedules.organizationId, organizationId))
+                .groupBy(classes.name)
+                .having(sql`count(distinct ${classSchedules.id}) >= 3`) // At least 3 sessions
+                .orderBy(sql`count(${attendance.id})::numeric / count(distinct ${classSchedules.id})::numeric`)
+                .limit(10);
+              
+              return JSON.stringify({
+                metric: "underperforming_classes",
+                classes: underperformingClasses.map(c => ({
+                  name: c.className || "Unknown",
+                  total_sessions: c.totalSessions,
+                  total_attendance: c.totalAttendance,
+                  avg_attendance: Number(c.avgAttendance || 0)
+                }))
+              });
+            }
+            
+            default:
+              return JSON.stringify({ error: "Unknown metric for class statistics" });
+          }
+        }
+        
         case "execute_custom_query": {
           const { query_type } = args;
           const queryLower = query_type.toLowerCase();
+          
+          // Total classes/sessions count query
+          if ((queryLower.includes("how many") || queryLower.includes("total") || queryLower.includes("count")) && 
+              (queryLower.includes("class") || queryLower.includes("session"))) {
+            // Extract year if mentioned
+            const yearMatch = queryLower.match(/\b(20\d{2})\b/);
+            const year = yearMatch ? parseInt(yearMatch[1]) : new Date().getFullYear();
+            
+            const { classSchedules } = await import("@shared/schema");
+            
+            // Count total class sessions (scheduled classes)
+            const totalSessions = await db
+              .select({
+                count: sql<number>`count(*)::int`
+              })
+              .from(classSchedules)
+              .where(
+                and(
+                  eq(classSchedules.organizationId, organizationId),
+                  sql`EXTRACT(YEAR FROM ${classSchedules.startTime}) = ${year}`
+                )
+              );
+            
+            // Count total attendance records (how many times students attended)
+            const totalAttendance = await db
+              .select({
+                count: sql<number>`count(*)::int`
+              })
+              .from(attendance)
+              .where(
+                and(
+                  eq(attendance.organizationId, organizationId),
+                  eq(attendance.status, "attended"),
+                  sql`EXTRACT(YEAR FROM ${attendance.attendedAt}) = ${year}`
+                )
+              );
+            
+            // Get breakdown by month
+            const monthlyBreakdown = await db
+              .select({
+                month: sql<number>`EXTRACT(MONTH FROM ${classSchedules.startTime})::int`,
+                sessionCount: sql<number>`count(*)::int`
+              })
+              .from(classSchedules)
+              .where(
+                and(
+                  eq(classSchedules.organizationId, organizationId),
+                  sql`EXTRACT(YEAR FROM ${classSchedules.startTime}) = ${year}`
+                )
+              )
+              .groupBy(sql`EXTRACT(MONTH FROM ${classSchedules.startTime})`)
+              .orderBy(sql`EXTRACT(MONTH FROM ${classSchedules.startTime})`);
+            
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            
+            return JSON.stringify({
+              query_type: "total_classes",
+              year,
+              total_sessions: totalSessions[0]?.count || 0,
+              total_attendance: totalAttendance[0]?.count || 0,
+              monthly_breakdown: monthlyBreakdown.map(m => ({
+                month: monthNames[m.month - 1],
+                sessions: m.sessionCount
+              }))
+            });
+          }
           
           // Inactive students query
           if (queryLower.includes("inactive") && queryLower.includes("student")) {
@@ -576,8 +784,17 @@ export class OpenAIService {
       {
         role: "system",
         content: `You are an AI assistant for analyzing Mindbody studio data (students, classes, attendance, revenue). 
-You have access to database query tools. Call the appropriate tools to get real data, then provide insights based on the results.
-Be specific, data-driven, and actionable in your responses.
+You have access to database query tools to retrieve real data. ALWAYS use these tools to answer questions - never say you cannot retrieve data.
+
+Available capabilities:
+- Count total classes/sessions taught (by year, month, or all time)
+- Get student attendance statistics and rankings
+- Analyze revenue by period and breakdown
+- Get class statistics (most popular, attendance rates, time of day analysis)
+- Track student retention and activity
+- Custom queries for trends and patterns
+
+Call the appropriate tools to get real data, then provide specific, data-driven, and actionable insights.
 When the user asks follow-up questions, refer to the conversation history to provide contextual answers.`
       }
     ];
