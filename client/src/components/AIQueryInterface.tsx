@@ -232,7 +232,7 @@ export function AIQueryInterface() {
   };
 
   return (
-    <div className="flex h-full min-h-[600px] gap-4">
+    <div className="flex w-full h-full min-h-[600px] gap-4">
       {/* Chat History Sidebar */}
       <div className="w-80 flex-shrink-0">
         <Card className="h-full">

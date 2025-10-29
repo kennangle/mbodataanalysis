@@ -231,10 +231,9 @@ export default function Dashboard() {
                 <AttendanceChart startDate={startDate} endDate={endDate} />
               </div>
 
-              <div className="grid gap-6 lg:grid-cols-2">
-                <AIQueryInterface />
-                <DataImportCard />
-              </div>
+              <AIQueryInterface />
+              
+              <DataImportCard />
 
               <WebhookManagement />
 
