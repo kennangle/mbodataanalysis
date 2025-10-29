@@ -104,7 +104,9 @@ export class OpenAIService {
         console.log(`[AI Query] SQL: ${sql_query}`);
         
         // Execute the query with organization_id as parameter
-        const result = await db.execute(sql.raw(sql_query.replace(/\$1/g, `'${organizationId}'`)));
+        // Replace $1 with the actual organization ID (properly escaped)
+        const finalQuery = sql_query.replace(/\$1/g, `'${organizationId.replace(/'/g, "''")}'`);
+        const result = await db.execute(sql.raw(finalQuery));
         
         console.log(`[AI Query] Result rows: ${result.rows.length}`);
         
