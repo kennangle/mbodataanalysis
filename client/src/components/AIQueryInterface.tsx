@@ -8,10 +8,18 @@ import { Badge } from "@/components/ui/badge";
 import { Sparkles, Send, Loader2, User, Trash2, Paperclip, X, FileText, Download } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { ChatHistorySidebar } from "./ChatHistorySidebar";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
+}
+
+interface ConversationMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  createdAt: string;
 }
 
 interface DownloadLink {
@@ -50,6 +58,7 @@ export function AIQueryInterface() {
   const [query, setQuery] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [attachedFileIds, setAttachedFileIds] = useState<string[]>([]);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
@@ -58,6 +67,29 @@ export function AIQueryInterface() {
   const { data: uploadedFiles = [] } = useQuery<UploadedFile[]>({
     queryKey: ["/api/files"],
   });
+
+  // Load conversation messages when a conversation is selected
+  const { data: conversationData, isLoading: isLoadingConversation } = useQuery({
+    queryKey: ["/api/conversations", currentConversationId],
+    enabled: !!currentConversationId,
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/conversations/${currentConversationId}`);
+      return await response.json() as { 
+        conversation: { id: string; title: string };
+        messages: ConversationMessage[] 
+      };
+    },
+  });
+
+  // Update messages when conversation data is loaded
+  useEffect(() => {
+    if (conversationData?.messages) {
+      setMessages(conversationData.messages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+      })));
+    }
+  }, [conversationData]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -110,8 +142,14 @@ export function AIQueryInterface() {
         query,
         conversationHistory,
         fileIds: attachedFileIds.length > 0 ? attachedFileIds : undefined,
+        conversationId: currentConversationId,
+        saveToHistory: true,
       });
-      const result = (await response.json()) as { response: string; tokensUsed: number };
+      const result = (await response.json()) as { 
+        response: string; 
+        tokensUsed: number;
+        conversationId?: string;
+      };
       return result;
     },
     onSuccess: (data, queryText) => {
@@ -122,6 +160,14 @@ export function AIQueryInterface() {
         { role: "assistant", content: data.response }
       ]);
       setQuery("");
+
+      // Update current conversation ID if a new one was created
+      if (data.conversationId && !currentConversationId) {
+        setCurrentConversationId(data.conversationId);
+      }
+
+      // Invalidate conversations list to refresh the sidebar
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
     },
     onError: (error: Error) => {
       toast({
@@ -142,6 +188,21 @@ export function AIQueryInterface() {
     setMessages([]);
     setQuery("");
     setAttachedFileIds([]);
+    setCurrentConversationId(null);
+  };
+
+  const handleNewChat = () => {
+    setMessages([]);
+    setQuery("");
+    setAttachedFileIds([]);
+    setCurrentConversationId(null);
+  };
+
+  const handleSelectConversation = (conversationId: string | null) => {
+    setCurrentConversationId(conversationId);
+    setQuery("");
+    setAttachedFileIds([]);
+    // Messages will be loaded by the useEffect hook
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -171,7 +232,20 @@ export function AIQueryInterface() {
   };
 
   return (
-    <Card className="flex flex-col h-full min-h-[600px]">
+    <div className="flex h-full min-h-[600px] gap-4">
+      {/* Chat History Sidebar */}
+      <div className="w-80 flex-shrink-0">
+        <Card className="h-full">
+          <ChatHistorySidebar
+            currentConversationId={currentConversationId}
+            onSelectConversation={handleSelectConversation}
+            onNewChat={handleNewChat}
+          />
+        </Card>
+      </div>
+
+      {/* Main Chat Interface */}
+      <Card className="flex flex-col flex-1">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -358,5 +432,6 @@ export function AIQueryInterface() {
         </form>
       </CardContent>
     </Card>
+    </div>
   );
 }
