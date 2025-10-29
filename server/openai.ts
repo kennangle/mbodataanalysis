@@ -157,6 +157,23 @@ export class OpenAIService {
         const { filename, sheet_name, data, description } = args;
         
         console.log(`[AI Excel] Creating spreadsheet: ${filename}`);
+        console.log(`[AI Excel] Data type:`, typeof data);
+        console.log(`[AI Excel] Data:`, JSON.stringify(data).substring(0, 200));
+        
+        // Validate data
+        if (!data || !Array.isArray(data)) {
+          return JSON.stringify({
+            error: "Data must be a non-empty array",
+            received_type: typeof data,
+          });
+        }
+        
+        if (data.length === 0) {
+          return JSON.stringify({
+            error: "Data array cannot be empty",
+          });
+        }
+        
         console.log(`[AI Excel] Rows: ${data.length}`);
         
         // Create workbook and worksheet
