@@ -24,6 +24,7 @@ import Classes from "@/pages/Classes";
 import Users from "@/pages/Users";
 import SkippedRecords from "@/pages/SkippedRecords";
 import DataCoverage from "@/pages/DataCoverage";
+import AIQuery from "@/pages/AIQuery";
 
 function Router() {
   return (
@@ -36,6 +37,7 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/analytics" component={Analytics} />
       <Route path="/kpi" component={KPI} />
+      <Route path="/ai-query" component={AIQuery} />
       <Route path="/students" component={Students} />
       <Route path="/classes" component={Classes} />
       <Route path="/users" component={Users} />
