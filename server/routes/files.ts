@@ -4,9 +4,11 @@ import { requireAuth } from "../auth";
 import type { User } from "@shared/schema";
 import { storage } from "../storage";
 import { parseFile } from "../file-parser";
-import { writeFileSync, unlinkSync, mkdirSync } from "fs";
-import { join, basename, normalize, resolve } from "path";
+import { writeFileSync, unlinkSync } from "fs";
+import { join, basename } from "path";
 import { randomUUID } from "crypto";
+import { ObjectStorageService } from "../objectStorage";
+import { tmpdir } from "os";
 
 function sanitizeFilename(filename: string): string {
   const safe = basename(filename)
@@ -45,6 +47,8 @@ const upload = multer({
 
 export function registerFileRoutes(app: Express) {
   app.post("/api/files/upload", requireAuth, upload.single("file"), async (req, res) => {
+    let tempFilePath: string | null = null;
+    
     try {
       const organizationId = (req.user as User)?.organizationId;
       const userId = (req.user as User)?.id;
@@ -62,30 +66,25 @@ export function registerFileRoutes(app: Express) {
       const safeName = sanitizeFilename(file.originalname);
       const fileName = `${fileId}-${safeName}`;
       
-      const privateDir = process.env.PRIVATE_OBJECT_DIR;
-      if (!privateDir) {
-        throw new Error("Object storage not configured");
-      }
-
-      const privateDirResolved = resolve(privateDir);
-      const storagePath = join(privateDirResolved, fileName);
-      const storagePathResolved = resolve(storagePath);
+      const objectStorage = new ObjectStorageService();
+      const privateDir = objectStorage.getPrivateObjectDir();
+      const storagePath = `${privateDir}/${fileName}`;
       
-      if (!storagePathResolved.startsWith(privateDirResolved + '/') && storagePathResolved !== privateDirResolved) {
-        throw new Error("Invalid file path");
-      }
-      
-      mkdirSync(privateDirResolved, { recursive: true });
-      writeFileSync(storagePathResolved, file.buffer);
+      // Write to temp file for parsing
+      tempFilePath = join(tmpdir(), `upload-${fileId}-${safeName}`);
+      writeFileSync(tempFilePath, file.buffer);
 
       let extractedText = "";
       try {
-        const parsed = await parseFile(storagePathResolved, file.mimetype);
+        const parsed = await parseFile(tempFilePath, file.mimetype);
         extractedText = parsed.text;
       } catch (error) {
         console.error("Error parsing file:", error);
         extractedText = "Could not extract text from file";
       }
+
+      // Upload to object storage
+      await objectStorage.saveFile(storagePath, file.buffer);
 
       const uploadedFile = await storage.createUploadedFile({
         organizationId,
@@ -94,7 +93,7 @@ export function registerFileRoutes(app: Express) {
         originalName: safeName,
         fileType: file.mimetype,
         fileSize: file.size,
-        storagePath: storagePathResolved,
+        storagePath,
         extractedText,
       });
 
@@ -110,6 +109,15 @@ export function registerFileRoutes(app: Express) {
       res.status(500).json({
         error: error instanceof Error ? error.message : "Failed to upload file",
       });
+    } finally {
+      // Clean up temp file
+      if (tempFilePath) {
+        try {
+          unlinkSync(tempFilePath);
+        } catch (err) {
+          console.error("Error deleting temp file:", err);
+        }
+      }
     }
   });
 
