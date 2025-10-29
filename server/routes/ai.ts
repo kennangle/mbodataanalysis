@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { requireAuth } from "../auth";
 import type { User } from "@shared/schema";
 import { openaiService } from "../openai";
+import { storage } from "../storage";
 
 export function registerAIRoutes(app: Express) {
   app.post("/api/ai/query", requireAuth, async (req, res) => {
@@ -13,7 +14,7 @@ export function registerAIRoutes(app: Express) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const { query, conversationHistory } = req.body;
+      const { query, conversationHistory, fileIds } = req.body;
       if (!query || typeof query !== "string" || query.trim().length === 0) {
         return res.status(400).json({ error: "Query is required" });
       }
@@ -57,8 +58,24 @@ export function registerAIRoutes(app: Express) {
           history.push({ role, content: content.trim() });
         }
       }
+
+      let fileContext = "";
+      if (Array.isArray(fileIds) && fileIds.length > 0) {
+        for (const fileId of fileIds) {
+          if (typeof fileId !== "string") continue;
+          
+          const file = await storage.getUploadedFile(fileId);
+          if (!file || file.organizationId !== organizationId || file.userId !== userId) {
+            continue;
+          }
+
+          if (file.extractedText) {
+            fileContext += `\n\n--- File: ${file.originalName} ---\n${file.extractedText}\n`;
+          }
+        }
+      }
       
-      const result = await openaiService.generateInsight(organizationId, userId, query, history);
+      const result = await openaiService.generateInsight(organizationId, userId, query, history, fileContext);
 
       res.json(result);
     } catch (error) {

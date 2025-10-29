@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sparkles, Send, Loader2, User, Trash2 } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
+import { Badge } from "@/components/ui/badge";
+import { Sparkles, Send, Loader2, User, Trash2, Paperclip, X, FileText } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 interface Message {
@@ -13,21 +14,69 @@ interface Message {
   content: string;
 }
 
+interface UploadedFile {
+  id: string;
+  fileName: string;
+  fileSize: number;
+  fileType: string;
+  createdAt: string;
+}
+
 export function AIQueryInterface() {
   const [query, setQuery] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
+  const [attachedFileIds, setAttachedFileIds] = useState<string[]>([]);
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: uploadedFiles = [] } = useQuery<UploadedFile[]>({
+    queryKey: ["/api/files"],
+  });
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     endOfMessagesRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const uploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      
+      const response = await fetch("/api/files/upload", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || response.statusText);
+      }
+
+      return (await response.json()) as UploadedFile;
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "File uploaded",
+        description: `${data.fileName} is ready to use`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/files"] });
+      setAttachedFileIds(prev => [...prev, data.id]);
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Upload failed",
+        description: error.message,
+      });
+    },
+  });
+
   const mutation = useMutation({
     mutationFn: async (query: string) => {
-      // Build conversation history (exclude system messages)
       const conversationHistory = messages.map(msg => ({
         role: msg.role,
         content: msg.content
@@ -35,7 +84,8 @@ export function AIQueryInterface() {
 
       const response = await apiRequest("POST", "/api/ai/query", { 
         query,
-        conversationHistory
+        conversationHistory,
+        fileIds: attachedFileIds.length > 0 ? attachedFileIds : undefined,
       });
       const result = (await response.json()) as { response: string; tokensUsed: number };
       return result;
@@ -67,7 +117,24 @@ export function AIQueryInterface() {
   const handleClearConversation = () => {
     setMessages([]);
     setQuery("");
+    setAttachedFileIds([]);
   };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files[0]) {
+      uploadMutation.mutate(files[0]);
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleRemoveFile = (fileId: string) => {
+    setAttachedFileIds(prev => prev.filter(id => id !== fileId));
+  };
+
+  const attachedFiles = uploadedFiles.filter(f => attachedFileIds.includes(f.id));
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // Submit on Enter, allow Shift+Enter for new line
@@ -145,6 +212,24 @@ export function AIQueryInterface() {
 
         {/* Query Input */}
         <form onSubmit={handleSubmit} className="space-y-3">
+          {attachedFiles.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {attachedFiles.map((file) => (
+                <Badge key={file.id} variant="secondary" className="gap-2 px-3 py-1" data-testid={`file-badge-${file.id}`}>
+                  <FileText className="h-3 w-3" />
+                  <span className="text-xs">{file.fileName}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveFile(file.id)}
+                    className="hover-elevate rounded-full"
+                    data-testid={`button-remove-file-${file.id}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          )}
           <Textarea
             placeholder={
               messages.length === 0
@@ -160,13 +245,39 @@ export function AIQueryInterface() {
             data-testid="input-ai-query"
           />
           <div className="flex items-center justify-between gap-2">
-            <div className="flex flex-col gap-0.5">
-              <span className="text-xs text-muted-foreground">
-                {query.length}/500 characters
-              </span>
-              <span className="text-xs text-muted-foreground">
-                Press Enter to send, Shift+Enter for new line
-              </span>
+            <div className="flex items-center gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,.txt,.xlsx,.xls,.pdf"
+                onChange={handleFileSelect}
+                className="hidden"
+                data-testid="input-file-upload"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadMutation.isPending || mutation.isPending}
+                className="gap-2"
+                data-testid="button-attach-file"
+              >
+                {uploadMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Paperclip className="h-4 w-4" />
+                )}
+                Attach File
+              </Button>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-xs text-muted-foreground">
+                  {query.length}/500 characters
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  Press Enter to send, Shift+Enter for new line
+                </span>
+              </div>
             </div>
             <Button
               type="submit"

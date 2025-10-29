@@ -41,6 +41,9 @@ import {
   type InsertWebhookEvent,
   type ScheduledImport,
   type InsertScheduledImport,
+  uploadedFiles,
+  type UploadedFile,
+  type InsertUploadedFile,
 } from "@shared/schema";
 import { eq, and, desc, gte, lt, lte, sql } from "drizzle-orm";
 import { addDays } from "date-fns";
@@ -207,6 +210,12 @@ export interface IStorage {
     organizationId: string,
     scheduledImport: Partial<InsertScheduledImport>
   ): Promise<void>;
+
+  // Uploaded Files
+  createUploadedFile(file: InsertUploadedFile): Promise<UploadedFile>;
+  getUploadedFile(id: string): Promise<UploadedFile | undefined>;
+  getUploadedFiles(organizationId: string, userId?: string): Promise<UploadedFile[]>;
+  deleteUploadedFile(id: string): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -1233,6 +1242,35 @@ export class DbStorage implements IStorage {
       .update(scheduledImports)
       .set({ ...scheduledImport, updatedAt: new Date() })
       .where(eq(scheduledImports.organizationId, organizationId));
+  }
+
+  async createUploadedFile(file: InsertUploadedFile): Promise<UploadedFile> {
+    const result = await db.insert(uploadedFiles).values(file).returning();
+    return result[0];
+  }
+
+  async getUploadedFile(id: string): Promise<UploadedFile | undefined> {
+    const result = await db.select().from(uploadedFiles).where(eq(uploadedFiles.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getUploadedFiles(organizationId: string, userId?: string): Promise<UploadedFile[]> {
+    if (userId) {
+      return await db
+        .select()
+        .from(uploadedFiles)
+        .where(and(eq(uploadedFiles.organizationId, organizationId), eq(uploadedFiles.userId, userId)))
+        .orderBy(desc(uploadedFiles.createdAt));
+    }
+    return await db
+      .select()
+      .from(uploadedFiles)
+      .where(eq(uploadedFiles.organizationId, organizationId))
+      .orderBy(desc(uploadedFiles.createdAt));
+  }
+
+  async deleteUploadedFile(id: string): Promise<void> {
+    await db.delete(uploadedFiles).where(eq(uploadedFiles.id, id));
   }
 }
 

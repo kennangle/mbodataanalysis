@@ -13,6 +13,7 @@ import { registerReportRoutes } from "./reports";
 import { registerScheduledImportRoutes } from "./scheduled-imports";
 import { registerBackupRoutes } from "./backups";
 import { registerKPIRoutes } from "./kpi";
+import { registerFileRoutes } from "./files";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Register all route modules
@@ -29,6 +30,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerScheduledImportRoutes(app);
   registerBackupRoutes(app);
   registerKPIRoutes(app);
+  registerFileRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;

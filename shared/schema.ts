@@ -388,3 +388,30 @@ export const insertScheduledImportSchema = createInsertSchema(scheduledImports).
 });
 export type InsertScheduledImport = z.infer<typeof insertScheduledImportSchema>;
 export type ScheduledImport = typeof scheduledImports.$inferSelect;
+
+export const uploadedFiles = pgTable(
+  "uploaded_files",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id").notNull(),
+    userId: uuid("user_id").notNull(),
+    fileName: text("file_name").notNull(),
+    originalName: text("original_name").notNull(),
+    fileType: text("file_type").notNull(), // mime type
+    fileSize: integer("file_size").notNull(), // bytes
+    storagePath: text("storage_path").notNull(), // path in object storage
+    extractedText: text("extracted_text"), // parsed content for AI analysis
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    orgIdx: index("uploaded_files_org_idx").on(table.organizationId),
+    userIdx: index("uploaded_files_user_idx").on(table.userId),
+  })
+);
+
+export const insertUploadedFileSchema = createInsertSchema(uploadedFiles).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertUploadedFile = z.infer<typeof insertUploadedFileSchema>;
+export type UploadedFile = typeof uploadedFiles.$inferSelect;

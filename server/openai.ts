@@ -133,7 +133,8 @@ export class OpenAIService {
     organizationId: string,
     userId: string,
     query: string,
-    conversationHistory: Array<{ role: string; content: string }> = []
+    conversationHistory: Array<{ role: string; content: string }> = [],
+    fileContext: string = ""
   ): Promise<{ response: string; tokensUsed: number }> {
     const recentQueries = await storage.getAIQueries(organizationId, 100);
     const thisMonthQueries = recentQueries.filter((q) => {
@@ -164,13 +165,14 @@ INSTRUCTIONS:
 - Be creative with SQL - you can use JOINs, aggregations, subqueries, date functions, etc.
 - After getting results, analyze them and provide clear, actionable insights
 - When users ask follow-up questions, refer to conversation history for context
+${fileContext ? `- The user has uploaded files. Use their content to answer questions or cross-reference with database data` : ''}
 
 EXAMPLES:
 - "How many classes in 2025?" → SELECT COUNT(*) FROM class_schedules WHERE organization_id = $1 AND EXTRACT(YEAR FROM start_time) = 2025
 - "Top 10 students by attendance?" → SELECT s.first_name, s.last_name, COUNT(*) as classes FROM attendance a JOIN students s ON a.student_id = s.id WHERE a.organization_id = $1 AND a.status = 'attended' GROUP BY s.id, s.first_name, s.last_name ORDER BY classes DESC LIMIT 10
 - "Revenue this month?" → SELECT SUM(amount) FROM revenue WHERE organization_id = $1 AND EXTRACT(YEAR FROM transaction_date) = EXTRACT(YEAR FROM CURRENT_DATE) AND EXTRACT(MONTH FROM transaction_date) = EXTRACT(MONTH FROM CURRENT_DATE)
 
-You can answer ANY question about the data - just write the appropriate SQL query!`
+You can answer ANY question about the data - just write the appropriate SQL query!${fileContext ? `\n\nUPLOADED FILE DATA:\n${fileContext}` : ''}`
       }
     ];
 
