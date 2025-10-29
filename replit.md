@@ -21,6 +21,7 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
 - **Backend**: Node.js, Express, TypeScript
 - **Database**: PostgreSQL (Neon), Drizzle ORM
 - **Authentication**: Passport.js with session management
+- **File Storage**: Google Cloud Storage via Replit Object Storage
 
 ### Design System
 
@@ -38,7 +39,7 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
 - **Real-Time Webhook Integration**: Supports Mindbody webhooks for instant data synchronization with HMAC-SHA256 verification.
 - **User Management**: Admin interface for CRUD, role-based access, and multi-tenancy.
 - **Dashboard & Analytics**: Real-time interactive charts for revenue, growth, and class attendance.
-- **AI-Powered Natural Language Queries**: OpenAI GPT-4o-mini with Function Calling for dynamic database querying, featuring a conversational interface with follow-up question support and message history.
+- **AI-Powered Natural Language Queries**: OpenAI GPT-4o-mini with Function Calling for dynamic database querying, featuring a conversational interface with follow-up question support and message history. Supports file uploads (CSV, Excel, PDF, TXT) with automatic text extraction for AI-powered analysis. Files stored securely in Google Cloud Storage with multi-tenant isolation.
 - **KPI Dashboard**: Tracks studio performance with key metrics like total revenue, active members, and class performance analysis, with dynamic date filtering.
 - **Reports System**: Four comprehensive report types (Revenue, Attendance, Class Performance, Monthly Summary) with CSV export.
 - **Data Coverage Report**: Diagnostics page showing record counts, date range coverage, and data quality metrics.
@@ -53,7 +54,8 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
 ## External Dependencies
 
 - **Mindbody Public API**: For importing client, class, visit, and sales data.
-- **OpenAI API**: For AI-powered natural language querying.
+- **OpenAI API**: For AI-powered natural language querying with file analysis.
 - **Neon (PostgreSQL)**: Cloud-hosted PostgreSQL database.
 - **Google OAuth 2.0**: For single sign-on authentication.
 - **Brevo (SendinBlue)**: For transactional emails.
+- **Google Cloud Storage**: For secure file storage via Replit Object Storage integration.
