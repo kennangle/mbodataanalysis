@@ -323,7 +323,7 @@ export default function Reports() {
                           <Download className="h-4 w-4" />
                           {downloadingReport === report.filename
                             ? "Generating..."
-                            : "Generate Report"}
+                            : "Generate and Download Report"}
                         </Button>
                       </CardContent>
                     </Card>
