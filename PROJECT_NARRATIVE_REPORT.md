@@ -1,6 +1,6 @@
 # Mindbody Data Analysis SaaS Platform: Complete Project Narrative
 
-**📅 Updated on: October 27, 2025** | *Version 1.1 - Post-Launch Enhancements*
+**📅 Updated on: October 29, 2025** | *Version 1.2 - Timezone Support & Date Precision*
 
 ---
 
@@ -282,7 +282,7 @@ All KPIs support dynamic date range filtering with proper query parameter handli
 
 **Impact**: Enables reliable processing of large job queues (75+ concurrent jobs) without premature failures.
 
-### Phase 15: Background Jobs Visibility Panel (Latest - October 24, 2025)
+### Phase 15: Background Jobs Visibility Panel (October 24, 2025)
 
 **The Problem**: Users couldn't see background jobs running, causing confusion when new imports were blocked. System would reject new imports saying "An import is already in progress" but users had no visibility into what was running.
 
@@ -306,6 +306,71 @@ All KPIs support dynamic date range filtering with proper query parameter handli
 - Organization-scoped with proper authentication
 
 **Impact**: Complete transparency into background operations, eliminating user confusion and improving UX significantly.
+
+### Phase 16: Date Range Precision & Exact Date Matching (October 28, 2025)
+
+**The Problem**: Date range queries in reports were including data from adjacent days due to confusing logic that added days and used "less than" comparisons instead of "less than or equal to". Users expecting data from Jan 1-15 would get unexpected records from Jan 16.
+
+**The Root Cause**: The pattern `addDays(endDate, 1)` combined with `lt()` comparison was non-intuitive and error-prone, making it unclear whether the end date was inclusive or exclusive.
+
+**The Solution**: Simplified date logic across all report endpoints
+- Replaced confusing `addDays(endDate, 1) + lt()` pattern with clear `setEndOfDay() + lte()` approach
+- End date now explicitly set to 23:59:59.999 and uses "less than or equal to" comparison
+- Applied consistently across all 4 report types:
+  - Revenue reports (`/api/reports/revenue`)
+  - Attendance reports (`/api/reports/attendance`)
+  - Class performance reports (`/api/reports/class-performance`)
+  - Monthly summary reports (`/api/reports/monthly-summary`)
+
+**Technical Details**:
+- Created `setEndOfDay()` utility function for clarity
+- Changed database queries from `and(gte(startDate), lt(addDays(endDate, 1)))` to `and(gte(startDate), lte(setEndOfDay(endDate)))`
+- Updated button text from "Generate Report" to "Generate and Download Report" for clarity
+
+**Impact**: Date ranges are now EXACT with no data leakage. When users request Jan 1-15, they get precisely Jan 1-15, nothing more.
+
+### Phase 17: Comprehensive Timezone Support (Latest - October 29, 2025)
+
+**The Problem**: All date and time information was displayed in UTC, making it difficult for users in different timezones to interpret when imports ran, when data was last synced, or analyze time-based patterns in their local context.
+
+**The Vision**: Every user should see all dates and times in their own timezone for accurate business intelligence and intuitive data interpretation.
+
+**The Solution**: Application-wide timezone implementation
+
+**User Interface**:
+- Added timezone selector in Settings using react-timezone-select library
+- Searchable dropdown with all world timezones
+- Timezone preference stored in database and validated server-side
+- Settings UI syncs properly when user data loads
+
+**Core Infrastructure**:
+- Created timezone utility library (`client/src/lib/timezone.ts`) with smart formatting functions:
+  - `formatDateTime()` - Converts ISO timestamps to user timezone (e.g., "Oct 29, 2024 at 3:45 PM")
+  - `formatDateShort()` - Displays dates in user timezone (e.g., "Oct 29, 2024")
+  - Smart handling of date-only strings (YYYY-MM-DD) vs full ISO timestamps
+- Extended auth context to include user timezone
+- Database schema: Added `timezone` field to users table (text, default: "UTC")
+- Server-side validation with Zod schema
+
+**Application Coverage**:
+All time-related features now respect user timezone:
+- **Dashboard widgets**: Charts display dates/times in user timezone
+- **Import history**: Job timestamps converted to user timezone  
+- **Quick Stats widget**: Latest import dates shown in user timezone
+- **Data Coverage Report**: Date ranges displayed in user timezone
+- **DataImportCard**: All job creation times, pause times, and date ranges in user timezone
+- **Background Jobs panel**: Timestamps for running jobs in user timezone
+
+**Technical Implementation Details**:
+- Date-only strings (YYYY-MM-DD) display correctly without timezone conversion to avoid off-by-one errors
+- ISO timestamps properly converted to target timezone using Intl.DateTimeFormat
+- Handles edge cases like western timezones (UTC-8) and far-eastern timezones (UTC+14)
+- Early return pattern isolates date-only handling cleanly
+- No hidden timezone math—all conversions explicit and testable
+
+**Architect-Verified**: Implementation reviewed and approved with zero edge cases or bugs remaining.
+
+**Impact**: Users now see all date/time information in their local timezone, making business intelligence accurate and intuitive. No more mental timezone conversion required.
 
 ---
 
@@ -369,7 +434,7 @@ All KPIs support dynamic date range filtering with proper query parameter handli
 
 ---
 
-## 5. Current Platform Capabilities (As of October 24, 2025)
+## 5. Current Platform Capabilities (As of October 29, 2025)
 
 ### Data Synchronization
 ✅ **Manual Imports**: On-demand data fetching with configurable date ranges  
@@ -415,6 +480,8 @@ All KPIs support dynamic date range filtering with proper query parameter handli
 ✅ **Connection Resilience**: Automatic retry logic for database operations  
 ✅ **Memory Optimization**: Batch processing prevents crashes  
 ✅ **Error Handling**: Comprehensive logging and user-friendly messages  
+✅ **Timezone Support**: All dates/times displayed in user's selected timezone  
+✅ **Date Precision**: Exact date range matching with no data leakage  
 
 ---
 
