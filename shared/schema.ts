@@ -21,6 +21,7 @@ export const users = pgTable("users", {
   organizationId: uuid("organization_id"),
   provider: text("provider").notNull().default("local"), // "local", "google"
   providerId: text("provider_id"), // OAuth provider user ID
+  timezone: text("timezone").notNull().default("UTC"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
