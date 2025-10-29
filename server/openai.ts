@@ -405,6 +405,86 @@ export class OpenAIService {
           return JSON.stringify(result);
         }
         
+        case "get_student_revenue": {
+          const { student_name, limit = 10 } = args;
+          
+          if (student_name) {
+            // Get revenue for specific student
+            const allStudents = await db
+              .select()
+              .from(students)
+              .where(eq(students.organizationId, organizationId));
+            
+            const nameLower = student_name.toLowerCase();
+            const matchingStudents = allStudents.filter(s => 
+              `${s.firstName} ${s.lastName}`.toLowerCase().includes(nameLower)
+            );
+            
+            if (matchingStudents.length === 0) {
+              return JSON.stringify({ error: `No student found matching "${student_name}"` });
+            }
+            
+            const student = matchingStudents[0];
+            
+            // Get all revenue/purchases for this student
+            const studentRevenue = await db
+              .select({
+                amount: revenue.amount,
+                type: revenue.type,
+                description: revenue.description,
+                transactionDate: revenue.transactionDate
+              })
+              .from(revenue)
+              .where(
+                and(
+                  eq(revenue.organizationId, organizationId),
+                  sql`${revenue.studentId} = ${student.id}`
+                )
+              )
+              .orderBy(desc(revenue.transactionDate))
+              .limit(20);
+            
+            const totalSpent = studentRevenue.reduce((sum, r) => sum + Number(r.amount || 0), 0);
+            
+            return JSON.stringify({
+              student: `${student.firstName} ${student.lastName}`,
+              total_spent: totalSpent,
+              transaction_count: studentRevenue.length,
+              recent_purchases: studentRevenue.slice(0, 10).map(r => ({
+                date: r.transactionDate,
+                amount: Number(r.amount || 0),
+                type: r.type,
+                description: r.description
+              }))
+            });
+          } else {
+            // Get top spenders
+            const topSpenders = await db
+              .select({
+                studentId: revenue.studentId,
+                firstName: students.firstName,
+                lastName: students.lastName,
+                totalSpent: sql<number>`sum(cast(${revenue.amount} as numeric))`,
+                transactionCount: sql<number>`count(*)::int`
+              })
+              .from(revenue)
+              .innerJoin(students, eq(revenue.studentId, students.id))
+              .where(eq(revenue.organizationId, organizationId))
+              .groupBy(revenue.studentId, students.firstName, students.lastName)
+              .orderBy(desc(sql`sum(cast(${revenue.amount} as numeric))`))
+              .limit(limit);
+            
+            return JSON.stringify({
+              top_spenders: topSpenders.map((s, i) => ({
+                rank: i + 1,
+                name: `${s.firstName} ${s.lastName}`,
+                total_spent: Number(s.totalSpent || 0),
+                transaction_count: s.transactionCount
+              }))
+            });
+          }
+        }
+        
         case "get_class_statistics": {
           const { metric } = args;
           const { classSchedules } = await import("@shared/schema");
