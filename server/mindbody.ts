@@ -566,25 +566,12 @@ export class MindbodyService {
     startDate: Date,
     endDate: Date,
     onProgress: (current: number, total: number) => Promise<void>,
-    startStudentIndex: number = 0,
+    startOffset: number = 0,
     schedulesByTime?: Map<string, any> // Pass cached schedules to avoid reloading
   ): Promise<{ imported: number; nextStudentIndex: number; completed: boolean; schedulesByTime?: Map<string, any> }> {
-    const BATCH_SIZE = 200; // Increased from 100 to 200 for faster imports
-    const BATCH_DELAY = 0; // No delay - removed for faster imports
-
-    // Get total student count without loading all students
-    const totalStudents = await storage.getStudentCount(organizationId);
-
-    if (startStudentIndex >= totalStudents) {
-      return { imported: 0, nextStudentIndex: startStudentIndex, completed: true, schedulesByTime };
-    }
-
-    // Load only the batch of students we need for this iteration (pagination)
-    const studentBatch = await storage.getStudents(organizationId, BATCH_SIZE, startStudentIndex);
-    const endIndex = startStudentIndex + studentBatch.length;
-
-    // Load schedules once on first batch, reuse on subsequent batches
-    // Match by StartDateTime since ClassId in visits != ClassScheduleId in schedules
+    console.log(`[Visits Optimized] Starting import for ${startDate.toISOString()} to ${endDate.toISOString()}`);
+    
+    // Load schedules once, reuse on subsequent batches
     if (!schedulesByTime) {
       try {
         console.log(`[Visits] Loading class schedules for organization ${organizationId}...`);
@@ -598,151 +585,83 @@ export class MindbodyService {
       }
     }
 
-    // DEBUG: Log sample schedule times
-    const sampleTimes = Array.from(schedulesByTime.keys()).slice(0, 5);
-    console.log("=== DEBUG: Sample schedule times in map ===");
-    console.log(sampleTimes);
-    console.log("===========================================");
-
-    let imported = 0;
-    let processedStudents = 0;
-    let totalVisitsFound = 0;
-    let unmatchedClassIds = new Set<string>();
-
-    // Process students sequentially in this batch
-    for (const student of studentBatch) {
-      try {
-        // Fetch visits page-by-page to avoid memory issues
-        let visitOffset = 0;
-        let hasMoreVisits = true;
-        const PAGE_SIZE = 100; // Smaller page size for memory safety
-
-        while (hasMoreVisits) {
-          const { results: visits, hasMore } = await this.fetchPage<MindbodyVisit>(
-            organizationId,
-            `/client/clientvisits?ClientId=${student.mindbodyClientId}&StartDate=${startDate.toISOString()}&EndDate=${endDate.toISOString()}`,
-            "Visits",
-            visitOffset,
-            PAGE_SIZE
-          );
-
-          // Break if no results (safety check)
-          if (visits.length === 0) {
-            break;
-          }
-
-          hasMoreVisits = hasMore;
-
-          if (visits.length > 0) {
-            totalVisitsFound += visits.length;
-            // DEBUG: Log first visit structure to understand API response
-            if (totalVisitsFound <= 3) {
-              console.log("=== DEBUG: Visit structure from API ===");
-              console.log(JSON.stringify(visits[0], null, 2));
-              console.log("=======================================");
-            }
-          }
-
-          // Process this page of visits immediately
-          for (const visit of visits) {
-            try {
-              if (!visit.ClassId || !visit.StartDateTime) {
-                // Log first few skipped visits with full data
-                if (totalVisitsFound <= 5) {
-                  console.log(
-                    `Skipping visit for client ${student.mindbodyClientId}. Full visit data:`,
-                    JSON.stringify(visit, null, 2)
-                  );
-                }
-                continue;
-              }
-
-              // Match by StartDateTime instead of ClassId
-              const visitStartTime = new Date(visit.StartDateTime).toISOString();
-              const schedule = schedulesByTime.get(visitStartTime);
-
-              // DEBUG: Log first few match attempts
-              if (totalVisitsFound <= 5) {
-                console.log(`=== DEBUG: Matching attempt ===`);
-                console.log(`Visit time: ${visit.StartDateTime} -> ${visitStartTime}`);
-                console.log(`Found schedule: ${schedule ? "YES" : "NO"}`);
-                console.log(`==============================`);
-              }
-
-              if (!schedule) {
-                unmatchedClassIds.add(`${visit.ClassId} at ${visit.StartDateTime}`);
-                continue;
-              }
-
-              await storage.createAttendance({
-                organizationId,
-                studentId: student.id,
-                scheduleId: schedule.id,
-                attendedAt: new Date(visit.StartDateTime),
-                status: visit.SignedIn ? "attended" : "noshow",
-              });
-
-              imported++;
-            } catch (error) {
-              console.error(`Failed to import visit for client ${student.mindbodyClientId}:`, error);
-            }
-          }
-
-          // Move to next page
-          visitOffset += visits.length;
-
-          // Allow garbage collection and I/O fairness between pages
-          await new Promise(resolve => setImmediate(resolve));
-        }
-      } catch (error) {
-        console.error(`Failed to fetch visits for client ${student.mindbodyClientId}:`, error);
-      }
-
-      // Update progress after each student to show real-time API count
-      processedStudents++;
-      await onProgress(startStudentIndex + processedStudents, totalStudents);
-    }
-
-    // Log memory usage and diagnostics after batch completion
-    const memUsage = process.memoryUsage();
-    console.log(`[Memory] Batch completed (students ${startStudentIndex}-${endIndex}/${totalStudents}):`);
-    console.log(
-      `  - Heap Used: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB / ${Math.round(memUsage.heapTotal / 1024 / 1024)}MB`
+    // Load all students into a map for quick lookup by Mindbody Client ID
+    console.log(`[Visits] Loading students for organization ${organizationId}...`);
+    const allStudents = await storage.getStudents(organizationId, 100000); // Get all students
+    const studentsByMindbodyId = new Map(
+      allStudents
+        .filter(s => s.mindbodyClientId)
+        .map(s => [s.mindbodyClientId!, s])
     );
-    console.log(`  - RSS: ${Math.round(memUsage.rss / 1024 / 1024)}MB`);
-    console.log(`  - External: ${Math.round(memUsage.external / 1024 / 1024)}MB`);
-    console.log(`  - API Calls: ${this.getApiCallCount()}`);
-    console.log(`  - Visits Imported: ${imported}`);
+    console.log(`[Visits] Loaded ${studentsByMindbodyId.size} students into lookup map`);
+    
+    // Fetch visits directly by date range (OPTIMIZED - no per-student iteration!)
+    const PAGE_SIZE = 200;
 
-    // Force garbage collection hint
-    if (global.gc) {
-      global.gc();
-      const postGcMem = process.memoryUsage();
-      console.log(`[Memory] After GC: Heap ${Math.round(postGcMem.heapUsed / 1024 / 1024)}MB`);
-    }
-
-    // Log diagnostic information
-    if (totalVisitsFound > 0) {
-      console.log(
-        `Visit import batch: Found ${totalVisitsFound} visits, imported ${imported} attendance records`
-      );
-      if (unmatchedClassIds.size > 0) {
-        console.log(
-          `Unmatched ClassIds (visits skipped):`,
-          Array.from(unmatchedClassIds).slice(0, 10).join(", ")
-        );
+    // Fetch ONE page of visits per iteration (resumable pagination)
+    const { results: visits, totalResults, hasMore } = await this.fetchPage<MindbodyVisit>(
+      organizationId,
+      `/client/visits?StartDateTime=${startDate.toISOString()}&EndDateTime=${endDate.toISOString()}`,
+      "Visits",
+      startOffset,
+      PAGE_SIZE
+    );
+    
+    console.log(`[Visits] Fetched ${visits.length} visits (offset ${startOffset}, total ${totalResults})`);
+    
+    let imported = 0;
+    let skippedNoStudent = 0;
+    let skippedNoSchedule = 0;
+    
+    // Process this batch of visits
+    for (const visit of visits) {
+      try {
+        if (!visit.ClientId || !visit.StartDateTime) {
+          continue;
+        }
+        
+        // Match visit to student by Mindbody Client ID
+        const student = studentsByMindbodyId.get(visit.ClientId);
+        if (!student) {
+          skippedNoStudent++;
+          continue;
+        }
+        
+        // Match visit to schedule by start time
+        const visitStartTime = new Date(visit.StartDateTime).toISOString();
+        const schedule = schedulesByTime.get(visitStartTime);
+        
+        if (!schedule) {
+          skippedNoSchedule++;
+          continue;
+        }
+        
+        // Create attendance record
+        await storage.createAttendance({
+          organizationId,
+          studentId: student.id,
+          scheduleId: schedule.id,
+          attendedAt: new Date(visit.StartDateTime),
+          status: visit.SignedIn ? "attended" : "noshow",
+        });
+        
+        imported++;
+      } catch (error) {
+        console.error(`[Visits] Failed to import visit:`, error);
       }
     }
-
-    const nextStudentIndex = endIndex;
-    const completed = nextStudentIndex >= totalStudents;
-
-    // Delay before next batch (unless completed)
-    if (!completed) {
-      await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY));
-    }
-
-    return { imported, nextStudentIndex, completed, schedulesByTime };
+    
+    const nextOffset = startOffset + visits.length;
+    const completed = !hasMore || nextOffset >= totalResults;
+    
+    // Update progress (use offset as current position)
+    await onProgress(nextOffset, totalResults);
+    
+    console.log(`[Visits] Batch complete: imported ${imported}, skipped ${skippedNoStudent} (no student), ${skippedNoSchedule} (no schedule)`);
+    console.log(`[Visits] Progress: ${nextOffset}/${totalResults} visits processed, completed=${completed}`);
+    
+    // Return with nextStudentIndex for compatibility (but we're using offset-based pagination now)
+    return { imported, nextStudentIndex: nextOffset, completed, schedulesByTime };
   }
 
   async importSalesResumable(
