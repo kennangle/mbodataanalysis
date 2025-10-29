@@ -30,10 +30,10 @@ export const setupAuth = (app: Express) => {
   const isReplit = !!process.env.REPL_ID;
   const isDevelopment = process.env.NODE_ENV === "development";
   
-  // In development, use lax to avoid iframe cookie issues
-  // In production (published), use none for cross-origin support
-  const sameSiteValue = isDevelopment ? "lax" : (isReplit ? "none" : "lax");
-  const secureValue = isDevelopment ? false : (isReplit ? true : (app.get("env") === "production"));
+  // Replit always uses HTTPS (even in dev), so we can use SameSite=none with secure=true
+  // This allows cookies to work properly in the Replit iframe
+  const sameSiteValue = isReplit ? "none" : "lax";
+  const secureValue = isReplit ? true : (app.get("env") === "production");
   
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET,
