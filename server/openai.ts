@@ -1,8 +1,7 @@
 import OpenAI from "openai";
 import { storage } from "./storage";
 import { db } from "./db";
-import { students, attendance, revenue, classes } from "@shared/schema";
-import { eq, and, gte, lte, sql, desc } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || "",
@@ -11,150 +10,55 @@ const openai = new OpenAI({
 const MAX_TOKENS_PER_QUERY = 2000;
 const MONTHLY_QUERY_LIMIT = 1000;
 
-// Define tools the AI can call to query the database (using new tools format)
+// Database schema description for the AI
+const DATABASE_SCHEMA = `
+DATABASE SCHEMA:
+
+1. students - Student/client information
+   - id (uuid), organization_id (uuid), mindbody_client_id, first_name, last_name
+   - email, phone, status, membership_type, join_date, created_at
+
+2. classes - Class types offered
+   - id (uuid), organization_id (uuid), mindbody_class_id, name, description
+   - instructor_name, capacity, duration, created_at
+
+3. class_schedules - Individual class sessions
+   - id (uuid), organization_id (uuid), class_id (uuid, FK to classes)
+   - mindbody_schedule_id, start_time, end_time, location, created_at
+
+4. attendance - Student attendance records
+   - id (uuid), organization_id (uuid), student_id (uuid, FK to students)
+   - schedule_id (uuid, FK to class_schedules), attended_at, status, created_at
+
+5. revenue - Financial transactions
+   - id (uuid), organization_id (uuid), student_id (uuid, FK to students)
+   - amount (decimal), type, description, transaction_date, created_at
+
+IMPORTANT: All queries must include "WHERE organization_id = $1" for data isolation.
+Use JOINs to combine tables. Aggregate functions (COUNT, SUM, AVG) are available.
+Use PostgreSQL functions like EXTRACT(YEAR FROM date), TO_CHAR(), etc.
+`;
+
+// Define the SQL query execution tool
 const QUERY_TOOLS = [
   {
     type: "function",
     function: {
-      name: "get_student_attendance",
-      description: "Get attendance records for a specific student by name. Returns total classes attended and attendance history.",
+      name: "execute_sql_query",
+      description: "Execute a custom SQL query to retrieve data from the database. You can query students, classes, class_schedules, attendance, and revenue tables. Always include WHERE organization_id = $1 for security.",
       parameters: {
         type: "object",
         properties: {
-          student_name: {
+          sql_query: {
             type: "string",
-            description: "The full or partial name of the student (e.g., 'Ameet Srivastava' or 'Ameet')"
+            description: "The SQL SELECT query to execute. Must be a read-only SELECT statement. Use $1 for organization_id parameter. Example: SELECT COUNT(*) FROM class_schedules WHERE organization_id = $1 AND EXTRACT(YEAR FROM start_time) = 2025"
           },
-          date_range: {
+          explanation: {
             type: "string",
-            enum: ["all_time", "past_year", "past_month"],
-            description: "Time range for attendance records"
+            description: "Brief explanation of what this query does (for logging/debugging)"
           }
         },
-        required: ["student_name"]
-      }
-    }
-  },
-  {
-    type: "function",
-    function: {
-      name: "get_top_students_by_attendance",
-      description: "Get the top N students ranked by number of classes attended",
-      parameters: {
-        type: "object",
-        properties: {
-          limit: {
-            type: "number",
-            description: "Number of top students to return (default 10)"
-          },
-          date_range: {
-            type: "string",
-            enum: ["all_time", "past_year", "past_month"],
-            description: "Time range for counting attendance"
-          }
-        },
-        required: []
-      }
-    }
-  },
-  {
-    type: "function",
-    function: {
-      name: "get_revenue_by_period",
-      description: "Get revenue statistics for a specific time period with breakdown",
-      parameters: {
-        type: "object",
-        properties: {
-          period: {
-            type: "string",
-            enum: ["this_month", "last_month", "this_quarter", "last_quarter", "this_year", "last_year"],
-            description: "The time period to analyze"
-          },
-          breakdown_by: {
-            type: "string",
-            enum: ["day", "month", "type"],
-            description: "How to break down the revenue data"
-          }
-        },
-        required: ["period"]
-      }
-    }
-  },
-  {
-    type: "function",
-    function: {
-      name: "get_class_statistics",
-      description: "Get statistics about classes including attendance rates, popular times, and performance",
-      parameters: {
-        type: "object",
-        properties: {
-          metric: {
-            type: "string",
-            enum: ["most_popular", "attendance_rate", "by_time_of_day", "underperforming"],
-            description: "What class metric to analyze"
-          }
-        },
-        required: ["metric"]
-      }
-    }
-  },
-  {
-    type: "function",
-    function: {
-      name: "get_student_revenue",
-      description: "Get revenue/purchase information for a specific student or all students",
-      parameters: {
-        type: "object",
-        properties: {
-          student_name: {
-            type: "string",
-            description: "The student's name (optional - if omitted, returns top spenders)"
-          },
-          limit: {
-            type: "number",
-            description: "If getting top spenders, how many to return"
-          }
-        },
-        required: []
-      }
-    }
-  },
-  {
-    type: "function",
-    function: {
-      name: "get_student_statistics",
-      description: "Get statistics about students including total count, active members, new students in a time period, status breakdown",
-      parameters: {
-        type: "object",
-        properties: {
-          include_breakdown: {
-            type: "boolean",
-            description: "Whether to include detailed breakdown by status (default true)"
-          },
-          time_period: {
-            type: "string",
-            enum: ["all_time", "past_year", "past_month"],
-            description: "Time period for counting new students (default all_time)"
-          }
-        },
-        required: []
-      }
-    }
-  },
-  {
-    type: "function",
-    function: {
-      name: "execute_custom_query",
-      description: "Execute a custom aggregation or complex query on the database. Use when other functions don't fit the question.",
-      parameters: {
-        type: "object",
-        properties: {
-          query_type: {
-            type: "string",
-            description: "Description of what data to retrieve (e.g., 'inactive students', 'revenue per class type', 'attendance trends')"
-          }
-        },
-        required: ["query_type"]
+        required: ["sql_query", "explanation"]
       }
     }
   }
@@ -167,674 +71,59 @@ export class OpenAIService {
     args: any,
     organizationId: string
   ): Promise<string> {
-    const now = new Date();
-    const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-    const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-
     try {
-      switch (functionName) {
-        case "get_student_attendance": {
-          const { student_name, date_range = "all_time" } = args;
-          
-          // Search for student by name (case-insensitive partial match)
-          const allStudents = await db
-            .select()
-            .from(students)
-            .where(eq(students.organizationId, organizationId));
-          
-          const nameLower = student_name.toLowerCase();
-          const matchingStudents = allStudents.filter(s => 
-            `${s.firstName} ${s.lastName}`.toLowerCase().includes(nameLower)
-          );
-          
-          if (matchingStudents.length === 0) {
-            return JSON.stringify({ error: `No student found matching "${student_name}"` });
-          }
-          
-          const student = matchingStudents[0];
-          
-          // Import class_schedules from schema
-          const { classSchedules } = await import("@shared/schema");
-          
-          // Get attendance records WITH class information
-          let attendanceRecords = await db
-            .select({
-              attendedAt: attendance.attendedAt,
-              className: classes.name,
-              classDescription: classes.description,
-              scheduleStartTime: classSchedules.startTime,
-            })
-            .from(attendance)
-            .leftJoin(classSchedules, eq(attendance.scheduleId, classSchedules.id))
-            .leftJoin(classes, eq(classSchedules.classId, classes.id))
-            .where(
-              and(
-                eq(attendance.organizationId, organizationId),
-                eq(attendance.studentId, student.id),
-                eq(attendance.status, "attended")
-              )
-            )
-            .orderBy(desc(attendance.attendedAt));
-          
-          // Filter by date range
-          if (date_range === "past_year") {
-            attendanceRecords = attendanceRecords.filter(a => new Date(a.attendedAt) >= oneYearAgo);
-          } else if (date_range === "past_month") {
-            attendanceRecords = attendanceRecords.filter(a => new Date(a.attendedAt) >= oneMonthAgo);
-          }
-          
-          // Get class types breakdown
-          const classTypeCounts = new Map<string, number>();
-          attendanceRecords.forEach(record => {
-            const className = record.className || "Unknown";
-            classTypeCounts.set(className, (classTypeCounts.get(className) || 0) + 1);
-          });
-          
-          return JSON.stringify({
-            student: `${student.firstName} ${student.lastName}`,
-            total_classes: attendanceRecords.length,
-            date_range,
-            class_types: Array.from(classTypeCounts.entries())
-              .map(([name, count]) => ({ class_name: name, count }))
-              .sort((a, b) => b.count - a.count),
-            recent_classes: attendanceRecords.slice(0, 10).map(r => ({
-              date: r.attendedAt,
-              class: r.className || "Unknown"
-            }))
+      if (functionName === "execute_sql_query") {
+        const { sql_query, explanation } = args;
+        
+        // Security: Validate that it's a SELECT query only
+        const trimmedQuery = sql_query.trim().toUpperCase();
+        if (!trimmedQuery.startsWith("SELECT")) {
+          return JSON.stringify({ 
+            error: "Only SELECT queries are allowed for security reasons" 
           });
         }
         
-        case "get_top_students_by_attendance": {
-          const { limit = 10, date_range = "all_time" } = args;
-          
-          // Get all students and their attendance counts
-          const result = await db
-            .select({
-              studentId: attendance.studentId,
-              firstName: students.firstName,
-              lastName: students.lastName,
-              count: sql<number>`count(*)::int`
-            })
-            .from(attendance)
-            .innerJoin(students, eq(attendance.studentId, students.id))
-            .where(
-              and(
-                eq(attendance.organizationId, organizationId),
-                eq(attendance.status, "attended"),
-                date_range === "past_year" ? gte(attendance.attendedAt, oneYearAgo) :
-                date_range === "past_month" ? gte(attendance.attendedAt, oneMonthAgo) :
-                sql`true`
-              )
-            )
-            .groupBy(attendance.studentId, students.firstName, students.lastName)
-            .orderBy(desc(sql`count(*)`))
-            .limit(limit);
-          
-          return JSON.stringify({
-            date_range,
-            top_students: result.map((r, i) => ({
-              rank: i + 1,
-              name: `${r.firstName} ${r.lastName}`,
-              classes_attended: r.count
-            }))
+        // Security: Check for dangerous SQL keywords
+        const dangerousKeywords = ["DROP", "DELETE", "UPDATE", "INSERT", "ALTER", "CREATE", "TRUNCATE"];
+        for (const keyword of dangerousKeywords) {
+          if (trimmedQuery.includes(keyword)) {
+            return JSON.stringify({ 
+              error: `Query contains forbidden keyword: ${keyword}` 
+            });
+          }
+        }
+        
+        // Security: Ensure organization_id filter is present
+        if (!sql_query.includes("$1") && !sql_query.toLowerCase().includes("organization_id")) {
+          return JSON.stringify({ 
+            error: "Query must include organization_id filter using $1 parameter" 
           });
         }
         
-        case "get_revenue_by_period": {
-          const { period, breakdown_by } = args;
-          
-          // Calculate date range based on period
-          let startDate: Date, endDate: Date = now;
-          
-          if (period === "this_month") {
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-          } else if (period === "last_month") {
-            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            endDate = new Date(now.getFullYear(), now.getMonth(), 0);
-          } else if (period === "this_year") {
-            startDate = new Date(now.getFullYear(), 0, 1);
-          } else if (period === "last_year") {
-            startDate = new Date(now.getFullYear() - 1, 0, 1);
-            endDate = new Date(now.getFullYear() - 1, 11, 31);
-          } else {
-            startDate = oneMonthAgo;
-          }
-          
-          const revenueData = await db
-            .select({
-              total: sql<number>`sum(cast(${revenue.amount} as numeric))`,
-              count: sql<number>`count(*)::int`,
-              type: breakdown_by === "type" ? revenue.type : sql`'all'`
-            })
-            .from(revenue)
-            .where(
-              and(
-                eq(revenue.organizationId, organizationId),
-                gte(revenue.transactionDate, startDate),
-                lte(revenue.transactionDate, endDate)
-              )
-            )
-            .groupBy(breakdown_by === "type" ? revenue.type : sql`'all'`);
-          
-          return JSON.stringify({
-            period,
-            total_revenue: revenueData.reduce((sum, r) => sum + Number(r.total || 0), 0),
-            transaction_count: revenueData.reduce((sum, r) => sum + r.count, 0),
-            breakdown: breakdown_by === "type" ? revenueData.map(r => ({
-              type: r.type,
-              revenue: Number(r.total || 0),
-              count: r.count
-            })) : null
-          });
-        }
+        console.log(`[AI Query] Executing: ${explanation}`);
+        console.log(`[AI Query] SQL: ${sql_query}`);
         
-        case "get_student_statistics": {
-          const { include_breakdown = true, time_period = "all_time" } = args;
-          
-          // Get total student count
-          const totalStudents = await db
-            .select({ count: sql<number>`count(*)::int` })
-            .from(students)
-            .where(eq(students.organizationId, organizationId));
-          
-          // Get active students (status = 'active')
-          const activeStudents = await db
-            .select({ count: sql<number>`count(*)::int` })
-            .from(students)
-            .where(
-              and(
-                eq(students.organizationId, organizationId),
-                eq(students.status, "active")
-              )
-            );
-          
-          // Get students with memberships (membershipType is not null and not empty)
-          const studentsWithMemberships = await db
-            .select({ count: sql<number>`count(*)::int` })
-            .from(students)
-            .where(
-              and(
-                eq(students.organizationId, organizationId),
-                sql`${students.membershipType} IS NOT NULL AND ${students.membershipType} != ''`
-              )
-            );
-          
-          let newStudents = 0;
-          if (time_period !== "all_time") {
-            const cutoffDate = time_period === "past_year" ? oneYearAgo : oneMonthAgo;
-            const newStudentResult = await db
-              .select({ count: sql<number>`count(*)::int` })
-              .from(students)
-              .where(
-                and(
-                  eq(students.organizationId, organizationId),
-                  gte(students.joinDate, cutoffDate)
-                )
-              );
-            newStudents = newStudentResult[0]?.count || 0;
-          }
-          
-          const result: any = {
-            total_students: totalStudents[0]?.count || 0,
-            active_students: activeStudents[0]?.count || 0,
-            students_with_memberships: studentsWithMemberships[0]?.count || 0,
-            time_period
-          };
-          
-          if (time_period !== "all_time") {
-            result.new_students = newStudents;
-          }
-          
-          // Get status breakdown if requested
-          if (include_breakdown) {
-            const statusBreakdown = await db
-              .select({
-                status: students.status,
-                count: sql<number>`count(*)::int`
-              })
-              .from(students)
-              .where(eq(students.organizationId, organizationId))
-              .groupBy(students.status);
-            
-            result.status_breakdown = statusBreakdown.map(s => ({
-              status: s.status,
-              count: s.count
-            }));
-          }
-          
-          return JSON.stringify(result);
-        }
+        // Execute the query with organization_id as parameter
+        const result = await db.execute(sql.raw(sql_query.replace(/\$1/g, `'${organizationId}'`)));
         
-        case "get_student_revenue": {
-          const { student_name, limit = 10 } = args;
-          
-          if (student_name) {
-            // Get revenue for specific student
-            const allStudents = await db
-              .select()
-              .from(students)
-              .where(eq(students.organizationId, organizationId));
-            
-            const nameLower = student_name.toLowerCase();
-            const matchingStudents = allStudents.filter(s => 
-              `${s.firstName} ${s.lastName}`.toLowerCase().includes(nameLower)
-            );
-            
-            if (matchingStudents.length === 0) {
-              return JSON.stringify({ error: `No student found matching "${student_name}"` });
-            }
-            
-            const student = matchingStudents[0];
-            
-            // Get all revenue/purchases for this student
-            const studentRevenue = await db
-              .select({
-                amount: revenue.amount,
-                type: revenue.type,
-                description: revenue.description,
-                transactionDate: revenue.transactionDate
-              })
-              .from(revenue)
-              .where(
-                and(
-                  eq(revenue.organizationId, organizationId),
-                  sql`${revenue.studentId} = ${student.id}`
-                )
-              )
-              .orderBy(desc(revenue.transactionDate))
-              .limit(20);
-            
-            const totalSpent = studentRevenue.reduce((sum, r) => sum + Number(r.amount || 0), 0);
-            
-            return JSON.stringify({
-              student: `${student.firstName} ${student.lastName}`,
-              total_spent: totalSpent,
-              transaction_count: studentRevenue.length,
-              recent_purchases: studentRevenue.slice(0, 10).map(r => ({
-                date: r.transactionDate,
-                amount: Number(r.amount || 0),
-                type: r.type,
-                description: r.description
-              }))
-            });
-          } else {
-            // Get top spenders
-            const topSpenders = await db
-              .select({
-                studentId: revenue.studentId,
-                firstName: students.firstName,
-                lastName: students.lastName,
-                totalSpent: sql<number>`sum(cast(${revenue.amount} as numeric))`,
-                transactionCount: sql<number>`count(*)::int`
-              })
-              .from(revenue)
-              .innerJoin(students, eq(revenue.studentId, students.id))
-              .where(eq(revenue.organizationId, organizationId))
-              .groupBy(revenue.studentId, students.firstName, students.lastName)
-              .orderBy(desc(sql`sum(cast(${revenue.amount} as numeric))`))
-              .limit(limit);
-            
-            return JSON.stringify({
-              top_spenders: topSpenders.map((s, i) => ({
-                rank: i + 1,
-                name: `${s.firstName} ${s.lastName}`,
-                total_spent: Number(s.totalSpent || 0),
-                transaction_count: s.transactionCount
-              }))
-            });
-          }
-        }
+        console.log(`[AI Query] Result rows: ${result.rows.length}`);
         
-        case "get_class_statistics": {
-          const { metric } = args;
-          const { classSchedules } = await import("@shared/schema");
-          
-          switch (metric) {
-            case "most_popular": {
-              // Get classes with most attendance
-              const popularClasses = await db
-                .select({
-                  className: classes.name,
-                  classDescription: classes.description,
-                  totalAttendance: sql<number>`count(*)::int`
-                })
-                .from(attendance)
-                .leftJoin(classSchedules, eq(attendance.scheduleId, classSchedules.id))
-                .leftJoin(classes, eq(classSchedules.classId, classes.id))
-                .where(
-                  and(
-                    eq(attendance.organizationId, organizationId),
-                    eq(attendance.status, "attended")
-                  )
-                )
-                .groupBy(classes.name, classes.description)
-                .orderBy(desc(sql`count(*)`))
-                .limit(10);
-              
-              return JSON.stringify({
-                metric: "most_popular_classes",
-                classes: popularClasses.map(c => ({
-                  name: c.className || "Unknown",
-                  description: c.classDescription,
-                  total_attendance: c.totalAttendance
-                }))
-              });
-            }
-            
-            case "attendance_rate": {
-              // Get average attendance per class
-              const attendanceRates = await db
-                .select({
-                  className: classes.name,
-                  totalSessions: sql<number>`count(distinct ${classSchedules.id})::int`,
-                  totalAttendance: sql<number>`count(${attendance.id})::int`,
-                  avgAttendancePerSession: sql<number>`round(count(${attendance.id})::numeric / count(distinct ${classSchedules.id})::numeric, 1)`
-                })
-                .from(classSchedules)
-                .leftJoin(classes, eq(classSchedules.classId, classes.id))
-                .leftJoin(
-                  attendance, 
-                  and(
-                    eq(attendance.scheduleId, classSchedules.id),
-                    eq(attendance.status, "attended")
-                  )
-                )
-                .where(eq(classSchedules.organizationId, organizationId))
-                .groupBy(classes.name)
-                .orderBy(desc(sql`count(${attendance.id})`))
-                .limit(15);
-              
-              return JSON.stringify({
-                metric: "attendance_rate",
-                classes: attendanceRates.map(c => ({
-                  name: c.className || "Unknown",
-                  total_sessions: c.totalSessions,
-                  total_attendance: c.totalAttendance,
-                  avg_per_session: Number(c.avgAttendancePerSession || 0)
-                }))
-              });
-            }
-            
-            case "by_time_of_day": {
-              // Get attendance by hour of day
-              const timeOfDayStats = await db
-                .select({
-                  hour: sql<number>`EXTRACT(HOUR FROM ${classSchedules.startTime})::int`,
-                  totalClasses: sql<number>`count(distinct ${classSchedules.id})::int`,
-                  totalAttendance: sql<number>`count(${attendance.id})::int`
-                })
-                .from(classSchedules)
-                .leftJoin(
-                  attendance, 
-                  and(
-                    eq(attendance.scheduleId, classSchedules.id),
-                    eq(attendance.status, "attended")
-                  )
-                )
-                .where(eq(classSchedules.organizationId, organizationId))
-                .groupBy(sql`EXTRACT(HOUR FROM ${classSchedules.startTime})`)
-                .orderBy(sql`EXTRACT(HOUR FROM ${classSchedules.startTime})`);
-              
-              return JSON.stringify({
-                metric: "by_time_of_day",
-                time_slots: timeOfDayStats.map(t => ({
-                  hour: t.hour,
-                  time_slot: `${t.hour}:00-${t.hour + 1}:00`,
-                  total_classes: t.totalClasses,
-                  total_attendance: t.totalAttendance,
-                  avg_per_class: t.totalClasses > 0 ? Math.round(t.totalAttendance / t.totalClasses) : 0
-                }))
-              });
-            }
-            
-            case "underperforming": {
-              // Get classes with low attendance
-              const underperformingClasses = await db
-                .select({
-                  className: classes.name,
-                  totalSessions: sql<number>`count(distinct ${classSchedules.id})::int`,
-                  totalAttendance: sql<number>`count(${attendance.id})::int`,
-                  avgAttendance: sql<number>`round(count(${attendance.id})::numeric / count(distinct ${classSchedules.id})::numeric, 1)`
-                })
-                .from(classSchedules)
-                .leftJoin(classes, eq(classSchedules.classId, classes.id))
-                .leftJoin(
-                  attendance, 
-                  and(
-                    eq(attendance.scheduleId, classSchedules.id),
-                    eq(attendance.status, "attended")
-                  )
-                )
-                .where(eq(classSchedules.organizationId, organizationId))
-                .groupBy(classes.name)
-                .having(sql`count(distinct ${classSchedules.id}) >= 3`) // At least 3 sessions
-                .orderBy(sql`count(${attendance.id})::numeric / count(distinct ${classSchedules.id})::numeric`)
-                .limit(10);
-              
-              return JSON.stringify({
-                metric: "underperforming_classes",
-                classes: underperformingClasses.map(c => ({
-                  name: c.className || "Unknown",
-                  total_sessions: c.totalSessions,
-                  total_attendance: c.totalAttendance,
-                  avg_attendance: Number(c.avgAttendance || 0)
-                }))
-              });
-            }
-            
-            default:
-              return JSON.stringify({ error: "Unknown metric for class statistics" });
-          }
-        }
-        
-        case "execute_custom_query": {
-          const { query_type } = args;
-          const queryLower = query_type.toLowerCase();
-          
-          // Total classes/sessions count query
-          if ((queryLower.includes("how many") || queryLower.includes("total") || queryLower.includes("count")) && 
-              (queryLower.includes("class") || queryLower.includes("session"))) {
-            // Extract year if mentioned
-            const yearMatch = queryLower.match(/\b(20\d{2})\b/);
-            const year = yearMatch ? parseInt(yearMatch[1]) : new Date().getFullYear();
-            
-            const { classSchedules } = await import("@shared/schema");
-            
-            // Count total class sessions (scheduled classes)
-            const totalSessions = await db
-              .select({
-                count: sql<number>`count(*)::int`
-              })
-              .from(classSchedules)
-              .where(
-                and(
-                  eq(classSchedules.organizationId, organizationId),
-                  sql`EXTRACT(YEAR FROM ${classSchedules.startTime}) = ${year}`
-                )
-              );
-            
-            // Count total attendance records (how many times students attended)
-            const totalAttendance = await db
-              .select({
-                count: sql<number>`count(*)::int`
-              })
-              .from(attendance)
-              .where(
-                and(
-                  eq(attendance.organizationId, organizationId),
-                  eq(attendance.status, "attended"),
-                  sql`EXTRACT(YEAR FROM ${attendance.attendedAt}) = ${year}`
-                )
-              );
-            
-            // Get breakdown by month
-            const monthlyBreakdown = await db
-              .select({
-                month: sql<number>`EXTRACT(MONTH FROM ${classSchedules.startTime})::int`,
-                sessionCount: sql<number>`count(*)::int`
-              })
-              .from(classSchedules)
-              .where(
-                and(
-                  eq(classSchedules.organizationId, organizationId),
-                  sql`EXTRACT(YEAR FROM ${classSchedules.startTime}) = ${year}`
-                )
-              )
-              .groupBy(sql`EXTRACT(MONTH FROM ${classSchedules.startTime})`)
-              .orderBy(sql`EXTRACT(MONTH FROM ${classSchedules.startTime})`);
-            
-            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-            
-            return JSON.stringify({
-              query_type: "total_classes",
-              year,
-              total_sessions: totalSessions[0]?.count || 0,
-              total_attendance: totalAttendance[0]?.count || 0,
-              monthly_breakdown: monthlyBreakdown.map(m => ({
-                month: monthNames[m.month - 1],
-                sessions: m.sessionCount
-              }))
-            });
-          }
-          
-          // Inactive students query
-          if (queryLower.includes("inactive") && queryLower.includes("student")) {
-            const inactiveStudents = await db
-              .select({
-                firstName: students.firstName,
-                lastName: students.lastName,
-                email: students.email,
-                status: students.status,
-                lastAttended: sql<Date>`MAX(${attendance.attendedAt})`
-              })
-              .from(students)
-              .leftJoin(attendance, eq(students.id, attendance.studentId))
-              .where(eq(students.organizationId, organizationId))
-              .groupBy(students.id, students.firstName, students.lastName, students.email, students.status)
-              .having(
-                sql`MAX(${attendance.attendedAt}) < ${oneMonthAgo} OR MAX(${attendance.attendedAt}) IS NULL`
-              )
-              .limit(50);
-            
-            return JSON.stringify({
-              query_type: "inactive_students",
-              count: inactiveStudents.length,
-              students: inactiveStudents.map(s => ({
-                name: `${s.firstName} ${s.lastName}`,
-                email: s.email,
-                status: s.status,
-                last_attended: s.lastAttended
-              }))
-            });
-          }
-          
-          // Revenue per class type
-          if (queryLower.includes("revenue") && queryLower.includes("class")) {
-            const revenueByClass = await db
-              .select({
-                className: classes.name,
-                totalRevenue: sql<number>`sum(cast(${revenue.amount} as numeric))`,
-                transactionCount: sql<number>`count(*)::int`
-              })
-              .from(revenue)
-              .leftJoin(classes, sql`${revenue.description} ILIKE '%' || ${classes.name} || '%'`)
-              .where(eq(revenue.organizationId, organizationId))
-              .groupBy(classes.name)
-              .orderBy(desc(sql`sum(cast(${revenue.amount} as numeric))`))
-              .limit(20);
-            
-            return JSON.stringify({
-              query_type: "revenue_per_class",
-              results: revenueByClass.map(r => ({
-                class: r.className || "Other",
-                revenue: Number(r.totalRevenue || 0),
-                transactions: r.transactionCount
-              }))
-            });
-          }
-          
-          // Attendance trends
-          if (queryLower.includes("attendance") && queryLower.includes("trend")) {
-            const monthlyAttendance = await db
-              .select({
-                month: sql<string>`TO_CHAR(${attendance.attendedAt}, 'YYYY-MM')`,
-                count: sql<number>`count(*)::int`
-              })
-              .from(attendance)
-              .where(
-                and(
-                  eq(attendance.organizationId, organizationId),
-                  eq(attendance.status, "attended"),
-                  gte(attendance.attendedAt, oneYearAgo)
-                )
-              )
-              .groupBy(sql`TO_CHAR(${attendance.attendedAt}, 'YYYY-MM')`)
-              .orderBy(sql`TO_CHAR(${attendance.attendedAt}, 'YYYY-MM')`);
-            
-            return JSON.stringify({
-              query_type: "attendance_trends",
-              time_period: "past_year",
-              monthly_data: monthlyAttendance.map(m => ({
-                month: m.month,
-                attendance_count: m.count
-              }))
-            });
-          }
-          
-          // Student retention (students who attended multiple months)
-          if (queryLower.includes("retention") || queryLower.includes("regular")) {
-            const retentionData = await db
-              .select({
-                studentId: attendance.studentId,
-                firstName: students.firstName,
-                lastName: students.lastName,
-                monthsActive: sql<number>`COUNT(DISTINCT TO_CHAR(${attendance.attendedAt}, 'YYYY-MM'))::int`,
-                totalClasses: sql<number>`count(*)::int`
-              })
-              .from(attendance)
-              .innerJoin(students, eq(attendance.studentId, students.id))
-              .where(
-                and(
-                  eq(attendance.organizationId, organizationId),
-                  eq(attendance.status, "attended"),
-                  gte(attendance.attendedAt, new Date(now.getFullYear(), now.getMonth() - 6, 1))
-                )
-              )
-              .groupBy(attendance.studentId, students.firstName, students.lastName)
-              .having(sql`COUNT(DISTINCT TO_CHAR(${attendance.attendedAt}, 'YYYY-MM')) >= 3`)
-              .orderBy(desc(sql`count(*)`))
-              .limit(30);
-            
-            return JSON.stringify({
-              query_type: "student_retention",
-              time_period: "past_6_months",
-              retained_students: retentionData.map(s => ({
-                name: `${s.firstName} ${s.lastName}`,
-                months_active: s.monthsActive,
-                total_classes: s.totalClasses
-              }))
-            });
-          }
-          
-          // Generic fallback - provide summary stats
-          return JSON.stringify({
-            query_type,
-            message: "Query type not specifically implemented. Try being more specific or use one of the other query functions.",
-            suggestions: [
-              "Ask about 'inactive students'",
-              "Ask about 'revenue per class type'",
-              "Ask about 'attendance trends'",
-              "Ask about 'student retention' or 'regular students'"
-            ]
-          });
-        }
-        
-        default:
-          return JSON.stringify({ error: `Function ${functionName} not implemented yet. Please ask a different question or try rephrasing.` });
+        return JSON.stringify({
+          success: true,
+          explanation,
+          row_count: result.rows.length,
+          data: result.rows.slice(0, 100) // Limit to 100 rows for response size
+        });
       }
+      
+      return JSON.stringify({ 
+        error: `Unknown function: ${functionName}` 
+      });
     } catch (error) {
       console.error(`Error executing function ${functionName}:`, error);
-      return JSON.stringify({ error: `Failed to execute query: ${error instanceof Error ? error.message : 'Unknown error'}` });
+      return JSON.stringify({ 
+        error: `Failed to execute query: ${error instanceof Error ? error.message : 'Unknown error'}` 
+      });
     }
   }
 
@@ -863,19 +152,23 @@ export class OpenAIService {
     const messages: any[] = [
       {
         role: "system",
-        content: `You are an AI assistant for analyzing Mindbody studio data (students, classes, attendance, revenue). 
-You have access to database query tools to retrieve real data. ALWAYS use these tools to answer questions - never say you cannot retrieve data.
+        content: `You are an AI assistant for analyzing Mindbody studio data. You have access to a SQL database query tool.
 
-Available capabilities:
-- Count total classes/sessions taught (by year, month, or all time)
-- Get student attendance statistics and rankings
-- Analyze revenue by period and breakdown
-- Get class statistics (most popular, attendance rates, time of day analysis)
-- Track student retention and activity
-- Custom queries for trends and patterns
+${DATABASE_SCHEMA}
 
-Call the appropriate tools to get real data, then provide specific, data-driven, and actionable insights.
-When the user asks follow-up questions, refer to the conversation history to provide contextual answers.`
+INSTRUCTIONS:
+- For ANY question about the data, use the execute_sql_query tool to write and run a SQL SELECT query
+- Always include "WHERE organization_id = $1" in your queries for data isolation
+- Be creative with SQL - you can use JOINs, aggregations, subqueries, date functions, etc.
+- After getting results, analyze them and provide clear, actionable insights
+- When users ask follow-up questions, refer to conversation history for context
+
+EXAMPLES:
+- "How many classes in 2025?" → SELECT COUNT(*) FROM class_schedules WHERE organization_id = $1 AND EXTRACT(YEAR FROM start_time) = 2025
+- "Top 10 students by attendance?" → SELECT s.first_name, s.last_name, COUNT(*) as classes FROM attendance a JOIN students s ON a.student_id = s.id WHERE a.organization_id = $1 AND a.status = 'attended' GROUP BY s.id, s.first_name, s.last_name ORDER BY classes DESC LIMIT 10
+- "Revenue this month?" → SELECT SUM(amount) FROM revenue WHERE organization_id = $1 AND EXTRACT(YEAR FROM transaction_date) = EXTRACT(YEAR FROM CURRENT_DATE) AND EXTRACT(MONTH FROM transaction_date) = EXTRACT(MONTH FROM CURRENT_DATE)
+
+You can answer ANY question about the data - just write the appropriate SQL query!`
       }
     ];
 
@@ -916,40 +209,36 @@ When the user asks follow-up questions, refer to the conversation history to pro
 
       // Check if AI wants to call tools
       if (message.tool_calls && message.tool_calls.length > 0) {
-        // Process all tool calls
+        // Execute each tool call
         for (const toolCall of message.tool_calls) {
-          if (toolCall.type === 'function') {
-            const functionName = toolCall.function.name;
-            const functionArgs = JSON.parse(toolCall.function.arguments || "{}");
+          if (toolCall.type !== 'function') continue;
+          const functionName = toolCall.function.name;
+          const functionArgs = JSON.parse(toolCall.function.arguments);
 
-            console.log(`[AI Query] Calling tool: ${functionName}`, functionArgs);
+          const result = await this.executeFunctionCall(
+            functionName,
+            functionArgs,
+            organizationId
+          );
 
-            // Execute the function and get results
-            const functionResult = await this.executeFunctionCall(functionName, functionArgs, organizationId);
-
-            console.log(`[AI Query] Tool result:`, functionResult);
-
-            // Add tool result to conversation
-            messages.push({
-              role: "tool",
-              tool_call_id: toolCall.id,
-              content: functionResult
-            });
-          }
+          // Add tool response to messages
+          messages.push({
+            role: "tool",
+            tool_call_id: toolCall.id,
+            content: result,
+          });
         }
 
         iterationCount++;
-      } else {
-        // AI has final answer
-        finalResponse = message.content || "No response generated";
-        break;
+        continue;
       }
+
+      // No more tool calls, we have final response
+      finalResponse = message.content || "No response generated";
+      break;
     }
 
-    if (!finalResponse) {
-      finalResponse = "Unable to complete the query. Please try rephrasing your question.";
-    }
-
+    // Save query to database
     await storage.createAIQuery({
       organizationId,
       userId,
@@ -958,30 +247,9 @@ When the user asks follow-up questions, refer to the conversation history to pro
       tokensUsed: totalTokensUsed,
     });
 
-    return { response: finalResponse, tokensUsed: totalTokensUsed };
-  }
-
-  async getUsageStats(organizationId: string): Promise<{
-    queriesThisMonth: number;
-    tokensThisMonth: number;
-    queryLimit: number;
-  }> {
-    const queries = await storage.getAIQueries(organizationId, 1000);
-
-    const now = new Date();
-    const thisMonthQueries = queries.filter((q) => {
-      const queryDate = new Date(q.createdAt);
-      return (
-        queryDate.getMonth() === now.getMonth() && queryDate.getFullYear() === now.getFullYear()
-      );
-    });
-
-    const tokensThisMonth = thisMonthQueries.reduce((sum, q) => sum + (q.tokensUsed || 0), 0);
-
     return {
-      queriesThisMonth: thisMonthQueries.length,
-      tokensThisMonth,
-      queryLimit: MONTHLY_QUERY_LIMIT,
+      response: finalResponse,
+      tokensUsed: totalTokensUsed,
     };
   }
 }
