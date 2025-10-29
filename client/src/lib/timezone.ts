@@ -3,32 +3,6 @@
  */
 
 /**
- * Parse a date-only string (YYYY-MM-DD) safely in the target timezone
- * Handles the case where "2024-01-15" should be Jan 15 in user's timezone, not UTC
- */
-function parseDateOnly(dateStr: string, timezone: string): Date {
-  const [year, month, day] = dateStr.split("-").map(Number);
-  
-  // Create a date at noon in the target timezone to avoid DST edge cases
-  const dateString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T12:00:00`;
-  
-  // Parse in target timezone
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone: timezone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
-  
-  // Create a date that represents the same calendar date in the target timezone
-  return new Date(dateString);
-}
-
-/**
  * Format a date in the user's timezone
  * @param date - Date to format (can be Date object, ISO string, or YYYY-MM-DD string)
  * @param timezone - User's timezone (e.g., "America/New_York")
@@ -40,18 +14,18 @@ export function formatInTimezone(
   timezone: string = "UTC",
   options: Intl.DateTimeFormatOptions = {}
 ): string {
-  let dateObj: Date;
-  
-  if (typeof date === "string") {
-    // Check if it's a date-only string (YYYY-MM-DD)
-    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      dateObj = parseDateOnly(date, timezone);
-    } else {
-      dateObj = new Date(date);
-    }
-  } else {
-    dateObj = date;
+  // For date-only strings (YYYY-MM-DD), format directly without timezone conversion
+  // This ensures calendar dates display correctly regardless of timezone
+  if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    const [year, month, day] = date.split("-").map(Number);
+    const formatter = new Intl.DateTimeFormat("en-US", options);
+    // Create a simple date object for formatting only (not for timezone conversion)
+    const simpleDate = new Date(year, month - 1, day);
+    return formatter.format(simpleDate);
   }
+  
+  // For timestamps, convert to target timezone
+  const dateObj = typeof date === "string" ? new Date(date) : date;
   
   const defaultOptions: Intl.DateTimeFormatOptions = {
     timeZone: timezone,
