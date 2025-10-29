@@ -599,10 +599,13 @@ export class MindbodyService {
     const PAGE_SIZE = 200;
 
     // Fetch ONE page of visits per iteration (resumable pagination)
+    // Using /class/classvisits endpoint which supports date range filtering
+    const startDateStr = startDate.toISOString().split('T')[0]; // YYYY-MM-DD
+    const endDateStr = endDate.toISOString().split('T')[0]; // YYYY-MM-DD
     const { results: visits, totalResults, hasMore } = await this.fetchPage<MindbodyVisit>(
       organizationId,
-      `/client/visits?StartDateTime=${startDate.toISOString()}&EndDateTime=${endDate.toISOString()}`,
-      "Visits",
+      `/class/classvisits?StartDate=${startDateStr}&EndDate=${endDateStr}`,
+      "ClassVisits",
       startOffset,
       PAGE_SIZE
     );
