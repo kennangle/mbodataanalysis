@@ -47,6 +47,12 @@ import {
   aiGeneratedFiles,
   type AiGeneratedFile,
   type InsertAiGeneratedFile,
+  conversations,
+  type Conversation,
+  type InsertConversation,
+  conversationMessages,
+  type ConversationMessage,
+  type InsertConversationMessage,
 } from "@shared/schema";
 import { eq, and, desc, gte, lt, lte, sql } from "drizzle-orm";
 import { addDays } from "date-fns";
@@ -225,6 +231,18 @@ export interface IStorage {
   getAiGeneratedFileByFilename(filename: string): Promise<AiGeneratedFile | undefined>;
   getAiGeneratedFiles(organizationId: string, userId?: string): Promise<AiGeneratedFile[]>;
   deleteAiGeneratedFile(id: string): Promise<void>;
+
+  // Conversations
+  createConversation(conversation: InsertConversation): Promise<Conversation>;
+  getConversation(id: string): Promise<Conversation | undefined>;
+  getConversations(organizationId: string, userId: string): Promise<Conversation[]>;
+  updateConversation(id: string, conversation: Partial<InsertConversation>): Promise<void>;
+  deleteConversation(id: string): Promise<void>;
+
+  // Conversation Messages
+  createConversationMessage(message: InsertConversationMessage): Promise<ConversationMessage>;
+  getConversationMessages(conversationId: string): Promise<ConversationMessage[]>;
+  deleteConversationMessages(conversationId: string): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -1318,6 +1336,69 @@ export class DbStorage implements IStorage {
 
   async deleteAiGeneratedFile(id: string): Promise<void> {
     await db.delete(aiGeneratedFiles).where(eq(aiGeneratedFiles.id, id));
+  }
+
+  async createConversation(conversation: InsertConversation): Promise<Conversation> {
+    const result = await db.insert(conversations).values(conversation).returning();
+    return result[0];
+  }
+
+  async getConversation(id: string): Promise<Conversation | undefined> {
+    const result = await db
+      .select()
+      .from(conversations)
+      .where(eq(conversations.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async getConversations(organizationId: string, userId: string): Promise<Conversation[]> {
+    return await db
+      .select()
+      .from(conversations)
+      .where(
+        and(
+          eq(conversations.organizationId, organizationId),
+          eq(conversations.userId, userId)
+        )
+      )
+      .orderBy(desc(conversations.updatedAt));
+  }
+
+  async updateConversation(
+    id: string,
+    conversation: Partial<InsertConversation>
+  ): Promise<void> {
+    await db
+      .update(conversations)
+      .set({ ...conversation, updatedAt: new Date() })
+      .where(eq(conversations.id, id));
+  }
+
+  async deleteConversation(id: string): Promise<void> {
+    // Delete all messages first
+    await db.delete(conversationMessages).where(eq(conversationMessages.conversationId, id));
+    // Then delete the conversation
+    await db.delete(conversations).where(eq(conversations.id, id));
+  }
+
+  async createConversationMessage(
+    message: InsertConversationMessage
+  ): Promise<ConversationMessage> {
+    const result = await db.insert(conversationMessages).values(message).returning();
+    return result[0];
+  }
+
+  async getConversationMessages(conversationId: string): Promise<ConversationMessage[]> {
+    return await db
+      .select()
+      .from(conversationMessages)
+      .where(eq(conversationMessages.conversationId, conversationId))
+      .orderBy(conversationMessages.createdAt);
+  }
+
+  async deleteConversationMessages(conversationId: string): Promise<void> {
+    await db.delete(conversationMessages).where(eq(conversationMessages.conversationId, conversationId));
   }
 }
 

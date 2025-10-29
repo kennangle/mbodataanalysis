@@ -441,3 +441,50 @@ export const insertAiGeneratedFileSchema = createInsertSchema(aiGeneratedFiles).
 });
 export type InsertAiGeneratedFile = z.infer<typeof insertAiGeneratedFileSchema>;
 export type AiGeneratedFile = typeof aiGeneratedFiles.$inferSelect;
+
+export const conversations = pgTable(
+  "conversations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id").notNull(),
+    userId: uuid("user_id").notNull(),
+    title: text("title").notNull(), // Auto-generated from first message or user-provided
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    orgIdx: index("conversations_org_idx").on(table.organizationId),
+    userIdx: index("conversations_user_idx").on(table.userId),
+    updatedIdx: index("conversations_updated_idx").on(table.updatedAt),
+  })
+);
+
+export const insertConversationSchema = createInsertSchema(conversations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertConversation = z.infer<typeof insertConversationSchema>;
+export type Conversation = typeof conversations.$inferSelect;
+
+export const conversationMessages = pgTable(
+  "conversation_messages",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    conversationId: uuid("conversation_id").notNull(),
+    role: text("role").notNull(), // "user" or "assistant"
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    conversationIdx: index("conversation_messages_conversation_idx").on(table.conversationId),
+    createdIdx: index("conversation_messages_created_idx").on(table.createdAt),
+  })
+);
+
+export const insertConversationMessageSchema = createInsertSchema(conversationMessages).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertConversationMessage = z.infer<typeof insertConversationMessageSchema>;
+export type ConversationMessage = typeof conversationMessages.$inferSelect;
