@@ -5,13 +5,37 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Send, Loader2, User, Trash2, Paperclip, X, FileText } from "lucide-react";
+import { Sparkles, Send, Loader2, User, Trash2, Paperclip, X, FileText, Download } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
+}
+
+interface DownloadLink {
+  url: string;
+  filename: string;
+}
+
+// Extract download URLs from AI response
+function extractDownloadLinks(content: string): { text: string; downloads: DownloadLink[] } {
+  const downloads: DownloadLink[] = [];
+  const downloadUrlRegex = /\[Download: ([^\]]+)\]\((\/api\/files\/download\/[^)]+)\)/g;
+  
+  let match;
+  while ((match = downloadUrlRegex.exec(content)) !== null) {
+    downloads.push({
+      filename: match[1],
+      url: match[2],
+    });
+  }
+  
+  // Remove download links from text
+  const text = content.replace(downloadUrlRegex, '').trim();
+  
+  return { text, downloads };
 }
 
 interface UploadedFile {
@@ -194,7 +218,40 @@ export function AIQueryInterface() {
                         : "bg-muted"
                     }`}
                   >
-                    <p className="text-sm whitespace-pre-line break-words">{message.content}</p>
+                    {message.role === "assistant" ? (
+                      (() => {
+                        const { text, downloads } = extractDownloadLinks(message.content);
+                        return (
+                          <div className="space-y-3">
+                            <p className="text-sm whitespace-pre-line break-words">{text}</p>
+                            {downloads.length > 0 && (
+                              <div className="flex flex-col gap-2 pt-2 border-t">
+                                {downloads.map((download, idx) => (
+                                  <a
+                                    key={idx}
+                                    href={download.url}
+                                    download={download.filename}
+                                    className="inline-flex"
+                                  >
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="gap-2"
+                                      data-testid={`button-download-${idx}`}
+                                    >
+                                      <Download className="h-4 w-4" />
+                                      Download {download.filename}
+                                    </Button>
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()
+                    ) : (
+                      <p className="text-sm whitespace-pre-line break-words">{message.content}</p>
+                    )}
                   </div>
                   {message.role === "user" && (
                     <div className="flex-shrink-0 mt-1">

@@ -2,6 +2,9 @@ import OpenAI from "openai";
 import { storage } from "./storage";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
+import * as XLSX from "xlsx";
+import { ObjectStorageService } from "./objectStorage";
+import { randomUUID } from "crypto";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || "",
@@ -61,6 +64,38 @@ const QUERY_TOOLS = [
         required: ["sql_query", "explanation"]
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_excel_spreadsheet",
+      description: "Create an Excel spreadsheet file (.xlsx) from structured data. Use this when the user asks to export data, create a spreadsheet, or download results as Excel. The data should be formatted as an array of objects where each object represents a row.",
+      parameters: {
+        type: "object",
+        properties: {
+          filename: {
+            type: "string",
+            description: "The filename for the Excel file (without extension). Example: 'student_roster' or 'revenue_report_2025'"
+          },
+          sheet_name: {
+            type: "string",
+            description: "The name of the worksheet/sheet. Example: 'Students' or 'Revenue Data'"
+          },
+          data: {
+            type: "array",
+            description: "Array of objects where each object represents a row. All objects should have the same keys which become column headers. Example: [{name: 'Alice', age: 25}, {name: 'Bob', age: 30}]",
+            items: {
+              type: "object"
+            }
+          },
+          description: {
+            type: "string",
+            description: "Brief description of what this spreadsheet contains (for the user)"
+          }
+        },
+        required: ["filename", "sheet_name", "data", "description"]
+      }
+    }
   }
 ];
 
@@ -118,13 +153,55 @@ export class OpenAIService {
         });
       }
       
+      if (functionName === "create_excel_spreadsheet") {
+        const { filename, sheet_name, data, description } = args;
+        
+        console.log(`[AI Excel] Creating spreadsheet: ${filename}`);
+        console.log(`[AI Excel] Rows: ${data.length}`);
+        
+        // Create workbook and worksheet
+        const workbook = XLSX.utils.book_new();
+        const worksheet = XLSX.utils.json_to_sheet(data);
+        
+        // Add worksheet to workbook
+        XLSX.utils.book_append_sheet(workbook, worksheet, sheet_name);
+        
+        // Generate Excel buffer
+        const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+        
+        // Save to object storage
+        const objectStorage = new ObjectStorageService();
+        const privateDir = objectStorage.getPrivateObjectDir();
+        const fileId = randomUUID();
+        const safeFilename = filename.replace(/[^a-zA-Z0-9_-]/g, '_');
+        const fullFilename = `${fileId}-${safeFilename}.xlsx`;
+        const storagePath = `${privateDir}/excel/${fullFilename}`;
+        
+        await objectStorage.saveFile(storagePath, excelBuffer);
+        
+        // Generate download URL
+        const downloadUrl = `/api/files/download/${fullFilename}`;
+        
+        console.log(`[AI Excel] Saved to: ${storagePath}`);
+        console.log(`[AI Excel] Download URL: ${downloadUrl}`);
+        
+        return JSON.stringify({
+          success: true,
+          description,
+          filename: `${safeFilename}.xlsx`,
+          download_url: downloadUrl,
+          row_count: data.length,
+          message: `Excel file "${safeFilename}.xlsx" created successfully with ${data.length} rows.`
+        });
+      }
+      
       return JSON.stringify({ 
         error: `Unknown function: ${functionName}` 
       });
     } catch (error) {
       console.error(`Error executing function ${functionName}:`, error);
       return JSON.stringify({ 
-        error: `Failed to execute query: ${error instanceof Error ? error.message : 'Unknown error'}` 
+        error: `Failed to execute ${functionName}: ${error instanceof Error ? error.message : 'Unknown error'}` 
       });
     }
   }
@@ -165,6 +242,8 @@ INSTRUCTIONS:
 - Be creative with SQL - you can use JOINs, aggregations, subqueries, date functions, etc.
 - After getting results, analyze them and provide clear, actionable insights
 - When users ask follow-up questions, refer to conversation history for context
+- When users ask to create a spreadsheet, export to Excel, or download data, use the create_excel_spreadsheet tool
+- You can combine both tools: first query data with execute_sql_query, then create a spreadsheet with the results
 ${fileContext ? `- The user has uploaded files. Use their content to answer questions or cross-reference with database data` : ''}
 
 EXAMPLES:
@@ -191,6 +270,7 @@ You can answer ANY question about the data - just write the appropriate SQL quer
     let finalResponse = "";
     let iterationCount = 0;
     const maxIterations = 5; // Allow multiple tool calls if needed
+    const downloadLinks: Array<{ filename: string; url: string }> = [];
 
     while (iterationCount < maxIterations) {
       const completion = await openai.chat.completions.create({
@@ -225,6 +305,21 @@ You can answer ANY question about the data - just write the appropriate SQL quer
             organizationId
           );
 
+          // Extract download links from Excel creation responses
+          if (functionName === 'create_excel_spreadsheet') {
+            try {
+              const resultData = JSON.parse(result);
+              if (resultData.success && resultData.download_url) {
+                downloadLinks.push({
+                  filename: resultData.filename,
+                  url: resultData.download_url,
+                });
+              }
+            } catch (e) {
+              console.error('Failed to parse Excel creation result:', e);
+            }
+          }
+
           // Add tool response to messages
           messages.push({
             role: "tool",
@@ -240,6 +335,14 @@ You can answer ANY question about the data - just write the appropriate SQL quer
       // No more tool calls, we have final response
       finalResponse = message.content || "No response generated";
       break;
+    }
+
+    // Append download links to the response
+    if (downloadLinks.length > 0) {
+      finalResponse += "\n\n";
+      downloadLinks.forEach(link => {
+        finalResponse += `[Download: ${link.filename}](${link.url})\n`;
+      });
     }
 
     // Save query to database

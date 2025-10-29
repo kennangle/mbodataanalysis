@@ -170,7 +170,8 @@ export function registerFileRoutes(app: Express) {
       }
 
       try {
-        unlinkSync(file.storagePath);
+        const objectStorage = new ObjectStorageService();
+        await objectStorage.deleteFile(file.storagePath);
       } catch (error) {
         console.error("Error deleting file from storage:", error);
       }
@@ -182,6 +183,28 @@ export function registerFileRoutes(app: Express) {
       console.error("Error deleting file:", error);
       res.status(500).json({
         error: error instanceof Error ? error.message : "Failed to delete file",
+      });
+    }
+  });
+
+  app.get("/api/files/download/:filename", requireAuth, async (req, res) => {
+    try {
+      const filename = req.params.filename;
+      
+      const objectStorage = new ObjectStorageService();
+      const privateDir = objectStorage.getPrivateObjectDir();
+      const storagePath = `${privateDir}/excel/${filename}`;
+      
+      const file = await objectStorage.getFile(storagePath);
+      
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      
+      await objectStorage.downloadObject(file, res);
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      res.status(404).json({
+        error: error instanceof Error ? error.message : "File not found",
       });
     }
   });
