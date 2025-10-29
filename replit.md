@@ -49,6 +49,7 @@ This platform is an enterprise-grade analytics solution for Mindbody data, encom
 - **Revenue Import Strategy**: Prioritizes CSV import for historical data due to Mindbody API limitations, with scheduled API imports configured for "Last 1 Day" for ongoing synchronization.
 - **Students Data Management**: Comprehensive student roster management with advanced filtering and Excel export.
 - **Authentication**: Multi-provider support (Email/Password, Google OAuth 2.0) with secure password reset.
+- **User Timezone Preferences**: Customizable timezone selection using react-timezone-select component in Settings page. Users can choose their preferred timezone from a searchable dropdown of all world timezones. Preference is stored in the database and validated server-side using Zod schema.
 - **Database Schema**: Comprehensive PostgreSQL schema optimized for multi-tenancy, with tables for users, organizations, students, classes, visits, sales, import jobs, and sessions.
 
 ### Deployment
