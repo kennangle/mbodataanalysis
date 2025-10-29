@@ -44,6 +44,9 @@ import {
   uploadedFiles,
   type UploadedFile,
   type InsertUploadedFile,
+  aiGeneratedFiles,
+  type AiGeneratedFile,
+  type InsertAiGeneratedFile,
 } from "@shared/schema";
 import { eq, and, desc, gte, lt, lte, sql } from "drizzle-orm";
 import { addDays } from "date-fns";
@@ -216,6 +219,12 @@ export interface IStorage {
   getUploadedFile(id: string): Promise<UploadedFile | undefined>;
   getUploadedFiles(organizationId: string, userId?: string): Promise<UploadedFile[]>;
   deleteUploadedFile(id: string): Promise<void>;
+
+  // AI Generated Files
+  createAiGeneratedFile(file: InsertAiGeneratedFile): Promise<AiGeneratedFile>;
+  getAiGeneratedFileByFilename(filename: string): Promise<AiGeneratedFile | undefined>;
+  getAiGeneratedFiles(organizationId: string, userId?: string): Promise<AiGeneratedFile[]>;
+  deleteAiGeneratedFile(id: string): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -1271,6 +1280,44 @@ export class DbStorage implements IStorage {
 
   async deleteUploadedFile(id: string): Promise<void> {
     await db.delete(uploadedFiles).where(eq(uploadedFiles.id, id));
+  }
+
+  async createAiGeneratedFile(file: InsertAiGeneratedFile): Promise<AiGeneratedFile> {
+    const result = await db.insert(aiGeneratedFiles).values(file).returning();
+    return result[0];
+  }
+
+  async getAiGeneratedFileByFilename(filename: string): Promise<AiGeneratedFile | undefined> {
+    const result = await db
+      .select()
+      .from(aiGeneratedFiles)
+      .where(eq(aiGeneratedFiles.filename, filename))
+      .limit(1);
+    return result[0];
+  }
+
+  async getAiGeneratedFiles(organizationId: string, userId?: string): Promise<AiGeneratedFile[]> {
+    if (userId) {
+      return await db
+        .select()
+        .from(aiGeneratedFiles)
+        .where(
+          and(
+            eq(aiGeneratedFiles.organizationId, organizationId),
+            eq(aiGeneratedFiles.userId, userId)
+          )
+        )
+        .orderBy(desc(aiGeneratedFiles.createdAt));
+    }
+    return await db
+      .select()
+      .from(aiGeneratedFiles)
+      .where(eq(aiGeneratedFiles.organizationId, organizationId))
+      .orderBy(desc(aiGeneratedFiles.createdAt));
+  }
+
+  async deleteAiGeneratedFile(id: string): Promise<void> {
+    await db.delete(aiGeneratedFiles).where(eq(aiGeneratedFiles.id, id));
   }
 }
 

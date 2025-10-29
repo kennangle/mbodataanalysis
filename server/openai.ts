@@ -104,7 +104,8 @@ export class OpenAIService {
   private async executeFunctionCall(
     functionName: string,
     args: any,
-    organizationId: string
+    organizationId: string,
+    userId: string
   ): Promise<string> {
     try {
       if (functionName === "execute_sql_query") {
@@ -196,11 +197,22 @@ export class OpenAIService {
         
         await objectStorage.saveFile(storagePath, excelBuffer);
         
+        // Save file metadata to database for ownership tracking
+        await storage.createAiGeneratedFile({
+          organizationId,
+          userId,
+          filename: fullFilename,
+          originalFilename: `${safeFilename}.xlsx`,
+          storagePath,
+          fileType: 'excel',
+        });
+        
         // Generate download URL
         const downloadUrl = `/api/files/download/${fullFilename}`;
         
         console.log(`[AI Excel] Saved to: ${storagePath}`);
         console.log(`[AI Excel] Download URL: ${downloadUrl}`);
+        console.log(`[AI Excel] Metadata saved for org ${organizationId}, user ${userId}`);
         
         return JSON.stringify({
           success: true,
@@ -319,7 +331,8 @@ You can answer ANY question about the data - just write the appropriate SQL quer
           const result = await this.executeFunctionCall(
             functionName,
             functionArgs,
-            organizationId
+            organizationId,
+            userId
           );
 
           // Extract download links from Excel creation responses

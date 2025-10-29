@@ -415,3 +415,29 @@ export const insertUploadedFileSchema = createInsertSchema(uploadedFiles).omit({
 });
 export type InsertUploadedFile = z.infer<typeof insertUploadedFileSchema>;
 export type UploadedFile = typeof uploadedFiles.$inferSelect;
+
+export const aiGeneratedFiles = pgTable(
+  "ai_generated_files",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id").notNull(),
+    userId: uuid("user_id").notNull(),
+    filename: text("filename").notNull(), // UUID-prefixed filename
+    originalFilename: text("original_filename").notNull(), // User-friendly name
+    storagePath: text("storage_path").notNull(), // Full path in object storage
+    fileType: text("file_type").notNull().default("excel"), // File type
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    orgIdx: index("ai_generated_files_org_idx").on(table.organizationId),
+    userIdx: index("ai_generated_files_user_idx").on(table.userId),
+    filenameIdx: index("ai_generated_files_filename_idx").on(table.filename),
+  })
+);
+
+export const insertAiGeneratedFileSchema = createInsertSchema(aiGeneratedFiles).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertAiGeneratedFile = z.infer<typeof insertAiGeneratedFileSchema>;
+export type AiGeneratedFile = typeof aiGeneratedFiles.$inferSelect;

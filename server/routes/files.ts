@@ -189,16 +189,37 @@ export function registerFileRoutes(app: Express) {
 
   app.get("/api/files/download/:filename", requireAuth, async (req, res) => {
     try {
+      const organizationId = (req.user as User)?.organizationId;
+      const userId = (req.user as User)?.id;
+
+      if (!organizationId || !userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
       const filename = req.params.filename;
       
-      const objectStorage = new ObjectStorageService();
-      const privateDir = objectStorage.getPrivateObjectDir();
-      const storagePath = `${privateDir}/excel/${filename}`;
+      // Look up file metadata to validate ownership
+      const fileMetadata = await storage.getAiGeneratedFileByFilename(filename);
       
-      const file = await objectStorage.getFile(storagePath);
+      if (!fileMetadata) {
+        console.warn(`[Download] File metadata not found for: ${filename}`);
+        return res.status(404).json({ error: "File not found" });
+      }
+      
+      // Security: Validate organization ownership
+      if (fileMetadata.organizationId !== organizationId) {
+        console.warn(`[Download] Organization mismatch - File org: ${fileMetadata.organizationId}, User org: ${organizationId}`);
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      // Download from object storage
+      const objectStorage = new ObjectStorageService();
+      const file = await objectStorage.getFile(fileMetadata.storagePath);
       
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Disposition', `attachment; filename="${fileMetadata.originalFilename}"`);
+      
+      console.log(`[Download] Serving file ${fileMetadata.originalFilename} to user ${userId} from org ${organizationId}`);
       
       await objectStorage.downloadObject(file, res);
     } catch (error) {
