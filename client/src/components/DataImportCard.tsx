@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Upload, CheckCircle, AlertCircle, Loader2, Database, Play, History, ChevronDown, ChevronUp } from "lucide-react";
+import { Upload, CheckCircle, AlertCircle, Loader2, Database, Play, History, ChevronDown, ChevronUp, X } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
@@ -104,6 +104,7 @@ export function DataImportCard() {
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
   const [isLoadingActiveJob, setIsLoadingActiveJob] = useState(true);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isDismissedError, setIsDismissedError] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -595,12 +596,20 @@ export function DataImportCard() {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {scheduledImportConfig?.lastRunError && (
-          <Alert variant="destructive">
+        {scheduledImportConfig?.lastRunError && !isDismissedError && (
+          <Alert variant="destructive" className="relative">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
+            <AlertDescription className="pr-8">
               Last scheduled import failed: {scheduledImportConfig.lastRunError}
             </AlertDescription>
+            <button
+              onClick={() => setIsDismissedError(true)}
+              className="absolute top-3 right-3 p-1 rounded-sm opacity-70 hover:opacity-100 hover-elevate transition-opacity"
+              data-testid="button-dismiss-error"
+              aria-label="Dismiss error"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </Alert>
         )}
         
