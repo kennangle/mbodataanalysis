@@ -529,6 +529,64 @@ export function registerMindbodyRoutes(app: Express) {
     }
   });
 
+  // Test saved Mindbody API credentials
+  app.post("/api/mindbody/test-saved-connection", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const organizationId = user?.organizationId;
+
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      // Get saved credentials from database
+      const org = await storage.getOrganization(organizationId);
+      
+      if (!org?.mindbodyApiKey || !org?.mindbodySiteId || !org?.mindbodyStaffUsername || !org?.mindbodyStaffPassword) {
+        return res.status(400).json({ 
+          success: false,
+          error: "No saved credentials found. Please configure your Mindbody credentials first." 
+        });
+      }
+
+      const mindbodyService = new MindbodyService();
+
+      try {
+        // Test authentication with saved credentials
+        const isValid = await mindbodyService.testCredentials({
+          siteId: org.mindbodySiteId,
+          apiKey: org.mindbodyApiKey,
+          username: org.mindbodyStaffUsername,
+          password: org.mindbodyStaffPassword,
+        });
+
+        if (isValid) {
+          res.json({
+            success: true,
+            message: "Connection successful! Your saved credentials are valid.",
+          });
+        } else {
+          res.status(401).json({
+            success: false,
+            error: "Failed to authenticate with saved credentials",
+          });
+        }
+      } catch (error: any) {
+        // Return 401 for authentication failures
+        const statusCode = error.message?.includes("authenticate") || error.message?.includes("401") ? 401 : 400;
+        res.status(statusCode).json({
+          success: false,
+          error: error.message || "Failed to connect to Mindbody API",
+        });
+      }
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        error: "Internal server error during connection test",
+      });
+    }
+  });
+
   // Test Mindbody API connection with provided credentials
   app.post("/api/mindbody/test-connection", requireAuth, async (req, res) => {
     try {
