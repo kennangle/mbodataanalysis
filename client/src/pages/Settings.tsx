@@ -49,7 +49,12 @@ export default function Settings() {
   });
 
   // Fetch Mindbody credentials
-  const { data: credentials } = useQuery({
+  const { data: credentials } = useQuery<{
+    siteId: string;
+    apiKey: string;
+    staffUsername: string;
+    staffPassword: string;
+  }>({
     queryKey: ["/api/organization/mindbody-credentials"],
     enabled: user?.role === "admin",
   });
@@ -69,10 +74,21 @@ export default function Settings() {
   // Save Mindbody credentials mutation
   const saveCredentialsMutation = useMutation({
     mutationFn: async (data: typeof mindbodyCredentials) => {
-      return await apiRequest("/api/organization/mindbody-credentials", {
+      const response = await fetch("/api/organization/mindbody-credentials", {
         method: "PATCH",
-        body: data,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(data),
       });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to update credentials");
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/organization/mindbody-credentials"] });

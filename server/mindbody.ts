@@ -122,19 +122,31 @@ export class MindbodyService {
     return data.access_token;
   }
 
-  private async getUserToken(): Promise<string> {
+  private async getUserToken(organizationId?: string): Promise<string> {
     // Return cached token if still valid (expires in 60 minutes, we cache for 55)
     const now = Date.now();
     if (this.cachedUserToken && now < this.tokenExpiryTime) {
       return this.cachedUserToken;
     }
 
-    const apiKey = process.env.MINDBODY_API_KEY;
-    const clientSecret = process.env.MINDBODY_CLIENT_SECRET;
-    const siteId = "133";
+    // Get organization credentials if organizationId provided
+    let apiKey = process.env.MINDBODY_API_KEY;
+    let siteId = "133"; // Default fallback
+    let username = "_YHC"; // Default fallback
+    let password = process.env.MINDBODY_CLIENT_SECRET;
 
-    if (!apiKey || !clientSecret) {
-      throw new Error("MINDBODY_API_KEY and MINDBODY_CLIENT_SECRET required");
+    if (organizationId) {
+      const org = await storage.getOrganization(organizationId);
+      if (org?.mindbodyApiKey && org?.mindbodySiteId && org?.mindbodyStaffUsername && org?.mindbodyStaffPassword) {
+        apiKey = org.mindbodyApiKey;
+        siteId = org.mindbodySiteId;
+        username = org.mindbodyStaffUsername;
+        password = org.mindbodyStaffPassword;
+      }
+    }
+
+    if (!apiKey || !password) {
+      throw new Error("Mindbody API credentials not configured. Please set them in Settings.");
     }
 
     // Source credentials username must be prefixed with underscore
@@ -146,15 +158,15 @@ export class MindbodyService {
         SiteId: siteId,
       },
       body: JSON.stringify({
-        Username: "_YHC", // Source name with underscore prefix
-        Password: clientSecret,
+        Username: username,
+        Password: password,
       }),
     });
 
     const responseText = await response.text();
 
     if (!response.ok) {
-      throw new Error(`Failed to authenticate with Mindbody (${response.status})`);
+      throw new Error(`Failed to authenticate with Mindbody (${response.status}). Please check your credentials in Settings.`);
     }
 
     let data;
@@ -177,17 +189,20 @@ export class MindbodyService {
     options: RequestInit = {},
     retryCount: number = 0
   ): Promise<any> {
-    const apiKey = process.env.MINDBODY_API_KEY;
-    const siteId = "133";
     const MAX_RETRIES = 3;
     const REQUEST_TIMEOUT = 60000; // 60 second timeout
 
+    // Get organization credentials
+    const org = await storage.getOrganization(organizationId);
+    const apiKey = org?.mindbodyApiKey || process.env.MINDBODY_API_KEY;
+    const siteId = org?.mindbodySiteId || "133";
+
     if (!apiKey) {
-      throw new Error("MINDBODY_API_KEY not configured");
+      throw new Error("Mindbody API credentials not configured. Please set them in Settings.");
     }
 
     // Get user token for staff-level access
-    const userToken = await this.getUserToken();
+    const userToken = await this.getUserToken(organizationId);
 
     // Create AbortController for timeout
     const controller = new AbortController();
@@ -220,7 +235,7 @@ export class MindbodyService {
           this.tokenExpiryTime = 0;
 
           // Retry once with fresh token
-          const newToken = await this.getUserToken();
+          const newToken = await this.getUserToken(organizationId);
           const retryResponse = await fetch(`${MINDBODY_API_BASE}${endpoint}`, {
             ...options,
             headers: {
@@ -1055,13 +1070,15 @@ export class MindbodyService {
     webhookUrl: string,
     referenceId?: string
   ): Promise<{ subscriptionId: string; messageSignatureKey: string }> {
-    const userToken = await this.getUserToken();
+    const userToken = await this.getUserToken(organizationId);
     const WEBHOOKS_API_BASE = "https://api.mindbodyonline.com/webhooks/v6";
 
     const org = await storage.getOrganization(organizationId);
     if (!org?.mindbodySiteId) {
       throw new Error("Mindbody site ID not configured");
     }
+
+    const apiKey = org?.mindbodyApiKey || process.env.MINDBODY_API_KEY;
 
     const requestBody = {
       eventType,
@@ -1075,7 +1092,7 @@ export class MindbodyService {
     const response = await fetch(`${WEBHOOKS_API_BASE}/subscriptions`, {
       method: "POST",
       headers: {
-        "Api-Key": process.env.MINDBODY_API_KEY || "",
+        "Api-Key": apiKey || "",
         Authorization: `Bearer ${userToken}`,
         "Content-Type": "application/json",
       },
@@ -1108,13 +1125,16 @@ export class MindbodyService {
     organizationId: string,
     mindbodySubscriptionId: string
   ): Promise<void> {
-    const userToken = await this.getUserToken();
+    const userToken = await this.getUserToken(organizationId);
     const WEBHOOKS_API_BASE = "https://api.mindbodyonline.com/webhooks/v6";
+
+    const org = await storage.getOrganization(organizationId);
+    const apiKey = org?.mindbodyApiKey || process.env.MINDBODY_API_KEY;
 
     const response = await fetch(`${WEBHOOKS_API_BASE}/subscriptions/${mindbodySubscriptionId}`, {
       method: "DELETE",
       headers: {
-        "Api-Key": process.env.MINDBODY_API_KEY || "",
+        "Api-Key": apiKey || "",
         Authorization: `Bearer ${userToken}`,
       },
     });
