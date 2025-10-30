@@ -14,6 +14,7 @@ import {
   webhookSubscriptions,
   webhookEvents,
   scheduledImports,
+  pricingOptions,
   type User,
   type InsertUser,
   type Organization,
@@ -53,6 +54,8 @@ import {
   conversationMessages,
   type ConversationMessage,
   type InsertConversationMessage,
+  type PricingOption,
+  type InsertPricingOption,
 } from "@shared/schema";
 import { eq, and, desc, gte, lt, lte, sql } from "drizzle-orm";
 import { addDays } from "date-fns";
@@ -243,6 +246,14 @@ export interface IStorage {
   createConversationMessage(message: InsertConversationMessage): Promise<ConversationMessage>;
   getConversationMessages(conversationId: string): Promise<ConversationMessage[]>;
   deleteConversationMessages(conversationId: string): Promise<void>;
+
+  // Pricing Options
+  getPricingOptions(organizationId: string): Promise<PricingOption[]>;
+  getPricingOption(id: string): Promise<PricingOption | undefined>;
+  createPricingOption(pricingOption: InsertPricingOption): Promise<PricingOption>;
+  updatePricingOption(id: string, pricingOption: Partial<InsertPricingOption>): Promise<void>;
+  deletePricingOption(id: string): Promise<void>;
+  getPricingOptionsCount(organizationId: string): Promise<number>;
 }
 
 export class DbStorage implements IStorage {
@@ -1399,6 +1410,50 @@ export class DbStorage implements IStorage {
 
   async deleteConversationMessages(conversationId: string): Promise<void> {
     await db.delete(conversationMessages).where(eq(conversationMessages.conversationId, conversationId));
+  }
+
+  async getPricingOptions(organizationId: string): Promise<PricingOption[]> {
+    return await db
+      .select()
+      .from(pricingOptions)
+      .where(eq(pricingOptions.organizationId, organizationId))
+      .orderBy(pricingOptions.name);
+  }
+
+  async getPricingOption(id: string): Promise<PricingOption | undefined> {
+    const result = await db
+      .select()
+      .from(pricingOptions)
+      .where(eq(pricingOptions.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async createPricingOption(pricingOption: InsertPricingOption): Promise<PricingOption> {
+    const result = await db.insert(pricingOptions).values(pricingOption).returning();
+    return result[0];
+  }
+
+  async updatePricingOption(
+    id: string,
+    pricingOption: Partial<InsertPricingOption>
+  ): Promise<void> {
+    await db
+      .update(pricingOptions)
+      .set({ ...pricingOption, updatedAt: new Date() })
+      .where(eq(pricingOptions.id, id));
+  }
+
+  async deletePricingOption(id: string): Promise<void> {
+    await db.delete(pricingOptions).where(eq(pricingOptions.id, id));
+  }
+
+  async getPricingOptionsCount(organizationId: string): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(pricingOptions)
+      .where(eq(pricingOptions.organizationId, organizationId));
+    return result[0]?.count || 0;
   }
 }
 
