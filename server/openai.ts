@@ -42,6 +42,12 @@ DATABASE SCHEMA:
    - id (uuid), organization_id (uuid), student_id (uuid, FK to students)
    - amount (decimal), type, description, transaction_date, created_at
 
+6. pricing_options - Service/product pricing from Mindbody
+   - id (uuid), organization_id (uuid), mindbody_service_id, name, description
+   - online_description, price (decimal), online_price (decimal), tax_rate (decimal)
+   - tax_included (boolean), program_id, default_time_length (integer minutes)
+   - type, count, created_at, updated_at
+
 IMPORTANT: All queries must include "WHERE organization_id = $1" for data isolation.
 Use JOINs to combine tables. Aggregate functions (COUNT, SUM, AVG) are available.
 Use PostgreSQL functions like EXTRACT(YEAR FROM date), TO_CHAR(), etc.
@@ -53,7 +59,7 @@ const QUERY_TOOLS = [
     type: "function",
     function: {
       name: "execute_sql_query",
-      description: "Execute a custom SQL query to retrieve data from the database. You can query students, classes, class_schedules, attendance, and revenue tables. Always include WHERE organization_id = $1 for security.",
+      description: "Execute a custom SQL query to retrieve data from the database. You can query students, classes, class_schedules, attendance, revenue, and pricing_options tables. Always include WHERE organization_id = $1 for security.",
       parameters: {
         type: "object",
         properties: {
