@@ -601,8 +601,9 @@ export class MindbodyService {
     
     // Process students in parallel batches for speed
     const CLIENTS_PER_BATCH = 10; // Process 10 clients at once
-    const startDateStr = startDate.toISOString();
-    const endDateStr = endDate.toISOString();
+    // Mindbody API requires YYYY-MM-DD format, not full ISO timestamp
+    const startDateStr = startDate.toISOString().split("T")[0];
+    const endDateStr = endDate.toISOString().split("T")[0];
     
     let imported = 0;
     let skippedNoSchedule = 0;
