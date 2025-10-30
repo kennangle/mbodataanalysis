@@ -289,7 +289,13 @@ EXAMPLES:
 
 NOTES:
 - Use ILIKE for case-insensitive text matching (e.g., finding "intro" in descriptions)
-- The description field contains product/service names like "Intro - 30 Days - SPECIAL" for intro offers
+- The description field contains product/service names
+- Intro offers specifically include these products:
+  * "Intro Offer - 30 Days - (EYES ONLY) New Student" ($75)
+  * "Intro Offer - 30 Days - For New Students" ($75)
+  * "Intro Offer - Upgrade from $20 Drop In Class" ($55)
+  * "Intro Offer - Upgrade from single class $42" ($42)
+  * And any description containing "Intro" (case-insensitive)
 - Use INTERVAL for date calculations (e.g., CURRENT_DATE - INTERVAL '60 days' for last 60 days)
 
 You can answer ANY question about the data - just write the appropriate SQL query!${fileContext ? `\n\nUPLOADED FILE DATA:\n${fileContext}` : ''}`
