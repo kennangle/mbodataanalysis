@@ -5,10 +5,18 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Send, Loader2, User, Trash2, Paperclip, X, FileText, Download } from "lucide-react";
+import { Sparkles, Send, Loader2, User, Trash2, Paperclip, X, FileText, Download, Mic, MicOff } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ChatHistorySidebar } from "./ChatHistorySidebar";
+
+// Type declarations for Web Speech API
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
 
 interface Message {
   role: "user" | "assistant";
@@ -59,10 +67,13 @@ export function AIQueryInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [attachedFileIds, setAttachedFileIds] = useState<string[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
 
   const { data: uploadedFiles = [] } = useQuery<UploadedFile[]>({
     queryKey: ["/api/files"],
@@ -227,6 +238,109 @@ export function AIQueryInterface() {
       e.preventDefault();
       if (query.trim() && !mutation.isPending) {
         mutation.mutate(query);
+      }
+    }
+  };
+
+  // Initialize speech recognition
+  useEffect(() => {
+    if (typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = () => {
+        setIsListening(true);
+      };
+
+      recognition.onresult = (event: any) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript + ' ';
+          } else {
+            interimTranscript += transcript;
+          }
+        }
+
+        if (finalTranscript) {
+          setQuery(prev => (prev + ' ' + finalTranscript).trim());
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        setIsRecording(false);
+        setIsListening(false);
+        
+        if (event.error === 'not-allowed') {
+          toast({
+            variant: "destructive",
+            title: "Microphone access denied",
+            description: "Please allow microphone access in your browser settings to use voice input.",
+          });
+        } else if (event.error !== 'aborted') {
+          toast({
+            variant: "destructive",
+            title: "Voice input error",
+            description: "There was an error with voice recognition. Please try again.",
+          });
+        }
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+        if (isRecording) {
+          // If still recording, restart recognition (it stopped automatically)
+          try {
+            recognition.start();
+          } catch (e) {
+            setIsRecording(false);
+          }
+        }
+      };
+
+      recognitionRef.current = recognition;
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, [isRecording, toast]);
+
+  const toggleVoiceInput = () => {
+    if (!recognitionRef.current) {
+      toast({
+        variant: "destructive",
+        title: "Voice input not supported",
+        description: "Your browser doesn't support voice input. Please try Chrome, Edge, or Safari.",
+      });
+      return;
+    }
+
+    if (isRecording) {
+      recognitionRef.current.stop();
+      setIsRecording(false);
+      setIsListening(false);
+    } else {
+      try {
+        recognitionRef.current.start();
+        setIsRecording(true);
+      } catch (error) {
+        console.error('Error starting recognition:', error);
+        toast({
+          variant: "destructive",
+          title: "Could not start voice input",
+          description: "Please try again or check your microphone permissions.",
+        });
       }
     }
   };
@@ -400,6 +514,32 @@ export function AIQueryInterface() {
                   <Paperclip className="h-4 w-4" />
                 )}
                 Attach File
+              </Button>
+              <Button
+                type="button"
+                variant={isRecording ? "destructive" : "outline"}
+                size="sm"
+                onClick={toggleVoiceInput}
+                disabled={mutation.isPending}
+                className="gap-2"
+                data-testid="button-voice-input"
+              >
+                {isListening ? (
+                  <>
+                    <Mic className="h-4 w-4 animate-pulse" />
+                    Listening...
+                  </>
+                ) : isRecording ? (
+                  <>
+                    <MicOff className="h-4 w-4" />
+                    Stop
+                  </>
+                ) : (
+                  <>
+                    <Mic className="h-4 w-4" />
+                    Voice
+                  </>
+                )}
               </Button>
               <div className="flex flex-col gap-0.5">
                 <span className="text-xs text-muted-foreground">
