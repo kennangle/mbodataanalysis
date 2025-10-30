@@ -15,6 +15,7 @@ import { registerBackupRoutes } from "./backups";
 import { registerKPIRoutes } from "./kpi";
 import { registerFileRoutes } from "./files";
 import { registerConversationRoutes } from "./conversations";
+import { registerPricingOptionRoutes } from "./pricing-options";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Register all route modules
@@ -33,6 +34,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerKPIRoutes(app);
   registerFileRoutes(app);
   registerConversationRoutes(app);
+  registerPricingOptionRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;
