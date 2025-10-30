@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { AppHeader } from "@/components/AppHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { LogOut, Download, Database, Code2, CheckCircle, AlertTriangle, Loader2, Globe, Key } from "lucide-react";
+import { Download, Database, Code2, CheckCircle, AlertTriangle, Loader2, Globe, Key } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import TimezoneSelect, { type ITimezone } from "react-timezone-select";
@@ -17,7 +17,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 
 export default function Settings() {
-  const { user, isLoading, logout, refreshUser } = useAuth();
+  const { user, isLoading, refreshUser, logout } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isDownloadingDb, setIsDownloadingDb] = useState(false);
@@ -206,11 +206,6 @@ export default function Settings() {
     "--sidebar-width-icon": "3rem",
   };
 
-  const handleLogout = async () => {
-    await logout();
-    setLocation("/login");
-  };
-
   const handleDatabaseBackup = async () => {
     setIsDownloadingDb(true);
     try {
@@ -374,23 +369,7 @@ export default function Settings() {
       <div className="flex h-screen w-full">
         <AppSidebar />
         <div className="flex flex-col flex-1 overflow-hidden">
-          <header className="flex items-center justify-between gap-4 p-4 border-b">
-            <div className="flex items-center gap-2">
-              <SidebarTrigger data-testid="button-sidebar-toggle" />
-              <h1 className="text-lg font-semibold">Settings</h1>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleLogout}
-                data-testid="button-logout"
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
-              <ThemeToggle />
-            </div>
-          </header>
+          <AppHeader title="Settings" />
           <main className="flex-1 overflow-y-auto p-6">
             <div className="max-w-4xl mx-auto space-y-6">
               {/* Account Information */}
@@ -837,7 +816,14 @@ export default function Settings() {
                         Sign out of your account on this device
                       </p>
                     </div>
-                    <Button variant="outline" onClick={handleLogout} data-testid="button-logout">
+                    <Button 
+                      variant="outline" 
+                      onClick={async () => {
+                        await logout();
+                        setLocation("/login");
+                      }} 
+                      data-testid="button-logout-settings"
+                    >
                       Sign Out
                     </Button>
                   </div>

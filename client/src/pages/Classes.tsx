@@ -2,13 +2,13 @@ import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { useQuery } from "@tanstack/react-query";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { AppHeader } from "@/components/AppHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Calendar, Search, Plus, LogOut } from "lucide-react";
+import { Calendar, Search, Plus } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -30,7 +30,7 @@ interface Class {
 }
 
 export default function Classes() {
-  const { user, isLoading, logout } = useAuth();
+  const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
   const [search, setSearch] = useState("");
 
@@ -73,26 +73,7 @@ export default function Classes() {
       <div className="flex h-screen w-full">
         <AppSidebar />
         <div className="flex flex-col flex-1 overflow-hidden">
-          <header className="flex items-center justify-between gap-4 p-4 border-b">
-            <div className="flex items-center gap-2">
-              <SidebarTrigger data-testid="button-sidebar-toggle" />
-              <h1 className="text-lg font-semibold">Classes</h1>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={async () => {
-                  await logout();
-                  setLocation("/login");
-                }}
-                data-testid="button-logout"
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
-              <ThemeToggle />
-            </div>
-          </header>
+          <AppHeader title="Classes" />
           <main className="flex-1 overflow-y-auto p-6">
             <div className="max-w-screen-2xl mx-auto">
               <Card>

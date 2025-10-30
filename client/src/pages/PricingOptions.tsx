@@ -1,15 +1,13 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { Button } from "@/components/ui/button";
-import { LogOut } from "lucide-react";
+import { AppHeader } from "@/components/AppHeader";
 import { PricingOptionsTable } from "@/components/PricingOptionsTable";
 
 export default function PricingOptions() {
-  const { user, isLoading, logout } = useAuth();
+  const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
@@ -40,26 +38,7 @@ export default function PricingOptions() {
       <div className="flex h-screen w-full">
         <AppSidebar />
         <div className="flex flex-col flex-1 overflow-hidden">
-          <header className="flex items-center justify-between gap-4 p-4 border-b">
-            <div className="flex items-center gap-2">
-              <SidebarTrigger data-testid="button-sidebar-toggle" />
-              <h1 className="text-lg font-semibold">Pricing Options</h1>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={async () => {
-                  await logout();
-                  setLocation("/login");
-                }}
-                data-testid="button-logout"
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
-              <ThemeToggle />
-            </div>
-          </header>
+          <AppHeader title="Pricing Options" />
           <main className="flex-1 overflow-y-auto p-6">
             <div className="max-w-screen-2xl mx-auto">
               <PricingOptionsTable />
