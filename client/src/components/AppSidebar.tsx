@@ -11,6 +11,7 @@ import {
   LogOut,
   TrendingUp,
   FileWarning,
+  Stethoscope,
 } from "lucide-react";
 import {
   Sidebar,
@@ -44,9 +45,14 @@ const menuItems = [
       { title: "Students", url: "/students", icon: Users },
       { title: "Classes", url: "/classes", icon: Calendar },
       { title: "Reports", url: "/reports", icon: FileText },
+      { title: "Import Data", url: "/import", icon: Database },
+    ],
+  },
+  {
+    title: "Diagnostics",
+    items: [
       { title: "Data Coverage", url: "/data-coverage", icon: Database },
       { title: "Skipped Records", url: "/skipped-records", icon: FileWarning },
-      { title: "Import Data", url: "/import", icon: Database },
     ],
   },
   {
