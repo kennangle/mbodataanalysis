@@ -104,7 +104,6 @@ export function DataImportCard() {
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
   const [isLoadingActiveJob, setIsLoadingActiveJob] = useState(true);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [isBackgroundJobsOpen, setIsBackgroundJobsOpen] = useState(true);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -116,12 +115,6 @@ export function DataImportCard() {
   // Fetch import history - always enabled to detect running imports
   const { data: importHistory = [] } = useQuery<JobStatus[]>({
     queryKey: ["/api/mindbody/import/history"],
-  });
-  
-  // Fetch all active background jobs (running/pending)
-  const { data: backgroundJobs = [], refetch: refetchBackgroundJobs } = useQuery<JobStatus[]>({
-    queryKey: ["/api/mindbody/import/active-jobs"],
-    refetchInterval: 5000, // Poll every 5 seconds
   });
   
   // Check if there's a running/pending import in history
@@ -1087,89 +1080,6 @@ export function DataImportCard() {
           </div>
         )}
 
-        {/* Background Jobs - Show all running/pending jobs */}
-        {backgroundJobs.length > 0 && (
-          <Collapsible
-            open={isBackgroundJobsOpen}
-            onOpenChange={setIsBackgroundJobsOpen}
-            className="mt-6 pt-6 border-t"
-          >
-            <CollapsibleTrigger asChild>
-              <Button
-                variant="ghost"
-                className="w-full flex items-center justify-between p-2 hover-elevate"
-                data-testid="button-toggle-background-jobs"
-              >
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                  <span className="text-sm font-medium">Active Background Jobs ({backgroundJobs.length})</span>
-                </div>
-                {isBackgroundJobsOpen ? (
-                  <ChevronUp className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="mt-3 space-y-3">
-              {backgroundJobs.map((job) => {
-                const progress = calculateJobProgress(job.progress);
-                const statusColor = getStatusColor(job.status);
-                
-                return (
-                  <div
-                    key={job.id}
-                    className="p-3 rounded-lg border bg-card"
-                    data-testid={`background-job-${job.id}`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant={statusColor} data-testid={`badge-status-${job.status}`}>
-                            {job.status}
-                          </Badge>
-                          {job.createdAt && (
-                            <span className="text-xs text-muted-foreground">
-                              Started {formatDateTime(job.createdAt, timezone)}
-                            </span>
-                          )}
-                        </div>
-                        
-                        {job.startDate && job.endDate && (
-                          <div className="text-sm">
-                            <span className="text-muted-foreground">
-                              Date Range: {formatDateShort(job.startDate, timezone)} -{" "}
-                              {formatDateShort(job.endDate, timezone)}
-                            </span>
-                          </div>
-                        )}
-                        
-                        <div className="text-sm">
-                          <span className="text-muted-foreground">
-                            Data Types: {job.dataTypes.map(getDisplayName).join(", ")}
-                          </span>
-                        </div>
-                        
-                        {progress > 0 && (
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-muted-foreground">Progress</span>
-                              <span className="font-medium">{progress}%</span>
-                            </div>
-                            <Progress value={progress} className="h-1.5" />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-              <p className="text-xs text-muted-foreground text-center pt-2">
-                These jobs are processing in the background. You cannot start new imports while these are running.
-              </p>
-            </CollapsibleContent>
-          </Collapsible>
-        )}
 
         {/* Import History - Show completed/failed/cancelled imports (exclude running/pending which are shown above) */}
         {(() => {
