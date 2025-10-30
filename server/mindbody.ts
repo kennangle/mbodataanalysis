@@ -595,76 +595,92 @@ export class MindbodyService {
     );
     console.log(`[Visits] Loaded ${studentsByMindbodyId.size} students into lookup map`);
     
-    // Fetch visits directly by date range (OPTIMIZED - no per-student iteration!)
-    const PAGE_SIZE = 200;
-
-    // Fetch ONE page of visits per iteration (resumable pagination)
-    // Using /class/classvisits endpoint which supports date range filtering
-    // Mindbody API requires full ISO 8601 format with timezone (YYYY-MM-DDTHH:mm:ssZ)
-    const startDateStr = startDate.toISOString(); // Full ISO format
-    const endDateStr = endDate.toISOString(); // Full ISO format
-    const { results: visits, totalResults, hasMore } = await this.fetchPage<MindbodyVisit>(
-      organizationId,
-      `/class/classvisits?StartDate=${startDateStr}&EndDate=${endDateStr}`,
-      "ClassVisits",
-      startOffset,
-      PAGE_SIZE
-    );
+    // Convert Map to Array for iteration
+    const studentsArray = Array.from(allStudents).filter(s => s.mindbodyClientId);
+    const totalStudents = studentsArray.length;
     
-    console.log(`[Visits] Fetched ${visits.length} visits (offset ${startOffset}, total ${totalResults})`);
+    // Process students in parallel batches for speed
+    const CLIENTS_PER_BATCH = 10; // Process 10 clients at once
+    const startDateStr = startDate.toISOString();
+    const endDateStr = endDate.toISOString();
     
     let imported = 0;
-    let skippedNoStudent = 0;
     let skippedNoSchedule = 0;
     
-    // Process this batch of visits
-    for (const visit of visits) {
-      try {
-        if (!visit.ClientId || !visit.StartDateTime) {
-          continue;
+    // Get batch of clients to process (resumable)
+    const batchEnd = Math.min(startOffset + CLIENTS_PER_BATCH, totalStudents);
+    const clientBatch = studentsArray.slice(startOffset, batchEnd);
+    
+    console.log(`[Visits] Processing clients ${startOffset}-${batchEnd} of ${totalStudents}`);
+    
+    // Process clients in parallel using /client/clientvisits endpoint
+    const results = await Promise.allSettled(
+      clientBatch.map(async (student) => {
+        try {
+          const { results: visits } = await this.fetchPage<MindbodyVisit>(
+            organizationId,
+            `/client/clientvisits?ClientId=${student.mindbodyClientId}&StartDate=${startDateStr}&EndDate=${endDateStr}`,
+            "Visits",
+            0,
+            1000 // Get up to 1000 visits for this client in date range
+          );
+          
+          let clientImported = 0;
+          let clientSkipped = 0;
+          
+          for (const visit of visits) {
+            try {
+              if (!visit.StartDateTime) continue;
+              
+              // Match visit to schedule by start time
+              const visitStartTime = new Date(visit.StartDateTime).toISOString();
+              const schedule = schedulesByTime.get(visitStartTime);
+              
+              if (!schedule) {
+                clientSkipped++;
+                continue;
+              }
+              
+              await storage.createAttendance({
+                organizationId,
+                studentId: student.id,
+                scheduleId: schedule.id,
+                attendedAt: new Date(visit.StartDateTime),
+                status: visit.SignedIn ? "attended" : "noshow",
+              });
+              
+              clientImported++;
+            } catch (error) {
+              console.error(`[Visits] Failed to import visit for client ${student.mindbodyClientId}:`, error);
+            }
+          }
+          
+          return { imported: clientImported, skipped: clientSkipped };
+        } catch (error) {
+          // Log error but don't fail entire batch
+          console.error(`[Visits] Failed to fetch visits for client ${student.mindbodyClientId}:`, error);
+          return { imported: 0, skipped: 0 };
         }
-        
-        // Match visit to student by Mindbody Client ID
-        const student = studentsByMindbodyId.get(visit.ClientId);
-        if (!student) {
-          skippedNoStudent++;
-          continue;
-        }
-        
-        // Match visit to schedule by start time
-        const visitStartTime = new Date(visit.StartDateTime).toISOString();
-        const schedule = schedulesByTime.get(visitStartTime);
-        
-        if (!schedule) {
-          skippedNoSchedule++;
-          continue;
-        }
-        
-        // Create attendance record
-        await storage.createAttendance({
-          organizationId,
-          studentId: student.id,
-          scheduleId: schedule.id,
-          attendedAt: new Date(visit.StartDateTime),
-          status: visit.SignedIn ? "attended" : "noshow",
-        });
-        
-        imported++;
-      } catch (error) {
-        console.error(`[Visits] Failed to import visit:`, error);
+      })
+    );
+    
+    // Aggregate results from parallel processing
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        imported += result.value.imported;
+        skippedNoSchedule += result.value.skipped;
       }
     }
     
-    const nextOffset = startOffset + visits.length;
-    const completed = !hasMore || nextOffset >= totalResults;
+    const completed = batchEnd >= totalStudents;
+    const nextOffset = completed ? 0 : batchEnd;
     
-    // Update progress (use offset as current position)
-    await onProgress(nextOffset, totalResults);
+    // Update progress
+    await onProgress(batchEnd, totalStudents);
     
-    console.log(`[Visits] Batch complete: imported ${imported}, skipped ${skippedNoStudent} (no student), ${skippedNoSchedule} (no schedule)`);
-    console.log(`[Visits] Progress: ${nextOffset}/${totalResults} visits processed, completed=${completed}`);
+    console.log(`[Visits] Batch complete: imported ${imported}, skipped ${skippedNoSchedule} (no schedule)`);
+    console.log(`[Visits] Progress: ${batchEnd}/${totalStudents} clients processed, completed=${completed}`);
     
-    // Return with nextStudentIndex for compatibility (but we're using offset-based pagination now)
     return { imported, nextStudentIndex: nextOffset, completed, schedulesByTime };
   }
 
