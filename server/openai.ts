@@ -284,6 +284,13 @@ EXAMPLES:
 - "How many classes in 2025?" → SELECT COUNT(*) FROM class_schedules WHERE organization_id = $1 AND EXTRACT(YEAR FROM start_time) = 2025
 - "Top 10 students by attendance?" → SELECT s.first_name, s.last_name, COUNT(*) as classes FROM attendance a JOIN students s ON a.student_id = s.id WHERE a.organization_id = $1 AND a.status = 'attended' GROUP BY s.id, s.first_name, s.last_name ORDER BY classes DESC LIMIT 10
 - "Revenue this month?" → SELECT SUM(amount) FROM revenue WHERE organization_id = $1 AND EXTRACT(YEAR FROM transaction_date) = EXTRACT(YEAR FROM CURRENT_DATE) AND EXTRACT(MONTH FROM transaction_date) = EXTRACT(MONTH FROM CURRENT_DATE)
+- "How many intro offers sold?" → SELECT COUNT(*) FROM revenue WHERE organization_id = $1 AND description ILIKE '%intro%'
+- "Intro offers in last 60 days?" → SELECT COUNT(*) FROM revenue WHERE organization_id = $1 AND description ILIKE '%intro%' AND transaction_date >= CURRENT_DATE - INTERVAL '60 days'
+
+NOTES:
+- Use ILIKE for case-insensitive text matching (e.g., finding "intro" in descriptions)
+- The description field contains product/service names like "Intro - 30 Days - SPECIAL" for intro offers
+- Use INTERVAL for date calculations (e.g., CURRENT_DATE - INTERVAL '60 days' for last 60 days)
 
 You can answer ANY question about the data - just write the appropriate SQL query!${fileContext ? `\n\nUPLOADED FILE DATA:\n${fileContext}` : ''}`
       }
