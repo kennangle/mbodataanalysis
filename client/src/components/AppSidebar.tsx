@@ -36,14 +36,9 @@ const menuItems = [
     title: "Overview",
     items: [
       { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+      { title: "AI Powered Insights", url: "/ai-query", icon: Sparkles },
       { title: "Analytics", url: "/analytics", icon: BarChart3 },
       { title: "KPIs", url: "/kpi", icon: TrendingUp },
-    ],
-  },
-  {
-    title: "AI Insights",
-    items: [
-      { title: "AI Powered Insights", url: "/ai-query", icon: Sparkles },
     ],
   },
   {
