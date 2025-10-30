@@ -181,4 +181,71 @@ export function registerUserRoutes(app: Express) {
       res.status(500).json({ error: "Failed to update timezone" });
     }
   });
+
+  // Update organization Mindbody credentials (admin only)
+  app.patch("/api/organization/mindbody-credentials", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const organizationId = user?.organizationId;
+
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      if (user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { siteId, apiKey, staffUsername, staffPassword } = req.body;
+
+      if (!siteId || !apiKey || !staffUsername || !staffPassword) {
+        return res.status(400).json({ error: "All Mindbody credentials are required" });
+      }
+
+      await storage.updateOrganizationMindbodyCredentials(
+        organizationId,
+        siteId,
+        apiKey,
+        staffUsername,
+        staffPassword
+      );
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to update Mindbody credentials:", error);
+      res.status(500).json({ error: "Failed to update Mindbody credentials" });
+    }
+  });
+
+  // Get organization Mindbody credentials (admin only)
+  app.get("/api/organization/mindbody-credentials", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const organizationId = user?.organizationId;
+
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      if (user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const org = await storage.getOrganization(organizationId);
+      
+      if (!org) {
+        return res.status(404).json({ error: "Organization not found" });
+      }
+
+      res.json({
+        siteId: org.mindbodySiteId || "",
+        apiKey: org.mindbodyApiKey || "",
+        staffUsername: org.mindbodyStaffUsername || "",
+        staffPassword: org.mindbodyStaffPassword || "",
+      });
+    } catch (error) {
+      console.error("Failed to fetch Mindbody credentials:", error);
+      res.status(500).json({ error: "Failed to fetch Mindbody credentials" });
+    }
+  });
 }

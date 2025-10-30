@@ -38,6 +38,9 @@ export const organizations = pgTable("organizations", {
   mindbodyAccessToken: text("mindbody_access_token"),
   mindbodyRefreshToken: text("mindbody_refresh_token"),
   mindbodySiteId: text("mindbody_site_id"),
+  mindbodyApiKey: text("mindbody_api_key"),
+  mindbodyStaffUsername: text("mindbody_staff_username"),
+  mindbodyStaffPassword: text("mindbody_staff_password"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

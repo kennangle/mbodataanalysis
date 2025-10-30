@@ -115,6 +115,13 @@ export interface IStorage {
   createOrganization(org: InsertOrganization): Promise<Organization>;
   updateOrganizationTokens(id: string, accessToken: string, refreshToken: string): Promise<void>;
   updateOrganizationSiteId(id: string, siteId: string): Promise<void>;
+  updateOrganizationMindbodyCredentials(
+    id: string, 
+    siteId: string, 
+    apiKey: string, 
+    staffUsername: string, 
+    staffPassword: string
+  ): Promise<void>;
 
   getStudents(
     organizationId: string,
@@ -351,6 +358,24 @@ export class DbStorage implements IStorage {
     await db
       .update(organizations)
       .set({ mindbodySiteId: siteId })
+      .where(eq(organizations.id, id));
+  }
+
+  async updateOrganizationMindbodyCredentials(
+    id: string,
+    siteId: string,
+    apiKey: string,
+    staffUsername: string,
+    staffPassword: string
+  ): Promise<void> {
+    await db
+      .update(organizations)
+      .set({
+        mindbodySiteId: siteId,
+        mindbodyApiKey: apiKey,
+        mindbodyStaffUsername: staffUsername,
+        mindbodyStaffPassword: staffPassword,
+      })
       .where(eq(organizations.id, id));
   }
 
