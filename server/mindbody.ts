@@ -60,8 +60,7 @@ function getRedirectUri(): string {
 }
 
 export class MindbodyService {
-  private cachedUserToken: string | null = null;
-  private tokenExpiryTime: number = 0;
+  private tokenCache: Map<string, { token: string; expiryTime: number }> = new Map();
   private apiCallCounter: number = 0;
 
   async exchangeCodeForTokens(code: string, organizationId: string): Promise<void> {
@@ -99,11 +98,13 @@ export class MindbodyService {
       throw new Error("No refresh token available");
     }
 
+    const apiKey = org.mindbodyApiKey || process.env.MINDBODY_API_KEY;
+
     const response = await fetch(`${MINDBODY_API_BASE}/usertoken/issue`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Api-Key": process.env.MINDBODY_API_KEY || "",
+        "Api-Key": apiKey || "",
       },
       body: JSON.stringify({
         refresh_token: org.mindbodyRefreshToken,
@@ -123,27 +124,23 @@ export class MindbodyService {
   }
 
   private async getUserToken(organizationId?: string): Promise<string> {
-    // Return cached token if still valid (expires in 60 minutes, we cache for 55)
+    if (!organizationId) {
+      throw new Error("Organization ID required for authentication");
+    }
+
+    // Check cached token for this organization
     const now = Date.now();
-    if (this.cachedUserToken && now < this.tokenExpiryTime) {
-      return this.cachedUserToken;
+    const cached = this.tokenCache.get(organizationId);
+    if (cached && now < cached.expiryTime) {
+      return cached.token;
     }
 
-    // Get organization credentials if organizationId provided
-    let apiKey = process.env.MINDBODY_API_KEY;
-    let siteId = "133"; // Default fallback
-    let username = "_YHC"; // Default fallback
-    let password = process.env.MINDBODY_CLIENT_SECRET;
-
-    if (organizationId) {
-      const org = await storage.getOrganization(organizationId);
-      if (org?.mindbodyApiKey && org?.mindbodySiteId && org?.mindbodyStaffUsername && org?.mindbodyStaffPassword) {
-        apiKey = org.mindbodyApiKey;
-        siteId = org.mindbodySiteId;
-        username = org.mindbodyStaffUsername;
-        password = org.mindbodyStaffPassword;
-      }
-    }
+    // Get organization credentials
+    const org = await storage.getOrganization(organizationId);
+    let apiKey = org?.mindbodyApiKey || process.env.MINDBODY_API_KEY;
+    let siteId = org?.mindbodySiteId || "133";
+    let username = org?.mindbodyStaffUsername || "_YHC";
+    let password = org?.mindbodyStaffPassword || process.env.MINDBODY_CLIENT_SECRET;
 
     if (!apiKey || !password) {
       throw new Error("Mindbody API credentials not configured. Please set them in Settings.");
@@ -176,11 +173,18 @@ export class MindbodyService {
       throw new Error(`Mindbody auth returned invalid JSON`);
     }
 
-    // Cache token for 55 minutes (expires in 60)
-    this.cachedUserToken = data.AccessToken;
-    this.tokenExpiryTime = now + 55 * 60 * 1000;
+    // Cache token per organization for 55 minutes (expires in 60)
+    this.tokenCache.set(organizationId, {
+      token: data.AccessToken,
+      expiryTime: now + 55 * 60 * 1000,
+    });
 
     return data.AccessToken;
+  }
+
+  // Clear cached token for an organization (call when credentials change)
+  clearTokenCache(organizationId: string): void {
+    this.tokenCache.delete(organizationId);
   }
 
   async makeAuthenticatedRequest(
@@ -231,8 +235,7 @@ export class MindbodyService {
 
         // Clear cached token on authentication errors and retry once
         if (response.status === 401) {
-          this.cachedUserToken = null;
-          this.tokenExpiryTime = 0;
+          this.clearTokenCache(organizationId);
 
           // Retry once with fresh token
           const newToken = await this.getUserToken(organizationId);

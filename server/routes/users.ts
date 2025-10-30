@@ -198,16 +198,25 @@ export function registerUserRoutes(app: Express) {
 
       const { siteId, apiKey, staffUsername, staffPassword } = req.body;
 
-      if (!siteId || !apiKey || !staffUsername || !staffPassword) {
-        return res.status(400).json({ error: "All Mindbody credentials are required" });
+      // Get existing credentials
+      const org = await storage.getOrganization(organizationId);
+      
+      // Use existing values if not provided (for partial updates)
+      const finalSiteId = siteId || org?.mindbodySiteId;
+      const finalApiKey = apiKey || org?.mindbodyApiKey;
+      const finalUsername = staffUsername || org?.mindbodyStaffUsername;
+      const finalPassword = staffPassword || org?.mindbodyStaffPassword;
+
+      if (!finalSiteId || !finalApiKey || !finalUsername || !finalPassword) {
+        return res.status(400).json({ error: "All Mindbody credentials are required (Site ID, API Key, Username, Password)" });
       }
 
       await storage.updateOrganizationMindbodyCredentials(
         organizationId,
-        siteId,
-        apiKey,
-        staffUsername,
-        staffPassword
+        finalSiteId,
+        finalApiKey,
+        finalUsername,
+        finalPassword
       );
 
       res.json({ success: true });
@@ -237,11 +246,13 @@ export function registerUserRoutes(app: Express) {
         return res.status(404).json({ error: "Organization not found" });
       }
 
+      // Mask sensitive credentials - only show if they exist
       res.json({
         siteId: org.mindbodySiteId || "",
-        apiKey: org.mindbodyApiKey || "",
+        apiKey: org.mindbodyApiKey ? "••••••••" : "",
         staffUsername: org.mindbodyStaffUsername || "",
-        staffPassword: org.mindbodyStaffPassword || "",
+        staffPassword: org.mindbodyStaffPassword ? "••••••••" : "",
+        hasCredentials: !!(org.mindbodyApiKey && org.mindbodySiteId && org.mindbodyStaffUsername && org.mindbodyStaffPassword),
       });
     } catch (error) {
       console.error("Failed to fetch Mindbody credentials:", error);

@@ -54,19 +54,20 @@ export default function Settings() {
     apiKey: string;
     staffUsername: string;
     staffPassword: string;
+    hasCredentials: boolean;
   }>({
     queryKey: ["/api/organization/mindbody-credentials"],
     enabled: user?.role === "admin",
   });
 
-  // Update credentials when fetched
+  // Update credentials when fetched (only update siteId and username, leave passwords empty)
   useEffect(() => {
     if (credentials) {
       setMindbodyCredentials({
         siteId: credentials.siteId || "",
-        apiKey: credentials.apiKey || "",
+        apiKey: "", // Don't populate masked values
         staffUsername: credentials.staffUsername || "",
-        staffPassword: credentials.staffPassword || "",
+        staffPassword: "", // Don't populate masked values
       });
     }
   }, [credentials]);
@@ -439,7 +440,7 @@ export default function Settings() {
                         <Input
                           id="mindbody-api-key"
                           type="password"
-                          placeholder="Your Mindbody API Key"
+                          placeholder={credentials?.hasCredentials ? "••••••••" : "Your Mindbody API Key"}
                           value={mindbodyCredentials.apiKey}
                           onChange={(e) =>
                             setMindbodyCredentials((prev) => ({
@@ -449,6 +450,11 @@ export default function Settings() {
                           }
                           data-testid="input-mindbody-api-key"
                         />
+                        {credentials?.hasCredentials && (
+                          <p className="text-xs text-muted-foreground">
+                            Leave blank to keep current API key
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2">
@@ -475,7 +481,7 @@ export default function Settings() {
                         <Input
                           id="mindbody-password"
                           type="password"
-                          placeholder="Your staff password"
+                          placeholder={credentials?.hasCredentials ? "••••••••" : "Your staff password"}
                           value={mindbodyCredentials.staffPassword}
                           onChange={(e) =>
                             setMindbodyCredentials((prev) => ({
@@ -485,6 +491,11 @@ export default function Settings() {
                           }
                           data-testid="input-mindbody-password"
                         />
+                        {credentials?.hasCredentials && (
+                          <p className="text-xs text-muted-foreground">
+                            Leave blank to keep current password
+                          </p>
+                        )}
                       </div>
                     </div>
                     <Separator />
@@ -494,9 +505,8 @@ export default function Settings() {
                         disabled={
                           saveCredentialsMutation.isPending ||
                           !mindbodyCredentials.siteId ||
-                          !mindbodyCredentials.apiKey ||
                           !mindbodyCredentials.staffUsername ||
-                          !mindbodyCredentials.staffPassword
+                          (!credentials?.hasCredentials && (!mindbodyCredentials.apiKey || !mindbodyCredentials.staffPassword))
                         }
                         data-testid="button-save-mindbody-credentials"
                       >

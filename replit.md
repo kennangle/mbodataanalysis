@@ -22,6 +22,7 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
 - **Database**: PostgreSQL (Neon), Drizzle ORM
 - **Authentication**: Passport.js with session management
 - **File Storage**: Google Cloud Storage via Replit Object Storage
+- **Mindbody Credentials**: Configurable per organization in Settings (admin-only), stored in database with API response masking. Supports multi-tenancy with per-org token caching.
 
 ### Design System
 
