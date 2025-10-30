@@ -37,7 +37,7 @@ export function PricingOptionsTable() {
   });
 
   const importMutation = useMutation({
-    mutationFn: () => apiRequest("/api/pricing-options/import", { method: "POST" }),
+    mutationFn: () => apiRequest("POST", "/api/pricing-options/import"),
     onSuccess: (response: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/pricing-options"] });
       toast({

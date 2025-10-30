@@ -13,6 +13,7 @@ import {
   FileWarning,
   Stethoscope,
   Sparkles,
+  DollarSign,
 } from "lucide-react";
 import {
   Sidebar,
@@ -46,6 +47,7 @@ const menuItems = [
     items: [
       { title: "Students", url: "/students", icon: Users },
       { title: "Classes", url: "/classes", icon: Calendar },
+      { title: "Pricing Options", url: "/pricing-options", icon: DollarSign },
       { title: "Reports", url: "/reports", icon: FileText },
       { title: "Import Data", url: "/import", icon: Database },
     ],

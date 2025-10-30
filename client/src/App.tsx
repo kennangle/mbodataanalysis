@@ -25,6 +25,7 @@ import Users from "@/pages/Users";
 import SkippedRecords from "@/pages/SkippedRecords";
 import DataCoverage from "@/pages/DataCoverage";
 import AIQuery from "@/pages/AIQuery";
+import PricingOptions from "@/pages/PricingOptions";
 
 function Router() {
   return (
@@ -40,6 +41,7 @@ function Router() {
       <Route path="/ai-query" component={AIQuery} />
       <Route path="/students" component={Students} />
       <Route path="/classes" component={Classes} />
+      <Route path="/pricing-options" component={PricingOptions} />
       <Route path="/users" component={Users} />
       <Route path="/reports" component={Reports} />
       <Route path="/data-coverage" component={DataCoverage} />
