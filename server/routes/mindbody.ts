@@ -529,6 +529,92 @@ export function registerMindbodyRoutes(app: Express) {
     }
   });
 
+  // Test Mindbody API connection - diagnostic endpoint
+  app.get("/api/mindbody/test-connection", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const organizationId = user?.organizationId;
+
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const mindbodyService = new MindbodyService();
+      const diagnostics: any = {
+        timestamp: new Date().toISOString(),
+        organizationId,
+        tests: {},
+      };
+
+      try {
+        // Test 1: Try to fetch clients (basic API call - this tests authentication too)
+        diagnostics.tests.clients = { status: "testing" };
+        try {
+          const clientsEndpoint = `/client/clients?Limit=1&Offset=0`;
+          const clientsData: any = await (mindbodyService as any).makeAuthenticatedRequest(organizationId, clientsEndpoint);
+          diagnostics.tests.clients = { 
+            status: "success", 
+            message: `Successfully fetched clients (authentication working)`,
+            recordCount: clientsData?.PaginationResponse?.TotalResults || 0
+          };
+        } catch (error: any) {
+          diagnostics.tests.clients = { status: "failed", error: error.message };
+        }
+
+        // Test 2: Try to fetch classes
+        diagnostics.tests.classes = { status: "testing" };
+        try {
+          const classesEndpoint = `/class/classes?Limit=1&Offset=0`;
+          const classesData: any = await (mindbodyService as any).makeAuthenticatedRequest(organizationId, classesEndpoint);
+          diagnostics.tests.classes = { 
+            status: "success", 
+            message: `Successfully fetched classes`,
+            recordCount: classesData?.PaginationResponse?.TotalResults || 0
+          };
+        } catch (error: any) {
+          diagnostics.tests.classes = { status: "failed", error: error.message };
+        }
+
+        // Test 3: Try to fetch visits for a specific date range
+        diagnostics.tests.visits = { status: "testing" };
+        try {
+          const visitsEndpoint = `/client/clientvisits?StartDate=2024-01-01&EndDate=2024-01-31&Limit=1`;
+          const visitsData: any = await (mindbodyService as any).makeAuthenticatedRequest(organizationId, visitsEndpoint);
+          diagnostics.tests.visits = { 
+            status: "success", 
+            message: `Successfully fetched visits`,
+            recordCount: visitsData?.PaginationResponse?.TotalResults || 0
+          };
+        } catch (error: any) {
+          diagnostics.tests.visits = { status: "failed", error: error.message };
+        }
+
+        // Determine overall status
+        const failedTests = Object.values(diagnostics.tests).filter((t: any) => t.status === "failed");
+        if (failedTests.length === 0) {
+          diagnostics.overallStatus = "success";
+          diagnostics.message = "All Mindbody API tests passed successfully";
+        } else {
+          diagnostics.overallStatus = "partial";
+          diagnostics.message = `${failedTests.length} test(s) failed`;
+        }
+
+      } catch (error: any) {
+        diagnostics.overallStatus = "failed";
+        diagnostics.message = `Mindbody API connection test failed: ${error.message}`;
+      }
+
+      res.json(diagnostics);
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to test connection";
+      res.status(500).json({ 
+        error: errorMessage,
+        overallStatus: "failed" 
+      });
+    }
+  });
+
   // Get skipped import records
   app.get("/api/mindbody/import/skipped-records", requireAuth, async (req, res) => {
     try {
