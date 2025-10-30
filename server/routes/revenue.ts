@@ -128,34 +128,6 @@ export function registerRevenueRoutes(app: Express) {
     }
   });
 
-  // Get CSV import progress
-  app.get("/api/revenue/import-progress", requireAuth, async (req, res) => {
-    try {
-      const organizationId = (req.user as User)?.organizationId;
-      if (!organizationId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
-
-      console.log(`[Progress Check] Org ${organizationId}, map size: ${importProgressMap.size}, has progress: ${importProgressMap.has(organizationId)}`);
-      const progress = importProgressMap.get(organizationId);
-      if (!progress) {
-        return res.status(404).json({ error: "No import in progress" });
-      }
-
-      const elapsed = (Date.now() - progress.startTime) / 1000;
-      // Guard against division by zero for empty CSV files
-      const percentage =
-        progress.total > 0 ? Math.round((progress.processed / progress.total) * 100) : 0;
-
-      res.json({
-        ...progress,
-        percentage,
-        elapsed,
-      });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch import progress" });
-    }
-  });
   // Get revenue records
   app.get("/api/revenue", requireAuth, async (req, res) => {
     try {

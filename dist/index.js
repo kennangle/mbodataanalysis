@@ -17,15 +17,21 @@ var __export = (target, all) => {
 // shared/schema.ts
 var schema_exports = {};
 __export(schema_exports, {
+  aiGeneratedFiles: () => aiGeneratedFiles,
   aiQueries: () => aiQueries,
   attendance: () => attendance,
   classSchedules: () => classSchedules,
   classes: () => classes,
+  conversationMessages: () => conversationMessages,
+  conversations: () => conversations,
   importJobs: () => importJobs,
   insertAIQuerySchema: () => insertAIQuerySchema,
+  insertAiGeneratedFileSchema: () => insertAiGeneratedFileSchema,
   insertAttendanceSchema: () => insertAttendanceSchema,
   insertClassScheduleSchema: () => insertClassScheduleSchema,
   insertClassSchema: () => insertClassSchema,
+  insertConversationMessageSchema: () => insertConversationMessageSchema,
+  insertConversationSchema: () => insertConversationSchema,
   insertImportJobSchema: () => insertImportJobSchema,
   insertOrganizationSchema: () => insertOrganizationSchema,
   insertPasswordResetTokenSchema: () => insertPasswordResetTokenSchema,
@@ -33,6 +39,7 @@ __export(schema_exports, {
   insertScheduledImportSchema: () => insertScheduledImportSchema,
   insertSkippedImportRecordSchema: () => insertSkippedImportRecordSchema,
   insertStudentSchema: () => insertStudentSchema,
+  insertUploadedFileSchema: () => insertUploadedFileSchema,
   insertUserSchema: () => insertUserSchema,
   insertWebhookEventSchema: () => insertWebhookEventSchema,
   insertWebhookSubscriptionSchema: () => insertWebhookSubscriptionSchema,
@@ -43,6 +50,7 @@ __export(schema_exports, {
   sessions: () => sessions,
   skippedImportRecords: () => skippedImportRecords,
   students: () => students,
+  uploadedFiles: () => uploadedFiles,
   users: () => users,
   webhookEvents: () => webhookEvents,
   webhookSubscriptions: () => webhookSubscriptions
@@ -59,7 +67,7 @@ import {
   uniqueIndex
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-var users, insertUserSchema, organizations, insertOrganizationSchema, students, insertStudentSchema, classes, insertClassSchema, classSchedules, insertClassScheduleSchema, attendance, insertAttendanceSchema, revenue, insertRevenueSchema, aiQueries, insertAIQuerySchema, sessions, importJobs, insertImportJobSchema, skippedImportRecords, insertSkippedImportRecordSchema, passwordResetTokens, insertPasswordResetTokenSchema, webhookSubscriptions, insertWebhookSubscriptionSchema, webhookEvents, insertWebhookEventSchema, scheduledImports, insertScheduledImportSchema;
+var users, insertUserSchema, organizations, insertOrganizationSchema, students, insertStudentSchema, classes, insertClassSchema, classSchedules, insertClassScheduleSchema, attendance, insertAttendanceSchema, revenue, insertRevenueSchema, aiQueries, insertAIQuerySchema, sessions, importJobs, insertImportJobSchema, skippedImportRecords, insertSkippedImportRecordSchema, passwordResetTokens, insertPasswordResetTokenSchema, webhookSubscriptions, insertWebhookSubscriptionSchema, webhookEvents, insertWebhookEventSchema, scheduledImports, insertScheduledImportSchema, uploadedFiles, insertUploadedFileSchema, aiGeneratedFiles, insertAiGeneratedFileSchema, conversations, insertConversationSchema, conversationMessages, insertConversationMessageSchema;
 var init_schema = __esm({
   "shared/schema.ts"() {
     "use strict";
@@ -75,6 +83,7 @@ var init_schema = __esm({
       // "local", "google"
       providerId: text("provider_id"),
       // OAuth provider user ID
+      timezone: text("timezone").notNull().default("UTC"),
       createdAt: timestamp("created_at").defaultNow().notNull()
     });
     insertUserSchema = createInsertSchema(users).omit({
@@ -263,6 +272,8 @@ var init_schema = __esm({
         // Current pagination offset
         error: text("error"),
         // Error message if failed
+        csvData: text("csv_data"),
+        // Compressed CSV data for background processing
         pausedAt: timestamp("paused_at"),
         // When the import was paused
         heartbeatAt: timestamp("heartbeat_at"),
@@ -408,6 +419,100 @@ var init_schema = __esm({
       createdAt: true,
       updatedAt: true
     });
+    uploadedFiles = pgTable(
+      "uploaded_files",
+      {
+        id: uuid("id").defaultRandom().primaryKey(),
+        organizationId: uuid("organization_id").notNull(),
+        userId: uuid("user_id").notNull(),
+        fileName: text("file_name").notNull(),
+        originalName: text("original_name").notNull(),
+        fileType: text("file_type").notNull(),
+        // mime type
+        fileSize: integer("file_size").notNull(),
+        // bytes
+        storagePath: text("storage_path").notNull(),
+        // path in object storage
+        extractedText: text("extracted_text"),
+        // parsed content for AI analysis
+        createdAt: timestamp("created_at").defaultNow().notNull()
+      },
+      (table) => ({
+        orgIdx: index("uploaded_files_org_idx").on(table.organizationId),
+        userIdx: index("uploaded_files_user_idx").on(table.userId)
+      })
+    );
+    insertUploadedFileSchema = createInsertSchema(uploadedFiles).omit({
+      id: true,
+      createdAt: true
+    });
+    aiGeneratedFiles = pgTable(
+      "ai_generated_files",
+      {
+        id: uuid("id").defaultRandom().primaryKey(),
+        organizationId: uuid("organization_id").notNull(),
+        userId: uuid("user_id").notNull(),
+        filename: text("filename").notNull(),
+        // UUID-prefixed filename
+        originalFilename: text("original_filename").notNull(),
+        // User-friendly name
+        storagePath: text("storage_path").notNull(),
+        // Full path in object storage
+        fileType: text("file_type").notNull().default("excel"),
+        // File type
+        createdAt: timestamp("created_at").defaultNow().notNull()
+      },
+      (table) => ({
+        orgIdx: index("ai_generated_files_org_idx").on(table.organizationId),
+        userIdx: index("ai_generated_files_user_idx").on(table.userId),
+        filenameIdx: index("ai_generated_files_filename_idx").on(table.filename)
+      })
+    );
+    insertAiGeneratedFileSchema = createInsertSchema(aiGeneratedFiles).omit({
+      id: true,
+      createdAt: true
+    });
+    conversations = pgTable(
+      "conversations",
+      {
+        id: uuid("id").defaultRandom().primaryKey(),
+        organizationId: uuid("organization_id").notNull(),
+        userId: uuid("user_id").notNull(),
+        title: text("title").notNull(),
+        // Auto-generated from first message or user-provided
+        createdAt: timestamp("created_at").defaultNow().notNull(),
+        updatedAt: timestamp("updated_at").defaultNow().notNull()
+      },
+      (table) => ({
+        orgIdx: index("conversations_org_idx").on(table.organizationId),
+        userIdx: index("conversations_user_idx").on(table.userId),
+        updatedIdx: index("conversations_updated_idx").on(table.updatedAt)
+      })
+    );
+    insertConversationSchema = createInsertSchema(conversations).omit({
+      id: true,
+      createdAt: true,
+      updatedAt: true
+    });
+    conversationMessages = pgTable(
+      "conversation_messages",
+      {
+        id: uuid("id").defaultRandom().primaryKey(),
+        conversationId: uuid("conversation_id").notNull(),
+        role: text("role").notNull(),
+        // "user" or "assistant"
+        content: text("content").notNull(),
+        createdAt: timestamp("created_at").defaultNow().notNull()
+      },
+      (table) => ({
+        conversationIdx: index("conversation_messages_conversation_idx").on(table.conversationId),
+        createdIdx: index("conversation_messages_created_idx").on(table.createdAt)
+      })
+    );
+    insertConversationMessageSchema = createInsertSchema(conversationMessages).omit({
+      id: true,
+      createdAt: true
+    });
   }
 });
 
@@ -431,8 +536,8 @@ var init_db = __esm({
     }
     pool = new Pool({
       connectionString: process.env.DATABASE_URL,
-      max: 10,
-      // Maximum number of clients in the pool
+      max: 20,
+      // Maximum number of clients in the pool (increased for concurrent imports + user requests)
       idleTimeoutMillis: 3e4,
       // Close idle clients after 30 seconds (increased from default 10s)
       connectionTimeoutMillis: 1e4
@@ -805,11 +910,11 @@ var init_storage = __esm({
         ];
         if (useDaily) {
           const revenueByDay = await db.select({
-            day: sql`to_char(${revenue.transactionDate}, 'YYYY-MM-DD')`,
+            day: sql`to_char(${revenue.transactionDate} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`,
             total: sql`sum(CAST(${revenue.amount} AS NUMERIC))`
-          }).from(revenue).where(and(...whereConditions)).groupBy(sql`to_char(${revenue.transactionDate}, 'YYYY-MM-DD')`);
+          }).from(revenue).where(and(...whereConditions)).groupBy(sql`to_char(${revenue.transactionDate} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`);
           const activeStudentsByDay = await db.select({
-            day: sql`to_char(${attendance.attendedAt}, 'YYYY-MM-DD')`,
+            day: sql`to_char(${attendance.attendedAt} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`,
             count: sql`count(distinct ${attendance.studentId})`
           }).from(attendance).where(
             and(
@@ -817,7 +922,7 @@ var init_storage = __esm({
               gte(attendance.attendedAt, effectiveStartDate),
               lt(attendance.attendedAt, nextDay)
             )
-          ).groupBy(sql`to_char(${attendance.attendedAt}, 'YYYY-MM-DD')`);
+          ).groupBy(sql`to_char(${attendance.attendedAt} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`);
           const revenueMap = new Map(
             revenueByDay.map((r) => [r.day, Number(r.total || 0)])
           );
@@ -1084,6 +1189,78 @@ var init_storage = __esm({
       }
       async updateScheduledImport(organizationId, scheduledImport) {
         await db.update(scheduledImports).set({ ...scheduledImport, updatedAt: /* @__PURE__ */ new Date() }).where(eq(scheduledImports.organizationId, organizationId));
+      }
+      async createUploadedFile(file) {
+        const result = await db.insert(uploadedFiles).values(file).returning();
+        return result[0];
+      }
+      async getUploadedFile(id) {
+        const result = await db.select().from(uploadedFiles).where(eq(uploadedFiles.id, id)).limit(1);
+        return result[0];
+      }
+      async getUploadedFiles(organizationId, userId) {
+        if (userId) {
+          return await db.select().from(uploadedFiles).where(and(eq(uploadedFiles.organizationId, organizationId), eq(uploadedFiles.userId, userId))).orderBy(desc(uploadedFiles.createdAt));
+        }
+        return await db.select().from(uploadedFiles).where(eq(uploadedFiles.organizationId, organizationId)).orderBy(desc(uploadedFiles.createdAt));
+      }
+      async deleteUploadedFile(id) {
+        await db.delete(uploadedFiles).where(eq(uploadedFiles.id, id));
+      }
+      async createAiGeneratedFile(file) {
+        const result = await db.insert(aiGeneratedFiles).values(file).returning();
+        return result[0];
+      }
+      async getAiGeneratedFileByFilename(filename) {
+        const result = await db.select().from(aiGeneratedFiles).where(eq(aiGeneratedFiles.filename, filename)).limit(1);
+        return result[0];
+      }
+      async getAiGeneratedFiles(organizationId, userId) {
+        if (userId) {
+          return await db.select().from(aiGeneratedFiles).where(
+            and(
+              eq(aiGeneratedFiles.organizationId, organizationId),
+              eq(aiGeneratedFiles.userId, userId)
+            )
+          ).orderBy(desc(aiGeneratedFiles.createdAt));
+        }
+        return await db.select().from(aiGeneratedFiles).where(eq(aiGeneratedFiles.organizationId, organizationId)).orderBy(desc(aiGeneratedFiles.createdAt));
+      }
+      async deleteAiGeneratedFile(id) {
+        await db.delete(aiGeneratedFiles).where(eq(aiGeneratedFiles.id, id));
+      }
+      async createConversation(conversation) {
+        const result = await db.insert(conversations).values(conversation).returning();
+        return result[0];
+      }
+      async getConversation(id) {
+        const result = await db.select().from(conversations).where(eq(conversations.id, id)).limit(1);
+        return result[0];
+      }
+      async getConversations(organizationId, userId) {
+        return await db.select().from(conversations).where(
+          and(
+            eq(conversations.organizationId, organizationId),
+            eq(conversations.userId, userId)
+          )
+        ).orderBy(desc(conversations.updatedAt));
+      }
+      async updateConversation(id, conversation) {
+        await db.update(conversations).set({ ...conversation, updatedAt: /* @__PURE__ */ new Date() }).where(eq(conversations.id, id));
+      }
+      async deleteConversation(id) {
+        await db.delete(conversationMessages).where(eq(conversationMessages.conversationId, id));
+        await db.delete(conversations).where(eq(conversations.id, id));
+      }
+      async createConversationMessage(message) {
+        const result = await db.insert(conversationMessages).values(message).returning();
+        return result[0];
+      }
+      async getConversationMessages(conversationId) {
+        return await db.select().from(conversationMessages).where(eq(conversationMessages.conversationId, conversationId)).orderBy(conversationMessages.createdAt);
+      }
+      async deleteConversationMessages(conversationId) {
+        await db.delete(conversationMessages).where(eq(conversationMessages.conversationId, conversationId));
       }
     };
     storage = new DbStorage();
@@ -1403,14 +1580,14 @@ var init_mindbody = __esm({
         const data = await this.makeAuthenticatedRequest(organizationId, endpoint);
         const pagination = data.PaginationResponse;
         const totalResults = pagination?.TotalResults || 0;
-        const classes3 = data.Classes || [];
-        if (classes3.length === 0) {
+        const classes2 = data.Classes || [];
+        if (classes2.length === 0) {
           return { imported: 0, nextOffset: startOffset, completed: true };
         }
         const existingClasses = await storage.getClasses(organizationId);
         const classMap = new Map(existingClasses.map((c) => [c.mindbodyClassId, c]));
         let imported = 0;
-        for (const mbClass of classes3) {
+        for (const mbClass of classes2) {
           try {
             if (!mbClass.ClassDescription?.Id || !mbClass.ClassScheduleId || !mbClass.StartDateTime || !mbClass.EndDateTime) {
               continue;
@@ -1441,7 +1618,7 @@ var init_mindbody = __esm({
             console.error(`Failed to import class ${mbClass.ClassScheduleId}:`, error);
           }
         }
-        const nextOffset = startOffset + classes3.length;
+        const nextOffset = startOffset + classes2.length;
         const completed = nextOffset >= totalResults;
         await onProgress(nextOffset, totalResults);
         if (!completed) {
@@ -1449,15 +1626,8 @@ var init_mindbody = __esm({
         }
         return { imported, nextOffset, completed };
       }
-      async importVisitsResumable(organizationId, startDate, endDate, onProgress, startStudentIndex = 0, schedulesByTime) {
-        const BATCH_SIZE = 200;
-        const BATCH_DELAY = 0;
-        const totalStudents = await storage.getStudentCount(organizationId);
-        if (startStudentIndex >= totalStudents) {
-          return { imported: 0, nextStudentIndex: startStudentIndex, completed: true, schedulesByTime };
-        }
-        const studentBatch = await storage.getStudents(organizationId, BATCH_SIZE, startStudentIndex);
-        const endIndex = startStudentIndex + studentBatch.length;
+      async importVisitsResumable(organizationId, startDate, endDate, onProgress, startOffset = 0, schedulesByTime) {
+        console.log(`[Visits Optimized] Starting import for ${startDate.toISOString()} to ${endDate.toISOString()}`);
         if (!schedulesByTime) {
           try {
             console.log(`[Visits] Loading class schedules for organization ${organizationId}...`);
@@ -1470,114 +1640,60 @@ var init_mindbody = __esm({
             throw new Error(`Failed to load class schedules: ${error instanceof Error ? error.message : String(error)}`);
           }
         }
-        const sampleTimes = Array.from(schedulesByTime.keys()).slice(0, 5);
-        console.log("=== DEBUG: Sample schedule times in map ===");
-        console.log(sampleTimes);
-        console.log("===========================================");
-        let imported = 0;
-        let processedStudents = 0;
-        let totalVisitsFound = 0;
-        let unmatchedClassIds = /* @__PURE__ */ new Set();
-        for (const student of studentBatch) {
-          try {
-            let visitOffset = 0;
-            let hasMoreVisits = true;
-            const PAGE_SIZE = 100;
-            while (hasMoreVisits) {
-              const { results: visits, hasMore } = await this.fetchPage(
-                organizationId,
-                `/client/clientvisits?ClientId=${student.mindbodyClientId}&StartDate=${startDate.toISOString()}&EndDate=${endDate.toISOString()}`,
-                "Visits",
-                visitOffset,
-                PAGE_SIZE
-              );
-              if (visits.length === 0) {
-                break;
-              }
-              hasMoreVisits = hasMore;
-              if (visits.length > 0) {
-                totalVisitsFound += visits.length;
-                if (totalVisitsFound <= 3) {
-                  console.log("=== DEBUG: Visit structure from API ===");
-                  console.log(JSON.stringify(visits[0], null, 2));
-                  console.log("=======================================");
-                }
-              }
-              for (const visit of visits) {
-                try {
-                  if (!visit.ClassId || !visit.StartDateTime) {
-                    if (totalVisitsFound <= 5) {
-                      console.log(
-                        `Skipping visit for client ${student.mindbodyClientId}. Full visit data:`,
-                        JSON.stringify(visit, null, 2)
-                      );
-                    }
-                    continue;
-                  }
-                  const visitStartTime = new Date(visit.StartDateTime).toISOString();
-                  const schedule = schedulesByTime.get(visitStartTime);
-                  if (totalVisitsFound <= 5) {
-                    console.log(`=== DEBUG: Matching attempt ===`);
-                    console.log(`Visit time: ${visit.StartDateTime} -> ${visitStartTime}`);
-                    console.log(`Found schedule: ${schedule ? "YES" : "NO"}`);
-                    console.log(`==============================`);
-                  }
-                  if (!schedule) {
-                    unmatchedClassIds.add(`${visit.ClassId} at ${visit.StartDateTime}`);
-                    continue;
-                  }
-                  await storage.createAttendance({
-                    organizationId,
-                    studentId: student.id,
-                    scheduleId: schedule.id,
-                    attendedAt: new Date(visit.StartDateTime),
-                    status: visit.SignedIn ? "attended" : "noshow"
-                  });
-                  imported++;
-                } catch (error) {
-                  console.error(`Failed to import visit for client ${student.mindbodyClientId}:`, error);
-                }
-              }
-              visitOffset += visits.length;
-              await new Promise((resolve) => setImmediate(resolve));
-            }
-          } catch (error) {
-            console.error(`Failed to fetch visits for client ${student.mindbodyClientId}:`, error);
-          }
-          processedStudents++;
-          await onProgress(startStudentIndex + processedStudents, totalStudents);
-        }
-        const memUsage = process.memoryUsage();
-        console.log(`[Memory] Batch completed (students ${startStudentIndex}-${endIndex}/${totalStudents}):`);
-        console.log(
-          `  - Heap Used: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB / ${Math.round(memUsage.heapTotal / 1024 / 1024)}MB`
+        console.log(`[Visits] Loading students for organization ${organizationId}...`);
+        const allStudents = await storage.getStudents(organizationId, 1e5);
+        const studentsByMindbodyId = new Map(
+          allStudents.filter((s) => s.mindbodyClientId).map((s) => [s.mindbodyClientId, s])
         );
-        console.log(`  - RSS: ${Math.round(memUsage.rss / 1024 / 1024)}MB`);
-        console.log(`  - External: ${Math.round(memUsage.external / 1024 / 1024)}MB`);
-        console.log(`  - API Calls: ${this.getApiCallCount()}`);
-        console.log(`  - Visits Imported: ${imported}`);
-        if (global.gc) {
-          global.gc();
-          const postGcMem = process.memoryUsage();
-          console.log(`[Memory] After GC: Heap ${Math.round(postGcMem.heapUsed / 1024 / 1024)}MB`);
-        }
-        if (totalVisitsFound > 0) {
-          console.log(
-            `Visit import batch: Found ${totalVisitsFound} visits, imported ${imported} attendance records`
-          );
-          if (unmatchedClassIds.size > 0) {
-            console.log(
-              `Unmatched ClassIds (visits skipped):`,
-              Array.from(unmatchedClassIds).slice(0, 10).join(", ")
-            );
+        console.log(`[Visits] Loaded ${studentsByMindbodyId.size} students into lookup map`);
+        const PAGE_SIZE = 200;
+        const startDateStr = startDate.toISOString().split("T")[0];
+        const endDateStr = endDate.toISOString().split("T")[0];
+        const { results: visits, totalResults, hasMore } = await this.fetchPage(
+          organizationId,
+          `/class/classvisits?StartDate=${startDateStr}&EndDate=${endDateStr}`,
+          "ClassVisits",
+          startOffset,
+          PAGE_SIZE
+        );
+        console.log(`[Visits] Fetched ${visits.length} visits (offset ${startOffset}, total ${totalResults})`);
+        let imported = 0;
+        let skippedNoStudent = 0;
+        let skippedNoSchedule = 0;
+        for (const visit of visits) {
+          try {
+            if (!visit.ClientId || !visit.StartDateTime) {
+              continue;
+            }
+            const student = studentsByMindbodyId.get(visit.ClientId);
+            if (!student) {
+              skippedNoStudent++;
+              continue;
+            }
+            const visitStartTime = new Date(visit.StartDateTime).toISOString();
+            const schedule = schedulesByTime.get(visitStartTime);
+            if (!schedule) {
+              skippedNoSchedule++;
+              continue;
+            }
+            await storage.createAttendance({
+              organizationId,
+              studentId: student.id,
+              scheduleId: schedule.id,
+              attendedAt: new Date(visit.StartDateTime),
+              status: visit.SignedIn ? "attended" : "noshow"
+            });
+            imported++;
+          } catch (error) {
+            console.error(`[Visits] Failed to import visit:`, error);
           }
         }
-        const nextStudentIndex = endIndex;
-        const completed = nextStudentIndex >= totalStudents;
-        if (!completed) {
-          await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY));
-        }
-        return { imported, nextStudentIndex, completed, schedulesByTime };
+        const nextOffset = startOffset + visits.length;
+        const completed = !hasMore || nextOffset >= totalResults;
+        await onProgress(nextOffset, totalResults);
+        console.log(`[Visits] Batch complete: imported ${imported}, skipped ${skippedNoStudent} (no student), ${skippedNoSchedule} (no schedule)`);
+        console.log(`[Visits] Progress: ${nextOffset}/${totalResults} visits processed, completed=${completed}`);
+        return { imported, nextStudentIndex: nextOffset, completed, schedulesByTime };
       }
       async importSalesResumable(organizationId, startDate, endDate, onProgress, startOffset = 0, cachedStudents) {
         const SALES_BATCH_SIZE = 200;
@@ -2471,8 +2587,8 @@ var init_scheduler = __esm({
         try {
           const db2 = await Promise.resolve().then(() => (init_db(), db_exports));
           const { scheduledImports: scheduledImports2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-          const { eq: eq4 } = await import("drizzle-orm");
-          const allScheduled = await db2.db.select().from(scheduledImports2).where(eq4(scheduledImports2.enabled, true));
+          const { eq: eq3 } = await import("drizzle-orm");
+          const allScheduled = await db2.db.select().from(scheduledImports2).where(eq3(scheduledImports2.enabled, true));
           const activeOrgs = /* @__PURE__ */ new Set();
           for (const scheduled of allScheduled) {
             activeOrgs.add(scheduled.organizationId);
@@ -2655,12 +2771,6 @@ import ConnectPgSimple from "connect-pg-simple";
 
 // server/brevo.ts
 import * as brevo from "@getbrevo/brevo";
-var apiInstance = new brevo.TransactionalEmailsApi();
-if (!process.env.BREVO_API_KEY) {
-  console.warn("BREVO_API_KEY not set. Password reset emails will not be sent.");
-} else {
-  apiInstance.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY);
-}
 async function sendPasswordResetEmail({
   toEmail,
   toName,
@@ -2670,6 +2780,8 @@ async function sendPasswordResetEmail({
     console.error("Cannot send password reset email: BREVO_API_KEY not configured");
     throw new Error("Email service not configured");
   }
+  const apiInstance = new brevo.TransactionalEmailsApi();
+  apiInstance.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY);
   const sendSmtpEmail = new brevo.SendSmtpEmail();
   sendSmtpEmail.subject = "Reset Your Password";
   sendSmtpEmail.sender = {
@@ -2765,10 +2877,16 @@ var setupAuth = (app2) => {
   if (!process.env.SESSION_SECRET) {
     throw new Error("SESSION_SECRET environment variable must be set");
   }
+  app2.set("trust proxy", 1);
+  const isReplit = !!process.env.REPL_ID;
+  const isDevelopment = process.env.NODE_ENV === "development";
+  const sameSiteValue = isReplit ? "none" : "lax";
+  const secureValue = isReplit ? true : app2.get("env") === "production";
   const sessionSettings = {
     secret: process.env.SESSION_SECRET,
-    resave: false,
+    resave: true,
     saveUninitialized: false,
+    rolling: true,
     store: new PgSession({
       pool,
       tableName: "sessions",
@@ -2777,13 +2895,18 @@ var setupAuth = (app2) => {
     cookie: {
       maxAge: 30 * 24 * 60 * 60 * 1e3,
       httpOnly: true,
-      secure: app2.get("env") === "production",
-      sameSite: "lax"
+      secure: secureValue,
+      sameSite: sameSiteValue,
+      path: "/"
     }
   };
-  if (app2.get("env") === "production") {
-    app2.set("trust proxy", 1);
-  }
+  console.log("[Auth] Session cookie configuration:", {
+    isReplit,
+    isDevelopment,
+    secure: sessionSettings.cookie?.secure,
+    sameSite: sessionSettings.cookie?.sameSite,
+    environment: app2.get("env")
+  });
   app2.use(session(sessionSettings));
   app2.use(passport.initialize());
   app2.use(passport.session());
@@ -2915,9 +3038,15 @@ var setupAuth = (app2) => {
     }
   });
   app2.post("/api/auth/login", (req, res, next) => {
+    console.log("[Auth] Login request - Headers:", {
+      host: req.headers.host,
+      "x-forwarded-proto": req.headers["x-forwarded-proto"],
+      secure: req.secure,
+      protocol: req.protocol
+    });
     passport.authenticate("local", (err, user, info) => {
       if (err) {
-        console.error("Login authentication error:", err);
+        console.error("[Auth] Login authentication error:", err);
         return res.status(500).json({ error: "Internal server error" });
       }
       if (!user) {
@@ -2925,9 +3054,14 @@ var setupAuth = (app2) => {
       }
       req.login(user, (err2) => {
         if (err2) {
-          console.error("Login session error:", err2);
+          console.error("[Auth] Login session error:", err2);
           return res.status(500).json({ error: "Login failed" });
         }
+        console.log("[Auth] Login successful - Session ID:", req.sessionID);
+        console.log("[Auth] Cookie settings:", req.session.cookie);
+        res.on("finish", () => {
+          console.log("[Auth] Set-Cookie header:", res.getHeader("set-cookie"));
+        });
         return res.json({
           id: user.id,
           email: user.email,
@@ -2969,6 +3103,7 @@ var setupAuth = (app2) => {
     }
   });
   app2.get("/api/auth/me", (req, res) => {
+    console.log("[Auth] /me check - Session ID:", req.sessionID, "Authenticated:", req.isAuthenticated(), "Cookie header:", req.headers.cookie);
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
@@ -2982,8 +3117,6 @@ var setupAuth = (app2) => {
     });
   });
   app2.get("/api/auth/google", (req, res, next) => {
-    console.log("[Google OAuth] Initiating Google login from:", req.headers.host);
-    console.log("[Google OAuth] User-Agent:", req.headers["user-agent"]);
     passport.authenticate("google", { scope: ["profile", "email"] })(req, res, next);
   });
   app2.get(
@@ -3011,12 +3144,23 @@ var setupAuth = (app2) => {
       const expiresAt = new Date(Date.now() + 60 * 60 * 1e3);
       await storage.createPasswordResetToken(user.id, token, expiresAt);
       const resetLink = `${req.protocol}://${req.get("host")}/reset-password?token=${token}`;
-      await sendPasswordResetEmail({
-        toEmail: user.email,
-        toName: user.name,
-        resetLink
-      });
-      res.json({ message: "If the email exists, a reset link has been sent" });
+      try {
+        await sendPasswordResetEmail({
+          toEmail: user.email,
+          toName: user.name,
+          resetLink
+        });
+        res.json({ message: "If the email exists, a reset link has been sent" });
+      } catch (emailError) {
+        console.error("Failed to send password reset email:", emailError);
+        if (process.env.NODE_ENV !== "production") {
+          return res.json({
+            message: "Email service unavailable. Use this link to reset your password:",
+            resetLink
+          });
+        }
+        res.json({ message: "If the email exists, a reset link has been sent" });
+      }
     } catch (error) {
       console.error("Forgot password error:", error);
       res.status(500).json({ error: "Failed to process request" });
@@ -3178,6 +3322,22 @@ function registerUserRoutes(app2) {
       res.status(500).json({ error: "Failed to delete user" });
     }
   });
+  app2.patch("/api/users/me/timezone", requireAuth, async (req, res) => {
+    try {
+      const currentUser = req.user;
+      if (!currentUser?.id) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const validation = insertUserSchema.partial().pick({ timezone: true }).safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ error: fromZodError(validation.error).toString() });
+      }
+      await storage.updateUser(currentUser.id, validation.data);
+      res.json({ success: true, timezone: validation.data.timezone });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update timezone" });
+    }
+  });
 }
 
 // server/routes/students.ts
@@ -3299,8 +3459,8 @@ function registerClassRoutes(app2) {
       if (!organizationId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
-      const classes3 = await storage.getClasses(organizationId);
-      res.json(classes3);
+      const classes2 = await storage.getClasses(organizationId);
+      res.json(classes2);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch classes" });
     }
@@ -3453,6 +3613,7 @@ function registerRevenueRoutes(app2) {
       if (!organizationId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
+      console.log(`[Progress Check] Org ${organizationId}, map size: ${importProgressMap.size}, has progress: ${importProgressMap.has(organizationId)}`);
       const progress = importProgressMap.get(organizationId);
       if (!progress) {
         return res.status(404).json({ error: "No import in progress" });
@@ -3512,14 +3673,14 @@ function registerRevenueRoutes(app2) {
       res.status(500).json({ error: "Failed to create revenue record" });
     }
   });
-  const upload = multer({
+  const upload2 = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 50 * 1024 * 1024 }
     // 50MB limit for large CSV files
   });
-  app2.post("/api/revenue/import-csv", requireAuth, upload.single("file"), async (req, res) => {
+  app2.post("/api/revenue/import-csv", requireAuth, upload2.single("file"), async (req, res) => {
+    const organizationId = req.user?.organizationId;
     try {
-      const organizationId = req.user?.organizationId;
       if (!organizationId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -3549,139 +3710,246 @@ function registerRevenueRoutes(app2) {
           details: parseResult.errors
         });
       }
-      const students2 = await storage.getStudents(organizationId);
-      const studentMapByMindbodyId = new Map(
-        students2.filter((s) => s.mindbodyClientId).map((s) => [s.mindbodyClientId, s.id])
-      );
-      const studentMapByEmail = new Map(
-        students2.filter((s) => s.email).map((s) => [s.email.toLowerCase(), s.id])
-      );
-      const studentMapByName = new Map(
-        students2.filter((s) => s.firstName && s.lastName).map((s) => [`${s.firstName.toLowerCase()} ${s.lastName.toLowerCase()}`, s.id])
-      );
-      let imported = 0;
-      let skipped = 0;
-      const errors = [];
-      const rows = parseResult.data;
-      console.log(`[CSV Import] Starting import of ${rows.length} rows...`);
-      const startTime = Date.now();
-      importProgressMap.set(organizationId, {
-        total: rows.length,
-        processed: 0,
-        imported: 0,
-        skipped: 0,
-        startTime
-      });
-      for (let index2 = 0; index2 < rows.length; index2++) {
-        const row = rows[index2];
-        importProgressMap.set(organizationId, {
-          total: rows.length,
-          processed: index2 + 1,
-          // +1 because we're processing this row now
-          imported,
-          skipped,
-          startTime
+      if (parseResult.data.length === 0) {
+        return res.status(400).json({
+          error: "CSV file is empty",
+          details: "No data rows found in CSV"
         });
-        if (index2 > 0 && index2 % 1e3 === 0) {
-          const elapsed = ((Date.now() - startTime) / 1e3).toFixed(1);
-          console.log(
-            `[CSV Import] Progress: ${index2}/${rows.length} rows processed (${elapsed}s, ${imported} imported, ${skipped} skipped)`
-          );
-        }
-        try {
-          const saleId = row["Sale ID"] || row["SaleId"] || row["ID"] || null;
-          const itemId = row["Item ID"] || row["ItemId"] || null;
-          const amountStr = row["Item Total"] || row["Amount"] || row["Total"] || row["Price"];
-          if (!amountStr || amountStr.toString().trim() === "") {
-            errors.push(`Row ${index2 + 1}: Missing amount field`);
-            skipped++;
-            continue;
-          }
-          const cleanedAmount = amountStr.toString().replace(/[^0-9.-]/g, "");
-          const amount = parseFloat(cleanedAmount);
-          if (isNaN(amount)) {
-            errors.push(`Row ${index2 + 1}: Invalid amount "${amountStr}"`);
-            skipped++;
-            continue;
-          }
-          const type = row["Payment Method"] || row["Type"] || row["Category"] || "Sale";
-          const description = row["Item name"] || row["Description"] || row["Item"] || row["Product"] || row["Service"] || "";
-          const dateStr = row["Sale Date"] || row["Date"] || row["Transaction Date"] || row["SaleDate"];
-          if (!dateStr) {
-            errors.push(`Row ${index2 + 1}: Missing date field`);
-            skipped++;
-            continue;
-          }
-          const transactionDate = new Date(dateStr);
-          if (isNaN(transactionDate.getTime())) {
-            errors.push(`Row ${index2 + 1}: Invalid date "${dateStr}"`);
-            skipped++;
-            continue;
-          }
-          let studentId = null;
-          const clientId = row["Client ID"] || row["ClientID"] || row["Client Id"];
-          const clientEmail = row["Client Email"] || row["Email"] || row["ClientEmail"];
-          let clientName = row["Client"] || row["Client Name"] || row["ClientName"];
-          if (clientId) {
-            studentId = studentMapByMindbodyId.get(clientId) || null;
-          }
-          if (!studentId && clientEmail) {
-            studentId = studentMapByEmail.get(clientEmail.toLowerCase()) || null;
-          }
-          if (!studentId && clientName) {
-            if (clientName.includes(",")) {
-              const parts = clientName.split(",").map((p) => p.trim());
-              if (parts.length === 2) {
-                clientName = `${parts[1]} ${parts[0]}`;
-              }
-            }
-            studentId = studentMapByName.get(clientName.toLowerCase()) || null;
-          }
-          await storage.upsertRevenue({
-            organizationId,
-            studentId,
-            mindbodySaleId: saleId,
-            mindbodyItemId: itemId,
-            amount: amount.toFixed(2),
-            // Ensure 2 decimal places
-            type,
-            description,
-            transactionDate
-          });
-          imported++;
-        } catch (error) {
-          errors.push(`Row ${index2 + 1}: ${error.message}`);
-          skipped++;
-        }
       }
-      const totalTime = ((Date.now() - startTime) / 1e3).toFixed(1);
-      console.log(
-        `[CSV Import] Completed: ${imported} imported, ${skipped} skipped, ${rows.length} total in ${totalTime}s`
-      );
-      if (errors.length > 0) {
-        console.error(
-          `[CSV Import] Errors (showing first 10 of ${errors.length}):`,
-          errors.slice(0, 10)
-        );
-      }
-      importProgressMap.delete(organizationId);
+      const csvDataCompressed = Buffer.from(csvText).toString("base64");
+      const importJob = await storage.createImportJob({
+        organizationId,
+        dataTypes: ["revenue"],
+        startDate: /* @__PURE__ */ new Date("2000-01-01"),
+        endDate: /* @__PURE__ */ new Date(),
+        status: "pending",
+        csvData: csvDataCompressed,
+        progress: JSON.stringify({
+          revenue: { current: 0, total: parseResult.data.length }
+        })
+      });
+      console.log(`[CSV Import] Created background job ${importJob.id} for ${parseResult.data.length} rows`);
+      processRevenueCSVBackground(importJob.id, organizationId, storage).catch((err) => {
+        console.error("[CSV Import] Background processing error:", err);
+      });
       res.json({
         success: true,
-        imported,
-        skipped,
-        total: parseResult.data.length,
-        errors: errors.length > 0 ? errors.slice(0, 10) : void 0
-        // Return first 10 errors
+        jobId: importJob.id,
+        totalRows: parseResult.data.length,
+        message: "CSV import started in background. Check import history for progress."
       });
     } catch (error) {
       console.error("CSV import error:", error);
-      const organizationId = req.user?.organizationId;
-      if (organizationId) {
-        importProgressMap.delete(organizationId);
-      }
       res.status(500).json({ error: "Failed to import CSV", details: error.message });
     }
   });
+  app2.get("/api/revenue/import-progress", requireAuth, async (req, res) => {
+    try {
+      const organizationId = req.user?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const progress = importProgressMap.get(organizationId);
+      if (progress) {
+        const elapsedSeconds2 = (Date.now() - progress.startTime) / 1e3;
+        const rowsPerSecond2 = progress.processed > 0 ? progress.processed / elapsedSeconds2 : 0;
+        const remainingRows2 = progress.total - progress.processed;
+        const estimatedSecondsLeft2 = rowsPerSecond2 > 0 ? remainingRows2 / rowsPerSecond2 : 0;
+        return res.json({
+          status: "in_progress",
+          total: progress.total,
+          processed: progress.processed,
+          imported: progress.imported,
+          skipped: progress.skipped,
+          elapsedSeconds: Math.floor(elapsedSeconds2),
+          estimatedSecondsLeft: Math.floor(estimatedSecondsLeft2),
+          rowsPerSecond: Math.floor(rowsPerSecond2)
+        });
+      }
+      const runningJobs = await storage.getActiveImportJobs(organizationId);
+      const revenueJob = runningJobs.find(
+        (job) => job.dataTypes?.includes("revenue") && job.csvData
+      );
+      if (!revenueJob || !revenueJob.progress) {
+        return res.json({ status: "idle" });
+      }
+      const jobProgress = typeof revenueJob.progress === "string" ? JSON.parse(revenueJob.progress) : revenueJob.progress;
+      const revenueProgress = jobProgress.revenue || {};
+      const current = revenueProgress.current || 0;
+      const total = revenueProgress.total || 0;
+      const startTime = revenueJob.startDate ? new Date(revenueJob.startDate).getTime() : Date.now();
+      const elapsedSeconds = (Date.now() - startTime) / 1e3;
+      const rowsPerSecond = current > 0 && elapsedSeconds > 0 ? current / elapsedSeconds : 0;
+      const remainingRows = total - current;
+      const estimatedSecondsLeft = rowsPerSecond > 0 ? remainingRows / rowsPerSecond : 0;
+      return res.json({
+        status: "in_progress",
+        total,
+        processed: current,
+        imported: current,
+        // Approximate - we don't track imported/skipped separately in DB
+        skipped: 0,
+        elapsedSeconds: Math.floor(elapsedSeconds),
+        estimatedSecondsLeft: Math.floor(estimatedSecondsLeft),
+        rowsPerSecond: Math.floor(rowsPerSecond)
+      });
+    } catch (error) {
+      console.error("[Progress] Error fetching progress:", error);
+      res.status(500).json({ error: "Failed to get import progress" });
+    }
+  });
+}
+async function processRevenueCSVBackground(jobId, organizationId, storage2) {
+  const startTime = Date.now();
+  console.log(`[CSV Background Worker] Starting job ${jobId} for org ${organizationId}`);
+  try {
+    await storage2.updateImportJob(jobId, { status: "running" });
+    const job = await storage2.getImportJob(jobId);
+    if (!job || !job.csvData) {
+      throw new Error("Import job not found or CSV data missing");
+    }
+    const csvText = Buffer.from(job.csvData, "base64").toString("utf-8");
+    const parseResult = Papa.parse(csvText, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: (header) => header.trim()
+    });
+    const rows = parseResult.data;
+    console.log(`[CSV Background Worker] Processing ${rows.length} rows with student matching`);
+    importProgressMap.set(organizationId, {
+      total: rows.length,
+      processed: 0,
+      imported: 0,
+      skipped: 0,
+      startTime
+    });
+    let imported = 0;
+    let skipped = 0;
+    const errors = [];
+    const STUDENT_BATCH_SIZE = 1e3;
+    console.log(`[CSV Background Worker] Building student lookup map...`);
+    const studentLookupByMindbodyId = /* @__PURE__ */ new Map();
+    const studentLookupByEmail = /* @__PURE__ */ new Map();
+    let studentOffset = 0;
+    let hasMoreStudents = true;
+    while (hasMoreStudents) {
+      const studentBatch = await storage2.getStudents(organizationId, STUDENT_BATCH_SIZE, studentOffset);
+      if (studentBatch.length === 0) {
+        hasMoreStudents = false;
+        break;
+      }
+      for (const student of studentBatch) {
+        if (student.mindbodyClientId) {
+          studentLookupByMindbodyId.set(student.mindbodyClientId, student.id);
+        }
+        if (student.email) {
+          studentLookupByEmail.set(student.email.toLowerCase(), student.id);
+        }
+      }
+      studentOffset += studentBatch.length;
+      console.log(`[CSV Background Worker] Loaded ${studentOffset} students into lookup map`);
+      if (studentBatch.length < STUDENT_BATCH_SIZE) {
+        hasMoreStudents = false;
+      }
+    }
+    console.log(`[CSV Background Worker] Student lookup complete: ${studentLookupByMindbodyId.size} by ID, ${studentLookupByEmail.size} by email`);
+    for (let index2 = 0; index2 < rows.length; index2++) {
+      const row = rows[index2];
+      importProgressMap.set(organizationId, {
+        total: rows.length,
+        processed: index2 + 1,
+        imported,
+        skipped,
+        startTime
+      });
+      if (index2 > 0 && index2 % 100 === 0) {
+        await storage2.updateImportJob(jobId, {
+          progress: JSON.stringify({
+            revenue: { current: index2, total: rows.length }
+          })
+        });
+      }
+      if (index2 > 0 && index2 % 1e3 === 0) {
+        const elapsed = ((Date.now() - startTime) / 1e3).toFixed(1);
+        console.log(
+          `[CSV Background Worker] Progress: ${index2}/${rows.length} (${elapsed}s, ${imported} imported, ${skipped} skipped)`
+        );
+      }
+      try {
+        const saleId = row["Sale ID"] || row["SaleId"] || row["ID"] || null;
+        const itemId = row["Item ID"] || row["ItemId"] || null;
+        const amountStr = row["Item Total"] || row["Amount"] || row["Total"] || row["Price"];
+        if (!amountStr || amountStr.toString().trim() === "") {
+          errors.push(`Row ${index2 + 1}: Missing amount`);
+          skipped++;
+          continue;
+        }
+        const cleanedAmount = amountStr.toString().replace(/[^0-9.-]/g, "");
+        const amount = parseFloat(cleanedAmount);
+        if (isNaN(amount)) {
+          errors.push(`Row ${index2 + 1}: Invalid amount "${amountStr}"`);
+          skipped++;
+          continue;
+        }
+        const dateStr = row["Sale Date"] || row["Date"] || row["Transaction Date"] || row["SaleDate"];
+        if (!dateStr) {
+          errors.push(`Row ${index2 + 1}: Missing date`);
+          skipped++;
+          continue;
+        }
+        const transactionDate = new Date(dateStr);
+        if (isNaN(transactionDate.getTime())) {
+          errors.push(`Row ${index2 + 1}: Invalid date "${dateStr}"`);
+          skipped++;
+          continue;
+        }
+        let studentId = null;
+        const clientId = row["Client ID"] || row["ClientId"] || row["ClientID"];
+        const clientEmail = row["Email"] || row["Client Email"];
+        if (clientId) {
+          studentId = studentLookupByMindbodyId.get(clientId.toString()) || null;
+        }
+        if (!studentId && clientEmail) {
+          studentId = studentLookupByEmail.get(clientEmail.toString().toLowerCase()) || null;
+        }
+        const type = row["Payment Method"] || row["Type"] || row["Category"] || "Sale";
+        const description = row["Item name"] || row["Description"] || row["Item"] || row["Product"] || row["Service"] || "";
+        await storage2.upsertRevenue({
+          organizationId,
+          studentId,
+          mindbodySaleId: saleId,
+          mindbodyItemId: itemId,
+          amount: amount.toFixed(2),
+          type,
+          description,
+          transactionDate
+        });
+        imported++;
+      } catch (error) {
+        errors.push(`Row ${index2 + 1}: ${error.message}`);
+        skipped++;
+      }
+    }
+    const totalTime = ((Date.now() - startTime) / 1e3).toFixed(1);
+    console.log(
+      `[CSV Background Worker] Completed: ${imported} imported, ${skipped} skipped, ${rows.length} total in ${totalTime}s`
+    );
+    await storage2.updateImportJob(jobId, {
+      status: "completed",
+      error: errors.length > 0 ? `${errors.length} rows had errors. First: ${errors[0]}` : null,
+      progress: JSON.stringify({
+        revenue: { current: rows.length, total: rows.length }
+      })
+    });
+    importProgressMap.delete(organizationId);
+  } catch (error) {
+    console.error("[CSV Background Worker] Error:", error);
+    await storage2.updateImportJob(jobId, {
+      status: "failed",
+      error: error.message
+    });
+    importProgressMap.delete(organizationId);
+  }
 }
 
 // server/routes/mindbody.ts
@@ -4291,247 +4559,300 @@ function registerWebhookRoutes(app2) {
 // server/openai.ts
 init_storage();
 init_db();
-init_schema();
 import OpenAI from "openai";
-import { eq as eq2, and as and2, gte as gte2, lte as lte2, sql as sql2, desc as desc2 } from "drizzle-orm";
+import { sql as sql2 } from "drizzle-orm";
+import * as XLSX from "xlsx";
+
+// server/objectStorage.ts
+import { Storage } from "@google-cloud/storage";
+var REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
+var objectStorageClient = new Storage({
+  credentials: {
+    audience: "replit",
+    subject_token_type: "access_token",
+    token_url: `${REPLIT_SIDECAR_ENDPOINT}/token`,
+    type: "external_account",
+    credential_source: {
+      url: `${REPLIT_SIDECAR_ENDPOINT}/credential`,
+      format: {
+        type: "json",
+        subject_token_field_name: "access_token"
+      }
+    },
+    universe_domain: "googleapis.com"
+  },
+  projectId: ""
+});
+var ObjectNotFoundError = class _ObjectNotFoundError extends Error {
+  constructor() {
+    super("Object not found");
+    this.name = "ObjectNotFoundError";
+    Object.setPrototypeOf(this, _ObjectNotFoundError.prototype);
+  }
+};
+var ObjectStorageService = class {
+  constructor() {
+  }
+  getPrivateObjectDir() {
+    const dir = process.env.PRIVATE_OBJECT_DIR || "";
+    if (!dir) {
+      throw new Error(
+        "PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' tool."
+      );
+    }
+    return dir;
+  }
+  parseObjectPath(path4) {
+    if (!path4.startsWith("/")) {
+      path4 = `/${path4}`;
+    }
+    const pathParts = path4.split("/");
+    if (pathParts.length < 3) {
+      throw new Error("Invalid path: must contain at least a bucket name");
+    }
+    const bucketName = pathParts[1];
+    const objectName = pathParts.slice(2).join("/");
+    return { bucketName, objectName };
+  }
+  async saveFile(filePath, buffer) {
+    const { bucketName, objectName } = this.parseObjectPath(filePath);
+    const bucket = objectStorageClient.bucket(bucketName);
+    const file = bucket.file(objectName);
+    await file.save(buffer, {
+      resumable: false
+    });
+  }
+  async getFile(filePath) {
+    const { bucketName, objectName } = this.parseObjectPath(filePath);
+    const bucket = objectStorageClient.bucket(bucketName);
+    const file = bucket.file(objectName);
+    const [exists] = await file.exists();
+    if (!exists) {
+      throw new ObjectNotFoundError();
+    }
+    return file;
+  }
+  async downloadFile(filePath) {
+    const file = await this.getFile(filePath);
+    const [buffer] = await file.download();
+    return buffer;
+  }
+  async deleteFile(filePath) {
+    const file = await this.getFile(filePath);
+    await file.delete();
+  }
+  async downloadObject(file, res, cacheTtlSec = 3600) {
+    try {
+      const [metadata] = await file.getMetadata();
+      res.set({
+        "Content-Type": metadata.contentType || "application/octet-stream",
+        "Content-Length": metadata.size,
+        "Cache-Control": `private, max-age=${cacheTtlSec}`
+      });
+      const stream = file.createReadStream();
+      stream.on("error", (err) => {
+        console.error("Stream error:", err);
+        if (!res.headersSent) {
+          res.status(500).json({ error: "Error streaming file" });
+        }
+      });
+      stream.pipe(res);
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Error downloading file" });
+      }
+    }
+  }
+};
+
+// server/openai.ts
+import { randomUUID } from "crypto";
 var openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || ""
 });
 var MAX_TOKENS_PER_QUERY = 2e3;
 var MONTHLY_QUERY_LIMIT = 1e3;
+var DATABASE_SCHEMA = `
+DATABASE SCHEMA:
+
+1. students - Student/client information
+   - id (uuid), organization_id (uuid), mindbody_client_id, first_name, last_name
+   - email, phone, status, membership_type, join_date, created_at
+
+2. classes - Class types offered
+   - id (uuid), organization_id (uuid), mindbody_class_id, name, description
+   - instructor_name, capacity, duration, created_at
+
+3. class_schedules - Individual class sessions
+   - id (uuid), organization_id (uuid), class_id (uuid, FK to classes)
+   - mindbody_schedule_id, start_time, end_time, location, created_at
+
+4. attendance - Student attendance records
+   - id (uuid), organization_id (uuid), student_id (uuid, FK to students)
+   - schedule_id (uuid, FK to class_schedules), attended_at, status, created_at
+
+5. revenue - Financial transactions
+   - id (uuid), organization_id (uuid), student_id (uuid, FK to students)
+   - amount (decimal), type, description, transaction_date, created_at
+
+IMPORTANT: All queries must include "WHERE organization_id = $1" for data isolation.
+Use JOINs to combine tables. Aggregate functions (COUNT, SUM, AVG) are available.
+Use PostgreSQL functions like EXTRACT(YEAR FROM date), TO_CHAR(), etc.
+`;
 var QUERY_TOOLS = [
   {
     type: "function",
     function: {
-      name: "get_student_attendance",
-      description: "Get attendance records for a specific student by name. Returns total classes attended and attendance history.",
+      name: "execute_sql_query",
+      description: "Execute a custom SQL query to retrieve data from the database. You can query students, classes, class_schedules, attendance, and revenue tables. Always include WHERE organization_id = $1 for security.",
       parameters: {
         type: "object",
         properties: {
-          student_name: {
+          sql_query: {
             type: "string",
-            description: "The full or partial name of the student (e.g., 'Ameet Srivastava' or 'Ameet')"
+            description: "The SQL SELECT query to execute. Must be a read-only SELECT statement. Use $1 for organization_id parameter. Example: SELECT COUNT(*) FROM class_schedules WHERE organization_id = $1 AND EXTRACT(YEAR FROM start_time) = 2025"
           },
-          date_range: {
+          explanation: {
             type: "string",
-            enum: ["all_time", "past_year", "past_month"],
-            description: "Time range for attendance records"
+            description: "Brief explanation of what this query does (for logging/debugging)"
           }
         },
-        required: ["student_name"]
+        required: ["sql_query", "explanation"]
       }
     }
   },
   {
     type: "function",
     function: {
-      name: "get_top_students_by_attendance",
-      description: "Get the top N students ranked by number of classes attended",
+      name: "create_excel_spreadsheet",
+      description: "Create an Excel spreadsheet file (.xlsx) from structured data. Use this when the user asks to export data, create a spreadsheet, or download results as Excel. The data should be formatted as an array of objects where each object represents a row.",
       parameters: {
         type: "object",
         properties: {
-          limit: {
-            type: "number",
-            description: "Number of top students to return (default 10)"
+          filename: {
+            type: "string",
+            description: "The filename for the Excel file (without extension). Example: 'student_roster' or 'revenue_report_2025'"
           },
-          date_range: {
+          sheet_name: {
             type: "string",
-            enum: ["all_time", "past_year", "past_month"],
-            description: "Time range for counting attendance"
-          }
-        },
-        required: []
-      }
-    }
-  },
-  {
-    type: "function",
-    function: {
-      name: "get_revenue_by_period",
-      description: "Get revenue statistics for a specific time period with breakdown",
-      parameters: {
-        type: "object",
-        properties: {
-          period: {
-            type: "string",
-            enum: ["this_month", "last_month", "this_quarter", "last_quarter", "this_year", "last_year"],
-            description: "The time period to analyze"
+            description: "The name of the worksheet/sheet. Example: 'Students' or 'Revenue Data'"
           },
-          breakdown_by: {
-            type: "string",
-            enum: ["day", "month", "type"],
-            description: "How to break down the revenue data"
-          }
-        },
-        required: ["period"]
-      }
-    }
-  },
-  {
-    type: "function",
-    function: {
-      name: "get_class_statistics",
-      description: "Get statistics about classes including attendance rates, popular times, and performance",
-      parameters: {
-        type: "object",
-        properties: {
-          metric: {
-            type: "string",
-            enum: ["most_popular", "attendance_rate", "by_time_of_day", "underperforming"],
-            description: "What class metric to analyze"
-          }
-        },
-        required: ["metric"]
-      }
-    }
-  },
-  {
-    type: "function",
-    function: {
-      name: "get_student_revenue",
-      description: "Get revenue/purchase information for a specific student or all students",
-      parameters: {
-        type: "object",
-        properties: {
-          student_name: {
-            type: "string",
-            description: "The student's name (optional - if omitted, returns top spenders)"
+          data: {
+            type: "array",
+            description: "Array of objects where each object represents a row. All objects should have the same keys which become column headers. Example: [{name: 'Alice', age: 25}, {name: 'Bob', age: 30}]",
+            items: {
+              type: "object"
+            }
           },
-          limit: {
-            type: "number",
-            description: "If getting top spenders, how many to return"
-          }
-        },
-        required: []
-      }
-    }
-  },
-  {
-    type: "function",
-    function: {
-      name: "execute_custom_query",
-      description: "Execute a custom aggregation or complex query on the database. Use when other functions don't fit the question.",
-      parameters: {
-        type: "object",
-        properties: {
-          query_type: {
+          description: {
             type: "string",
-            description: "Description of what data to retrieve (e.g., 'inactive students', 'revenue per class type', 'attendance trends')"
+            description: "Brief description of what this spreadsheet contains (for the user)"
           }
         },
-        required: ["query_type"]
+        required: ["filename", "sheet_name", "data", "description"]
       }
     }
   }
 ];
 var OpenAIService = class {
   // Execute database query functions called by AI
-  async executeFunctionCall(functionName, args, organizationId) {
-    const now = /* @__PURE__ */ new Date();
-    const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-    const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+  async executeFunctionCall(functionName, args, organizationId, userId) {
     try {
-      switch (functionName) {
-        case "get_student_attendance": {
-          const { student_name, date_range = "all_time" } = args;
-          const allStudents = await db.select().from(students).where(eq2(students.organizationId, organizationId));
-          const nameLower = student_name.toLowerCase();
-          const matchingStudents = allStudents.filter(
-            (s) => `${s.firstName} ${s.lastName}`.toLowerCase().includes(nameLower)
-          );
-          if (matchingStudents.length === 0) {
-            return JSON.stringify({ error: `No student found matching "${student_name}"` });
-          }
-          const student = matchingStudents[0];
-          let attendanceRecords = await db.select().from(attendance).where(
-            and2(
-              eq2(attendance.organizationId, organizationId),
-              eq2(attendance.studentId, student.id),
-              eq2(attendance.status, "attended")
-            )
-          ).orderBy(desc2(attendance.attendedAt));
-          if (date_range === "past_year") {
-            attendanceRecords = attendanceRecords.filter((a) => new Date(a.attendedAt) >= oneYearAgo);
-          } else if (date_range === "past_month") {
-            attendanceRecords = attendanceRecords.filter((a) => new Date(a.attendedAt) >= oneMonthAgo);
-          }
+      if (functionName === "execute_sql_query") {
+        const { sql_query, explanation } = args;
+        const trimmedQuery = sql_query.trim().toUpperCase();
+        if (!trimmedQuery.startsWith("SELECT")) {
           return JSON.stringify({
-            student: `${student.firstName} ${student.lastName}`,
-            total_classes: attendanceRecords.length,
-            date_range,
-            most_recent: attendanceRecords[0]?.attendedAt || null
+            error: "Only SELECT queries are allowed for security reasons"
           });
         }
-        case "get_top_students_by_attendance": {
-          const { limit = 10, date_range = "all_time" } = args;
-          const result = await db.select({
-            studentId: attendance.studentId,
-            firstName: students.firstName,
-            lastName: students.lastName,
-            count: sql2`count(*)::int`
-          }).from(attendance).innerJoin(students, eq2(attendance.studentId, students.id)).where(
-            and2(
-              eq2(attendance.organizationId, organizationId),
-              eq2(attendance.status, "attended"),
-              date_range === "past_year" ? gte2(attendance.attendedAt, oneYearAgo) : date_range === "past_month" ? gte2(attendance.attendedAt, oneMonthAgo) : sql2`true`
-            )
-          ).groupBy(attendance.studentId, students.firstName, students.lastName).orderBy(desc2(sql2`count(*)`)).limit(limit);
-          return JSON.stringify({
-            date_range,
-            top_students: result.map((r, i) => ({
-              rank: i + 1,
-              name: `${r.firstName} ${r.lastName}`,
-              classes_attended: r.count
-            }))
-          });
-        }
-        case "get_revenue_by_period": {
-          const { period, breakdown_by } = args;
-          let startDate, endDate = now;
-          if (period === "this_month") {
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-          } else if (period === "last_month") {
-            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            endDate = new Date(now.getFullYear(), now.getMonth(), 0);
-          } else if (period === "this_year") {
-            startDate = new Date(now.getFullYear(), 0, 1);
-          } else if (period === "last_year") {
-            startDate = new Date(now.getFullYear() - 1, 0, 1);
-            endDate = new Date(now.getFullYear() - 1, 11, 31);
-          } else {
-            startDate = oneMonthAgo;
+        const dangerousKeywords = ["DROP", "DELETE", "UPDATE", "INSERT", "ALTER", "CREATE", "TRUNCATE"];
+        for (const keyword of dangerousKeywords) {
+          if (trimmedQuery.includes(keyword)) {
+            return JSON.stringify({
+              error: `Query contains forbidden keyword: ${keyword}`
+            });
           }
-          const revenueData = await db.select({
-            total: sql2`sum(cast(${revenue.amount} as numeric))`,
-            count: sql2`count(*)::int`,
-            type: breakdown_by === "type" ? revenue.type : sql2`'all'`
-          }).from(revenue).where(
-            and2(
-              eq2(revenue.organizationId, organizationId),
-              gte2(revenue.transactionDate, startDate),
-              lte2(revenue.transactionDate, endDate)
-            )
-          ).groupBy(breakdown_by === "type" ? revenue.type : sql2`'all'`);
+        }
+        if (!sql_query.includes("$1") && !sql_query.toLowerCase().includes("organization_id")) {
           return JSON.stringify({
-            period,
-            total_revenue: revenueData.reduce((sum, r) => sum + Number(r.total || 0), 0),
-            transaction_count: revenueData.reduce((sum, r) => sum + r.count, 0),
-            breakdown: breakdown_by === "type" ? revenueData.map((r) => ({
-              type: r.type,
-              revenue: Number(r.total || 0),
-              count: r.count
-            })) : null
+            error: "Query must include organization_id filter using $1 parameter"
           });
         }
-        default:
-          return JSON.stringify({ error: `Function ${functionName} not implemented yet. Please ask a different question or try rephrasing.` });
+        console.log(`[AI Query] Executing: ${explanation}`);
+        console.log(`[AI Query] SQL: ${sql_query}`);
+        const finalQuery = sql_query.replace(/\$1/g, `'${organizationId.replace(/'/g, "''")}'`);
+        const result = await db.execute(sql2.raw(finalQuery));
+        console.log(`[AI Query] Result rows: ${result.rows.length}`);
+        return JSON.stringify({
+          success: true,
+          explanation,
+          row_count: result.rows.length,
+          data: result.rows.slice(0, 100)
+          // Limit to 100 rows for response size
+        });
       }
+      if (functionName === "create_excel_spreadsheet") {
+        const { filename, sheet_name, data, description } = args;
+        console.log(`[AI Excel] Creating spreadsheet: ${filename}`);
+        console.log(`[AI Excel] Data type:`, typeof data);
+        console.log(`[AI Excel] Data:`, JSON.stringify(data).substring(0, 200));
+        if (!data || !Array.isArray(data)) {
+          return JSON.stringify({
+            error: "Data must be a non-empty array",
+            received_type: typeof data
+          });
+        }
+        if (data.length === 0) {
+          return JSON.stringify({
+            error: "Data array cannot be empty"
+          });
+        }
+        console.log(`[AI Excel] Rows: ${data.length}`);
+        const workbook = XLSX.utils.book_new();
+        const worksheet = XLSX.utils.json_to_sheet(data);
+        XLSX.utils.book_append_sheet(workbook, worksheet, sheet_name);
+        const excelBuffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+        const objectStorage = new ObjectStorageService();
+        const privateDir = objectStorage.getPrivateObjectDir();
+        const fileId = randomUUID();
+        const safeFilename = filename.replace(/[^a-zA-Z0-9_-]/g, "_");
+        const fullFilename = `${fileId}-${safeFilename}.xlsx`;
+        const storagePath = `${privateDir}/excel/${fullFilename}`;
+        await objectStorage.saveFile(storagePath, excelBuffer);
+        await storage.createAiGeneratedFile({
+          organizationId,
+          userId,
+          filename: fullFilename,
+          originalFilename: `${safeFilename}.xlsx`,
+          storagePath,
+          fileType: "excel"
+        });
+        const downloadUrl = `/api/files/download/${fullFilename}`;
+        console.log(`[AI Excel] Saved to: ${storagePath}`);
+        console.log(`[AI Excel] Download URL: ${downloadUrl}`);
+        console.log(`[AI Excel] Metadata saved for org ${organizationId}, user ${userId}`);
+        return JSON.stringify({
+          success: true,
+          description,
+          filename: `${safeFilename}.xlsx`,
+          download_url: downloadUrl,
+          row_count: data.length,
+          message: `Excel file "${safeFilename}.xlsx" created successfully with ${data.length} rows.`
+        });
+      }
+      return JSON.stringify({
+        error: `Unknown function: ${functionName}`
+      });
     } catch (error) {
       console.error(`Error executing function ${functionName}:`, error);
-      return JSON.stringify({ error: `Failed to execute query: ${error instanceof Error ? error.message : "Unknown error"}` });
+      return JSON.stringify({
+        error: `Failed to execute ${functionName}: ${error instanceof Error ? error.message : "Unknown error"}`
+      });
     }
   }
-  async generateInsight(organizationId, userId, query) {
+  async generateInsight(organizationId, userId, query, conversationHistory = [], fileContext = "") {
     const recentQueries = await storage.getAIQueries(organizationId, 100);
     const thisMonthQueries = recentQueries.filter((q) => {
       const queryDate = new Date(q.createdAt);
@@ -4546,19 +4867,43 @@ var OpenAIService = class {
     const messages = [
       {
         role: "system",
-        content: `You are an AI assistant for analyzing Mindbody studio data (students, classes, attendance, revenue). 
-You have access to database query tools. Call the appropriate tools to get real data, then provide insights based on the results.
-Be specific, data-driven, and actionable in your responses.`
-      },
-      {
-        role: "user",
-        content: query
+        content: `You are an AI assistant for analyzing Mindbody studio data. You have access to a SQL database query tool.
+
+${DATABASE_SCHEMA}
+
+INSTRUCTIONS:
+- For ANY question about the data, use the execute_sql_query tool to write and run a SQL SELECT query
+- Always include "WHERE organization_id = $1" in your queries for data isolation
+- Be creative with SQL - you can use JOINs, aggregations, subqueries, date functions, etc.
+- After getting results, analyze them and provide clear, actionable insights
+- When users ask follow-up questions, refer to conversation history for context
+- When users ask to create a spreadsheet, export to Excel, or download data, use the create_excel_spreadsheet tool
+- You can combine both tools: first query data with execute_sql_query, then create a spreadsheet with the results
+${fileContext ? `- The user has uploaded files. Use their content to answer questions or cross-reference with database data` : ""}
+
+EXAMPLES:
+- "How many classes in 2025?" \u2192 SELECT COUNT(*) FROM class_schedules WHERE organization_id = $1 AND EXTRACT(YEAR FROM start_time) = 2025
+- "Top 10 students by attendance?" \u2192 SELECT s.first_name, s.last_name, COUNT(*) as classes FROM attendance a JOIN students s ON a.student_id = s.id WHERE a.organization_id = $1 AND a.status = 'attended' GROUP BY s.id, s.first_name, s.last_name ORDER BY classes DESC LIMIT 10
+- "Revenue this month?" \u2192 SELECT SUM(amount) FROM revenue WHERE organization_id = $1 AND EXTRACT(YEAR FROM transaction_date) = EXTRACT(YEAR FROM CURRENT_DATE) AND EXTRACT(MONTH FROM transaction_date) = EXTRACT(MONTH FROM CURRENT_DATE)
+
+You can answer ANY question about the data - just write the appropriate SQL query!${fileContext ? `
+
+UPLOADED FILE DATA:
+${fileContext}` : ""}`
       }
     ];
+    if (conversationHistory.length > 0) {
+      messages.push(...conversationHistory);
+    }
+    messages.push({
+      role: "user",
+      content: query
+    });
     let totalTokensUsed = 0;
     let finalResponse = "";
     let iterationCount = 0;
     const maxIterations = 5;
+    const downloadLinks = [];
     while (iterationCount < maxIterations) {
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
@@ -4576,27 +4921,46 @@ Be specific, data-driven, and actionable in your responses.`
       messages.push(message);
       if (message.tool_calls && message.tool_calls.length > 0) {
         for (const toolCall of message.tool_calls) {
-          if (toolCall.type === "function") {
-            const functionName = toolCall.function.name;
-            const functionArgs = JSON.parse(toolCall.function.arguments || "{}");
-            console.log(`[AI Query] Calling tool: ${functionName}`, functionArgs);
-            const functionResult = await this.executeFunctionCall(functionName, functionArgs, organizationId);
-            console.log(`[AI Query] Tool result:`, functionResult);
-            messages.push({
-              role: "tool",
-              tool_call_id: toolCall.id,
-              content: functionResult
-            });
+          if (toolCall.type !== "function") continue;
+          const functionName = toolCall.function.name;
+          const functionArgs = JSON.parse(toolCall.function.arguments);
+          const result = await this.executeFunctionCall(
+            functionName,
+            functionArgs,
+            organizationId,
+            userId
+          );
+          if (functionName === "create_excel_spreadsheet") {
+            try {
+              const resultData = JSON.parse(result);
+              if (resultData.success && resultData.download_url) {
+                downloadLinks.push({
+                  filename: resultData.filename,
+                  url: resultData.download_url
+                });
+              }
+            } catch (e) {
+              console.error("Failed to parse Excel creation result:", e);
+            }
           }
+          messages.push({
+            role: "tool",
+            tool_call_id: toolCall.id,
+            content: result
+          });
         }
         iterationCount++;
-      } else {
-        finalResponse = message.content || "No response generated";
-        break;
+        continue;
       }
+      finalResponse = message.content || "No response generated";
+      break;
     }
-    if (!finalResponse) {
-      finalResponse = "Unable to complete the query. Please try rephrasing your question.";
+    if (downloadLinks.length > 0) {
+      finalResponse += "\n\n";
+      downloadLinks.forEach((link) => {
+        finalResponse += `[Download: ${link.filename}](${link.url})
+`;
+      });
     }
     await storage.createAIQuery({
       organizationId,
@@ -4605,26 +4969,16 @@ Be specific, data-driven, and actionable in your responses.`
       response: finalResponse,
       tokensUsed: totalTokensUsed
     });
-    return { response: finalResponse, tokensUsed: totalTokensUsed };
-  }
-  async getUsageStats(organizationId) {
-    const queries = await storage.getAIQueries(organizationId, 1e3);
-    const now = /* @__PURE__ */ new Date();
-    const thisMonthQueries = queries.filter((q) => {
-      const queryDate = new Date(q.createdAt);
-      return queryDate.getMonth() === now.getMonth() && queryDate.getFullYear() === now.getFullYear();
-    });
-    const tokensThisMonth = thisMonthQueries.reduce((sum, q) => sum + (q.tokensUsed || 0), 0);
     return {
-      queriesThisMonth: thisMonthQueries.length,
-      tokensThisMonth,
-      queryLimit: MONTHLY_QUERY_LIMIT
+      response: finalResponse,
+      tokensUsed: totalTokensUsed
     };
   }
 };
 var openaiService = new OpenAIService();
 
 // server/routes/ai.ts
+init_storage();
 function registerAIRoutes(app2) {
   app2.post("/api/ai/query", requireAuth, async (req, res) => {
     try {
@@ -4633,15 +4987,95 @@ function registerAIRoutes(app2) {
       if (!organizationId || !userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
-      const { query } = req.body;
+      const { query, conversationHistory, fileIds, conversationId, saveToHistory } = req.body;
       if (!query || typeof query !== "string" || query.trim().length === 0) {
         return res.status(400).json({ error: "Query is required" });
       }
       if (query.length > 500) {
         return res.status(400).json({ error: "Query too long (max 500 characters)" });
       }
-      const result = await openaiService.generateInsight(organizationId, userId, query);
-      res.json(result);
+      let activeConversation = null;
+      if (conversationId && typeof conversationId === "string") {
+        activeConversation = await storage.getConversation(conversationId);
+        if (activeConversation) {
+          if (activeConversation.organizationId !== organizationId || activeConversation.userId !== userId) {
+            return res.status(403).json({ error: "Access denied to conversation" });
+          }
+        } else {
+          return res.status(404).json({ error: "Conversation not found" });
+        }
+      }
+      const history = [];
+      if (Array.isArray(conversationHistory)) {
+        if (conversationHistory.length > 20) {
+          return res.status(400).json({ error: "Conversation history too long (max 20 messages)" });
+        }
+        for (const entry of conversationHistory) {
+          if (typeof entry !== "object" || entry === null) {
+            return res.status(400).json({ error: "Invalid conversation history format" });
+          }
+          const { role, content } = entry;
+          if (role !== "user" && role !== "assistant") {
+            return res.status(400).json({ error: "Invalid role in conversation history. Only 'user' and 'assistant' are allowed." });
+          }
+          if (typeof content !== "string" || content.trim().length === 0) {
+            return res.status(400).json({ error: "Invalid content in conversation history" });
+          }
+          if (content.length > 2e3) {
+            return res.status(400).json({ error: "Conversation history message too long (max 2000 characters per message)" });
+          }
+          history.push({ role, content: content.trim() });
+        }
+      }
+      let fileContext = "";
+      if (Array.isArray(fileIds) && fileIds.length > 0) {
+        for (const fileId of fileIds) {
+          if (typeof fileId !== "string") continue;
+          const file = await storage.getUploadedFile(fileId);
+          if (!file || file.organizationId !== organizationId || file.userId !== userId) {
+            continue;
+          }
+          if (file.extractedText) {
+            fileContext += `
+
+--- File: ${file.originalName} ---
+${file.extractedText}
+`;
+          }
+        }
+      }
+      const result = await openaiService.generateInsight(organizationId, userId, query, history, fileContext);
+      let savedConversationId;
+      if (saveToHistory !== false) {
+        try {
+          if (!activeConversation) {
+            const title = query.trim().substring(0, 50) + (query.length > 50 ? "..." : "");
+            activeConversation = await storage.createConversation({
+              organizationId,
+              userId,
+              title
+            });
+          }
+          await storage.createConversationMessage({
+            conversationId: activeConversation.id,
+            role: "user",
+            content: query.trim()
+          });
+          await storage.createConversationMessage({
+            conversationId: activeConversation.id,
+            role: "assistant",
+            content: result.response
+          });
+          await storage.updateConversation(activeConversation.id, {});
+          savedConversationId = activeConversation.id;
+        } catch (saveError) {
+          console.error("Error saving to conversation:", saveError);
+        }
+      }
+      res.json({
+        ...result,
+        ...savedConversationId && { conversationId: savedConversationId }
+      });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to generate AI insight";
       res.status(500).json({ error: errorMessage });
@@ -4729,7 +5163,7 @@ function registerDashboardRoutes(app2) {
         previousPeriodRevenue,
         attendanceRecords,
         previousAttendanceRecords,
-        classes3
+        classes2
       ] = await Promise.all([
         storage.getStudentCount(organizationId),
         storage.getActiveStudentCount(organizationId),
@@ -4756,7 +5190,7 @@ function registerDashboardRoutes(app2) {
         attendanceRate: attendanceRate.toFixed(1),
         attendanceChange: attendanceChange.toFixed(1),
         totalAttendanceRecords: attendanceRecords.length,
-        classesThisMonth: classes3.length,
+        classesThisMonth: classes2.length,
         classChange: "+8.2",
         _timestamp: Date.now()
         // Cache-busting timestamp
@@ -4788,6 +5222,10 @@ function registerDashboardRoutes(app2) {
         );
       }
       const data = await storage.getMonthlyRevenueTrend(organizationId, startDate, endDate);
+      console.log(`[Revenue Trend] Returning ${data.length} data points for ${startDate?.toISOString()} to ${endDate?.toISOString()}`);
+      console.log(`[Revenue Trend] First 5 data points:`, JSON.stringify(data.slice(0, 5), null, 2));
+      console.log(`[Revenue Trend] Last 5 data points:`, JSON.stringify(data.slice(-5), null, 2));
+      console.log(`[Revenue Trend] Data points with revenue > 0:`, data.filter((d) => d.revenue > 0).length);
       res.json(data);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch revenue trend" });
@@ -4811,7 +5249,11 @@ function registerDashboardRoutes(app2) {
 
 // server/routes/reports.ts
 init_storage();
-import { addDays as addDays2 } from "date-fns";
+function setEndOfDay(date) {
+  const endOfDay = new Date(date);
+  endOfDay.setHours(23, 59, 59, 999);
+  return endOfDay;
+}
 function registerReportRoutes(app2) {
   app2.post("/api/reports/fix-orphaned-attendance", requireAuth, async (req, res) => {
     try {
@@ -4888,7 +5330,6 @@ function registerReportRoutes(app2) {
       }
       let startDate;
       let endDate;
-      let queryEndDate;
       if (req.query.startDate) {
         startDate = new Date(req.query.startDate);
         if (isNaN(startDate.getTime())) {
@@ -4900,14 +5341,12 @@ function registerReportRoutes(app2) {
         if (isNaN(endDate.getTime())) {
           return res.status(400).json({ error: "Invalid endDate format" });
         }
+        endDate = setEndOfDay(endDate);
       }
       if (startDate && endDate && startDate > endDate) {
         return res.status(400).json({ error: "startDate must be before or equal to endDate" });
       }
-      if (endDate) {
-        queryEndDate = addDays2(endDate, 1);
-      }
-      const revenueData = await storage.getRevenue(organizationId, startDate, queryEndDate);
+      const revenueData = await storage.getRevenue(organizationId, startDate, endDate);
       const csv = [
         "Date,Description,Amount,Type",
         ...revenueData.map(
@@ -4932,7 +5371,6 @@ function registerReportRoutes(app2) {
       }
       let startDate;
       let endDate;
-      let queryEndDate;
       if (req.query.startDate) {
         startDate = new Date(req.query.startDate);
         if (isNaN(startDate.getTime())) {
@@ -4944,14 +5382,12 @@ function registerReportRoutes(app2) {
         if (isNaN(endDate.getTime())) {
           return res.status(400).json({ error: "Invalid endDate format" });
         }
+        endDate = setEndOfDay(endDate);
       }
       if (startDate && endDate && startDate > endDate) {
         return res.status(400).json({ error: "startDate must be before or equal to endDate" });
       }
-      if (endDate) {
-        queryEndDate = addDays2(endDate, 1);
-      }
-      const attendanceData = await storage.getAttendanceWithDetails(organizationId, startDate, queryEndDate);
+      const attendanceData = await storage.getAttendanceWithDetails(organizationId, startDate, endDate);
       console.log("[ATTENDANCE REPORT DEBUG]", {
         totalRecords: attendanceData.length,
         sampleRecords: attendanceData.slice(0, 5).map((a) => ({
@@ -4989,7 +5425,6 @@ function registerReportRoutes(app2) {
       }
       let startDate;
       let endDate;
-      let queryEndDate;
       if (req.query.startDate) {
         startDate = new Date(req.query.startDate);
         if (isNaN(startDate.getTime())) {
@@ -5001,19 +5436,17 @@ function registerReportRoutes(app2) {
         if (isNaN(endDate.getTime())) {
           return res.status(400).json({ error: "Invalid endDate format" });
         }
+        endDate = setEndOfDay(endDate);
       }
       if (startDate && endDate && startDate > endDate) {
         return res.status(400).json({ error: "startDate must be before or equal to endDate" });
       }
-      if (endDate) {
-        queryEndDate = addDays2(endDate, 1);
-      }
-      const classes3 = await storage.getClasses(organizationId);
-      const attendanceData = await storage.getAttendance(organizationId, startDate, queryEndDate);
+      const classes2 = await storage.getClasses(organizationId);
+      const attendanceData = await storage.getAttendance(organizationId, startDate, endDate);
       const schedules = await storage.getClassSchedules(organizationId);
       const scheduleToClassMap = /* @__PURE__ */ new Map();
       schedules.forEach((sch) => scheduleToClassMap.set(sch.id, sch.classId));
-      const classStats = classes3.map((c) => {
+      const classStats = classes2.map((c) => {
         const classAttendance = attendanceData.filter((a) => {
           const classId = scheduleToClassMap.get(a.scheduleId);
           return classId === c.id;
@@ -5074,11 +5507,11 @@ function registerReportRoutes(app2) {
       const now = /* @__PURE__ */ new Date();
       const periodStart = startDate || new Date(now.getFullYear(), now.getMonth(), 1);
       let periodEnd = endDate || now;
-      const queryEndDate = addDays2(periodEnd, 1);
-      const [studentCount, revenueStats, attendanceRecords, classes3] = await Promise.all([
+      periodEnd = setEndOfDay(periodEnd);
+      const [studentCount, revenueStats, attendanceRecords, classes2] = await Promise.all([
         storage.getStudentCount(organizationId),
         storage.getRevenueStats(organizationId, periodStart, periodEnd),
-        storage.getAttendance(organizationId, periodStart, queryEndDate),
+        storage.getAttendance(organizationId, periodStart, periodEnd),
         storage.getClasses(organizationId)
       ]);
       const attendedCount = attendanceRecords.filter((a) => a.status === "attended").length;
@@ -5089,7 +5522,7 @@ function registerReportRoutes(app2) {
         "Metric,Value",
         `"Period","${periodName}"`,
         `"Total Students","${studentCount}"`,
-        `"Total Classes","${classes3.length}"`,
+        `"Total Classes","${classes2.length}"`,
         `"Total Revenue","$${revenueStats.total.toFixed(2)}"`,
         `"Revenue Transactions","${revenueStats.count}"`,
         `"Total Attendance Records","${attendanceRecords.length}"`,
@@ -5113,7 +5546,7 @@ function registerReportRoutes(app2) {
       if (!organizationId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
-      const [studentCount, classes3, schedules, attendance2, revenue2, orphanedCount, studentsWithoutAttendance, classesWithoutSchedules] = await Promise.all([
+      const [studentCount, classes2, schedules, attendance2, revenue2, orphanedCount, studentsWithoutAttendance, classesWithoutSchedules] = await Promise.all([
         storage.getStudentCount(organizationId),
         storage.getClasses(organizationId),
         storage.getClassSchedules(organizationId),
@@ -5154,8 +5587,8 @@ function registerReportRoutes(app2) {
             dateRange: { earliest: null, latest: null }
           },
           classes: {
-            total: classes3.length,
-            dateRange: getDateRange(classes3)
+            total: classes2.length,
+            dateRange: getDateRange(classes2)
           },
           schedules: {
             total: schedules.length,
@@ -5456,7 +5889,7 @@ async function exportDatabaseAsJson(req, res) {
 // server/routes/kpi.ts
 init_db();
 init_schema();
-import { sql as sql4, and as and3, gte as gte3, lte as lte3, eq as eq3, desc as desc3, isNotNull } from "drizzle-orm";
+import { sql as sql4, and as and2, gte as gte2, lte as lte2, eq as eq2, desc as desc2, isNotNull } from "drizzle-orm";
 function registerKPIRoutes(app2) {
   app2.get("/api/kpi/overview", requireAuth, async (req, res) => {
     try {
@@ -5467,42 +5900,42 @@ function registerKPIRoutes(app2) {
       const startDate = req.query.startDate ? new Date(req.query.startDate) : void 0;
       const endDate = req.query.endDate ? new Date(req.query.endDate) : void 0;
       const dateFilter = [];
-      if (startDate) dateFilter.push(gte3(revenue.transactionDate, startDate));
-      if (endDate) dateFilter.push(lte3(revenue.transactionDate, endDate));
+      if (startDate) dateFilter.push(gte2(revenue.transactionDate, startDate));
+      if (endDate) dateFilter.push(lte2(revenue.transactionDate, endDate));
       const revenueResult = await db.select({
         total: sql4`COALESCE(SUM(${revenue.amount}::numeric), 0)`
       }).from(revenue).where(
-        and3(
-          eq3(revenue.organizationId, organizationId),
-          dateFilter.length > 0 ? and3(...dateFilter) : void 0
+        and2(
+          eq2(revenue.organizationId, organizationId),
+          dateFilter.length > 0 ? and2(...dateFilter) : void 0
         )
       );
       const activeMembersResult = await db.select({
         count: sql4`COUNT(*)`
       }).from(students).where(
-        and3(
-          eq3(students.organizationId, organizationId),
-          eq3(students.status, "active"),
+        and2(
+          eq2(students.organizationId, organizationId),
+          eq2(students.status, "active"),
           isNotNull(students.membershipType)
         )
       );
       const totalStudentsResult = await db.select({
         count: sql4`COUNT(*)`
-      }).from(students).where(eq3(students.organizationId, organizationId));
+      }).from(students).where(eq2(students.organizationId, organizationId));
       const churnedMembersResult = await db.select({
         count: sql4`COUNT(*)`
       }).from(students).where(
-        and3(
-          eq3(students.organizationId, organizationId),
-          eq3(students.status, "inactive"),
+        and2(
+          eq2(students.organizationId, organizationId),
+          eq2(students.status, "inactive"),
           isNotNull(students.membershipType)
         )
       );
       const totalMembersEverResult = await db.select({
         count: sql4`COUNT(*)`
       }).from(students).where(
-        and3(
-          eq3(students.organizationId, organizationId),
+        and2(
+          eq2(students.organizationId, organizationId),
           isNotNull(students.membershipType)
         )
       );
@@ -5538,9 +5971,9 @@ function registerKPIRoutes(app2) {
           scheduleId: attendance.scheduleId,
           count: sql4`COUNT(*)::int`
         }).from(attendance).where(
-          and3(
-            eq3(attendance.organizationId, organizationId),
-            eq3(attendance.status, "attended")
+          and2(
+            eq2(attendance.organizationId, organizationId),
+            eq2(attendance.status, "attended")
           )
         ).groupBy(attendance.scheduleId)
       );
@@ -5555,11 +5988,11 @@ function registerKPIRoutes(app2) {
               END
             )
           `
-      }).from(classSchedules).leftJoin(classes, eq3(classSchedules.classId, classes.id)).leftJoin(attendanceCounts, eq3(attendanceCounts.scheduleId, classSchedules.id)).where(
-        and3(
-          eq3(classSchedules.organizationId, organizationId),
-          gte3(classSchedules.startTime, startDate),
-          lte3(classSchedules.startTime, endDate)
+      }).from(classSchedules).leftJoin(classes, eq2(classSchedules.classId, classes.id)).leftJoin(attendanceCounts, eq2(attendanceCounts.scheduleId, classSchedules.id)).where(
+        and2(
+          eq2(classSchedules.organizationId, organizationId),
+          gte2(classSchedules.startTime, startDate),
+          lte2(classSchedules.startTime, endDate)
         )
       ).groupBy(
         sql4`EXTRACT(DOW FROM ${classSchedules.startTime})`,
@@ -5580,18 +6013,18 @@ function registerKPIRoutes(app2) {
       const startDate = req.query.startDate ? new Date(req.query.startDate) : void 0;
       const endDate = req.query.endDate ? new Date(req.query.endDate) : void 0;
       const dateFilter = [];
-      if (startDate) dateFilter.push(gte3(revenue.transactionDate, startDate));
-      if (endDate) dateFilter.push(lte3(revenue.transactionDate, endDate));
+      if (startDate) dateFilter.push(gte2(revenue.transactionDate, startDate));
+      if (endDate) dateFilter.push(lte2(revenue.transactionDate, endDate));
       const introPurchases = await db.select({
         lineItems: sql4`COUNT(*)::int`,
         uniqueBuyers: sql4`COUNT(DISTINCT ${revenue.studentId})::int`,
         total: sql4`SUM(${revenue.amount}::numeric)`
       }).from(revenue).where(
-        and3(
-          eq3(revenue.organizationId, organizationId),
+        and2(
+          eq2(revenue.organizationId, organizationId),
           sql4`${revenue.description} ILIKE '%Intro%'`,
           sql4`${revenue.amount} > 0`,
-          dateFilter.length > 0 ? and3(...dateFilter) : void 0
+          dateFilter.length > 0 ? and2(...dateFilter) : void 0
         )
       );
       const conversions = await db.execute(sql4`
@@ -5634,12 +6067,12 @@ function registerKPIRoutes(app2) {
         month: sql4`TO_CHAR(${students.joinDate}, 'YYYY-MM')`,
         newMembers: sql4`COUNT(*)`
       }).from(students).where(
-        and3(
-          eq3(students.organizationId, organizationId),
+        and2(
+          eq2(students.organizationId, organizationId),
           isNotNull(students.membershipType),
           isNotNull(students.joinDate),
-          gte3(students.joinDate, startDate),
-          lte3(students.joinDate, endDate)
+          gte2(students.joinDate, startDate),
+          lte2(students.joinDate, endDate)
         )
       ).groupBy(sql4`TO_CHAR(${students.joinDate}, 'YYYY-MM')`).orderBy(sql4`TO_CHAR(${students.joinDate}, 'YYYY-MM')`);
       res.json({ monthlyTrend });
@@ -5661,9 +6094,9 @@ function registerKPIRoutes(app2) {
           scheduleId: attendance.scheduleId,
           count: sql4`COUNT(*)::int`
         }).from(attendance).where(
-          and3(
-            eq3(attendance.organizationId, organizationId),
-            eq3(attendance.status, "attended")
+          and2(
+            eq2(attendance.organizationId, organizationId),
+            eq2(attendance.status, "attended")
           )
         ).groupBy(attendance.scheduleId)
       );
@@ -5682,13 +6115,13 @@ function registerKPIRoutes(app2) {
               END
             )
           `
-      }).from(classes).innerJoin(classSchedules, eq3(classSchedules.classId, classes.id)).leftJoin(attendanceCounts, eq3(attendanceCounts.scheduleId, classSchedules.id)).where(
-        and3(
-          eq3(classes.organizationId, organizationId),
-          gte3(classSchedules.startTime, startDate),
-          lte3(classSchedules.startTime, endDate)
+      }).from(classes).innerJoin(classSchedules, eq2(classSchedules.classId, classes.id)).leftJoin(attendanceCounts, eq2(attendanceCounts.scheduleId, classSchedules.id)).where(
+        and2(
+          eq2(classes.organizationId, organizationId),
+          gte2(classSchedules.startTime, startDate),
+          lte2(classSchedules.startTime, endDate)
         )
-      ).groupBy(classes.id, classes.name, classes.instructorName, classes.capacity).orderBy(desc3(sql4`AVG(
+      ).groupBy(classes.id, classes.name, classes.instructorName, classes.capacity).orderBy(desc2(sql4`AVG(
           CASE 
             WHEN ${classes.capacity} IS NULL OR ${classes.capacity} = 0 THEN 0
             ELSE LEAST(100, (COALESCE(attendance_counts.count, 0)::decimal / ${classes.capacity}) * 100)
@@ -5719,29 +6152,29 @@ function registerKPIRoutes(app2) {
         month: sql4`TO_CHAR(${students.joinDate}, 'YYYY-MM')`,
         count: sql4`COUNT(*)::int`
       }).from(students).where(
-        and3(
-          eq3(students.organizationId, organizationId),
+        and2(
+          eq2(students.organizationId, organizationId),
           isNotNull(students.membershipType),
           isNotNull(students.joinDate),
-          gte3(students.joinDate, startDate),
-          lte3(students.joinDate, endDate)
+          gte2(students.joinDate, startDate),
+          lte2(students.joinDate, endDate)
         )
       ).groupBy(sql4`TO_CHAR(${students.joinDate}, 'YYYY-MM')`).orderBy(sql4`TO_CHAR(${students.joinDate}, 'YYYY-MM')`);
       const currentActive = await db.select({
         count: sql4`COUNT(*)::int`
       }).from(students).where(
-        and3(
-          eq3(students.organizationId, organizationId),
-          eq3(students.status, "active"),
+        and2(
+          eq2(students.organizationId, organizationId),
+          eq2(students.status, "active"),
           isNotNull(students.membershipType)
         )
       );
       const currentInactive = await db.select({
         count: sql4`COUNT(*)::int`
       }).from(students).where(
-        and3(
-          eq3(students.organizationId, organizationId),
-          eq3(students.status, "inactive"),
+        and2(
+          eq2(students.organizationId, organizationId),
+          eq2(students.status, "inactive"),
           isNotNull(students.membershipType)
         )
       );
@@ -5753,6 +6186,499 @@ function registerKPIRoutes(app2) {
     } catch (error) {
       console.error("Membership trends error:", error);
       res.status(500).json({ error: "Failed to fetch membership trends" });
+    }
+  });
+}
+
+// server/routes/files.ts
+import multer2 from "multer";
+init_storage();
+
+// server/file-parser.ts
+import Papa2 from "papaparse";
+import * as XLSX2 from "xlsx";
+import { readFileSync } from "fs";
+import { PDFParse } from "pdf-parse";
+async function parseFile(filePath, mimeType) {
+  try {
+    switch (mimeType) {
+      case "text/csv":
+        return parseCSV(filePath);
+      case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+      case "application/vnd.ms-excel":
+        return parseExcel(filePath);
+      case "text/plain":
+        return parseText(filePath);
+      case "application/pdf":
+        return await parsePDF(filePath);
+      default:
+        return {
+          text: `File type ${mimeType} is not supported for text extraction`,
+          metadata: {}
+        };
+    }
+  } catch (error) {
+    console.error(`Error parsing file:`, error);
+    return {
+      text: `Error parsing file: ${error instanceof Error ? error.message : String(error)}`,
+      metadata: {}
+    };
+  }
+}
+function parseCSV(filePath) {
+  const content = readFileSync(filePath, "utf-8");
+  const parsed = Papa2.parse(content, { header: true, skipEmptyLines: true });
+  const rows = parsed.data;
+  const columns = parsed.meta.fields || [];
+  const text2 = formatDataAsText(rows, columns);
+  return {
+    text: text2,
+    metadata: {
+      rows: rows.length,
+      columns: columns.length
+    }
+  };
+}
+function parseExcel(filePath) {
+  const workbook = XLSX2.readFile(filePath);
+  const sheetNames = workbook.SheetNames;
+  let allText = "";
+  const allRows = [];
+  for (const sheetName of sheetNames) {
+    const worksheet = workbook.Sheets[sheetName];
+    const data = XLSX2.utils.sheet_to_json(worksheet, { header: 1 });
+    if (data.length > 0) {
+      allText += `
+
+=== Sheet: ${sheetName} ===
+`;
+      const headers = data[0];
+      const rows = data.slice(1);
+      const rowObjects = rows.map((row) => {
+        const obj = {};
+        headers.forEach((header, i) => {
+          obj[header || `Column${i + 1}`] = row[i] || "";
+        });
+        return obj;
+      });
+      allRows.push(...rowObjects);
+      allText += formatDataAsText(rowObjects, headers.map((h, i) => h || `Column${i + 1}`));
+    }
+  }
+  return {
+    text: allText,
+    metadata: {
+      rows: allRows.length,
+      sheets: sheetNames
+    }
+  };
+}
+function parseText(filePath) {
+  const content = readFileSync(filePath, "utf-8");
+  return {
+    text: content,
+    metadata: {}
+  };
+}
+async function parsePDF(filePath) {
+  try {
+    const dataBuffer = readFileSync(filePath);
+    const parser = new PDFParse({ data: dataBuffer });
+    const pdfData = await parser.getText();
+    await parser.destroy();
+    return {
+      text: pdfData.text || "PDF contains no extractable text",
+      metadata: {
+        pages: pdfData.total || 0
+      }
+    };
+  } catch (error) {
+    console.error("Error parsing PDF:", error);
+    if (error instanceof Error && error.message.includes("encrypted")) {
+      return {
+        text: "PDF is password-protected and cannot be read",
+        metadata: {}
+      };
+    }
+    return {
+      text: `Could not extract text from PDF: ${error instanceof Error ? error.message : "Unknown error"}`,
+      metadata: {}
+    };
+  }
+}
+function formatDataAsText(rows, columns) {
+  if (rows.length === 0) return "No data found";
+  const maxRows = 1e3;
+  const displayRows = rows.slice(0, maxRows);
+  let text2 = `Data Summary (${rows.length} total rows, showing first ${displayRows.length}):
+
+`;
+  text2 += `Columns: ${columns.join(", ")}
+
+`;
+  text2 += "Sample Data:\n";
+  displayRows.slice(0, 10).forEach((row, i) => {
+    text2 += `
+Row ${i + 1}:
+`;
+    columns.forEach((col) => {
+      const value = row[col];
+      if (value !== void 0 && value !== null && value !== "") {
+        text2 += `  ${col}: ${value}
+`;
+      }
+    });
+  });
+  if (rows.length > maxRows) {
+    text2 += `
+... and ${rows.length - maxRows} more rows`;
+  }
+  return text2;
+}
+
+// server/routes/files.ts
+import { writeFileSync, unlinkSync } from "fs";
+import { join, basename } from "path";
+import { randomUUID as randomUUID2 } from "crypto";
+import { tmpdir } from "os";
+function sanitizeFilename(filename) {
+  const safe = basename(filename).replace(/[^a-zA-Z0-9._-]/g, "_").replace(/^\.+/, "").slice(0, 200);
+  if (!safe || safe === ".") {
+    return "file";
+  }
+  return safe;
+}
+var upload = multer2({
+  storage: multer2.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024
+    // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [
+      "text/csv",
+      "text/plain",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/pdf"
+    ];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Invalid file type. Only CSV, Excel, PDF, and text files are allowed."));
+    }
+  }
+});
+function registerFileRoutes(app2) {
+  app2.post("/api/files/upload", requireAuth, upload.single("file"), async (req, res) => {
+    let tempFilePath = null;
+    try {
+      const organizationId = req.user?.organizationId;
+      const userId = req.user?.id;
+      if (!organizationId || !userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+      const file = req.file;
+      const fileId = randomUUID2();
+      const safeName = sanitizeFilename(file.originalname);
+      const fileName = `${fileId}-${safeName}`;
+      const objectStorage = new ObjectStorageService();
+      const privateDir = objectStorage.getPrivateObjectDir();
+      const storagePath = `${privateDir}/${fileName}`;
+      tempFilePath = join(tmpdir(), `upload-${fileId}-${safeName}`);
+      writeFileSync(tempFilePath, file.buffer);
+      let extractedText = "";
+      try {
+        const parsed = await parseFile(tempFilePath, file.mimetype);
+        extractedText = parsed.text;
+      } catch (error) {
+        console.error("Error parsing file:", error);
+        extractedText = "Could not extract text from file";
+      }
+      await objectStorage.saveFile(storagePath, file.buffer);
+      const uploadedFile = await storage.createUploadedFile({
+        organizationId,
+        userId,
+        fileName,
+        originalName: safeName,
+        fileType: file.mimetype,
+        fileSize: file.size,
+        storagePath,
+        extractedText
+      });
+      res.json({
+        id: uploadedFile.id,
+        fileName: uploadedFile.originalName,
+        fileSize: uploadedFile.fileSize,
+        fileType: uploadedFile.fileType,
+        createdAt: uploadedFile.createdAt
+      });
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Failed to upload file"
+      });
+    } finally {
+      if (tempFilePath) {
+        try {
+          unlinkSync(tempFilePath);
+        } catch (err) {
+          console.error("Error deleting temp file:", err);
+        }
+      }
+    }
+  });
+  app2.get("/api/files", requireAuth, async (req, res) => {
+    try {
+      const organizationId = req.user?.organizationId;
+      const userId = req.user?.id;
+      if (!organizationId || !userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const files = await storage.getUploadedFiles(organizationId, userId);
+      res.json(
+        files.map((file) => ({
+          id: file.id,
+          fileName: file.originalName,
+          fileSize: file.fileSize,
+          fileType: file.fileType,
+          createdAt: file.createdAt
+        }))
+      );
+    } catch (error) {
+      console.error("Error fetching files:", error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Failed to fetch files"
+      });
+    }
+  });
+  app2.delete("/api/files/:id", requireAuth, async (req, res) => {
+    try {
+      const organizationId = req.user?.organizationId;
+      const userId = req.user?.id;
+      if (!organizationId || !userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const fileId = req.params.id;
+      const file = await storage.getUploadedFile(fileId);
+      if (!file) {
+        return res.status(404).json({ error: "File not found" });
+      }
+      if (file.organizationId !== organizationId || file.userId !== userId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      try {
+        const objectStorage = new ObjectStorageService();
+        await objectStorage.deleteFile(file.storagePath);
+      } catch (error) {
+        console.error("Error deleting file from storage:", error);
+      }
+      await storage.deleteUploadedFile(fileId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting file:", error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Failed to delete file"
+      });
+    }
+  });
+  app2.get("/api/files/download/:filename", requireAuth, async (req, res) => {
+    try {
+      const organizationId = req.user?.organizationId;
+      const userId = req.user?.id;
+      if (!organizationId || !userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const filename = req.params.filename;
+      const fileMetadata = await storage.getAiGeneratedFileByFilename(filename);
+      if (!fileMetadata) {
+        console.warn(`[Download] File metadata not found for: ${filename}`);
+        return res.status(404).json({ error: "File not found" });
+      }
+      if (fileMetadata.organizationId !== organizationId) {
+        console.warn(`[Download] Organization mismatch - File org: ${fileMetadata.organizationId}, User org: ${organizationId}`);
+        return res.status(403).json({ error: "Access denied" });
+      }
+      const objectStorage = new ObjectStorageService();
+      const file = await objectStorage.getFile(fileMetadata.storagePath);
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename="${fileMetadata.originalFilename}"`);
+      console.log(`[Download] Serving file ${fileMetadata.originalFilename} to user ${userId} from org ${organizationId}`);
+      await objectStorage.downloadObject(file, res);
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      res.status(404).json({
+        error: error instanceof Error ? error.message : "File not found"
+      });
+    }
+  });
+}
+
+// server/routes/conversations.ts
+init_storage();
+function registerConversationRoutes(app2) {
+  app2.get("/api/conversations", requireAuth, async (req, res) => {
+    try {
+      const organizationId = req.user?.organizationId;
+      const userId = req.user?.id;
+      if (!organizationId || !userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const conversations2 = await storage.getConversations(organizationId, userId);
+      res.json(conversations2);
+    } catch (error) {
+      console.error("Error fetching conversations:", error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Failed to fetch conversations"
+      });
+    }
+  });
+  app2.get("/api/conversations/:id", requireAuth, async (req, res) => {
+    try {
+      const organizationId = req.user?.organizationId;
+      const userId = req.user?.id;
+      if (!organizationId || !userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const conversationId = req.params.id;
+      const conversation = await storage.getConversation(conversationId);
+      if (!conversation) {
+        return res.status(404).json({ error: "Conversation not found" });
+      }
+      if (conversation.organizationId !== organizationId || conversation.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      const messages = await storage.getConversationMessages(conversationId);
+      res.json({
+        conversation,
+        messages
+      });
+    } catch (error) {
+      console.error("Error fetching conversation:", error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Failed to fetch conversation"
+      });
+    }
+  });
+  app2.post("/api/conversations", requireAuth, async (req, res) => {
+    try {
+      const organizationId = req.user?.organizationId;
+      const userId = req.user?.id;
+      if (!organizationId || !userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const { title } = req.body;
+      if (!title || typeof title !== "string" || title.trim().length === 0) {
+        return res.status(400).json({ error: "Title is required" });
+      }
+      if (title.length > 200) {
+        return res.status(400).json({ error: "Title too long (max 200 characters)" });
+      }
+      const conversation = await storage.createConversation({
+        organizationId,
+        userId,
+        title: title.trim()
+      });
+      res.json(conversation);
+    } catch (error) {
+      console.error("Error creating conversation:", error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Failed to create conversation"
+      });
+    }
+  });
+  app2.patch("/api/conversations/:id", requireAuth, async (req, res) => {
+    try {
+      const organizationId = req.user?.organizationId;
+      const userId = req.user?.id;
+      if (!organizationId || !userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const conversationId = req.params.id;
+      const { title } = req.body;
+      if (!title || typeof title !== "string" || title.trim().length === 0) {
+        return res.status(400).json({ error: "Title is required" });
+      }
+      if (title.length > 200) {
+        return res.status(400).json({ error: "Title too long (max 200 characters)" });
+      }
+      const conversation = await storage.getConversation(conversationId);
+      if (!conversation) {
+        return res.status(404).json({ error: "Conversation not found" });
+      }
+      if (conversation.organizationId !== organizationId || conversation.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      await storage.updateConversation(conversationId, { title: title.trim() });
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating conversation:", error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Failed to update conversation"
+      });
+    }
+  });
+  app2.delete("/api/conversations/:id", requireAuth, async (req, res) => {
+    try {
+      const organizationId = req.user?.organizationId;
+      const userId = req.user?.id;
+      if (!organizationId || !userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const conversationId = req.params.id;
+      const conversation = await storage.getConversation(conversationId);
+      if (!conversation) {
+        return res.status(404).json({ error: "Conversation not found" });
+      }
+      if (conversation.organizationId !== organizationId || conversation.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      await storage.deleteConversation(conversationId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting conversation:", error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Failed to delete conversation"
+      });
+    }
+  });
+  app2.post("/api/conversations/:id/messages", requireAuth, async (req, res) => {
+    try {
+      const organizationId = req.user?.organizationId;
+      const userId = req.user?.id;
+      if (!organizationId || !userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const conversationId = req.params.id;
+      const { role, content } = req.body;
+      if (!role || role !== "user" && role !== "assistant") {
+        return res.status(400).json({ error: "Invalid role" });
+      }
+      if (!content || typeof content !== "string" || content.trim().length === 0) {
+        return res.status(400).json({ error: "Content is required" });
+      }
+      const conversation = await storage.getConversation(conversationId);
+      if (!conversation) {
+        return res.status(404).json({ error: "Conversation not found" });
+      }
+      if (conversation.organizationId !== organizationId || conversation.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      const message = await storage.createConversationMessage({
+        conversationId,
+        role,
+        content: content.trim()
+      });
+      await storage.updateConversation(conversationId, {});
+      res.json(message);
+    } catch (error) {
+      console.error("Error creating message:", error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Failed to create message"
+      });
     }
   });
 }
@@ -5772,6 +6698,8 @@ async function registerRoutes(app2) {
   registerScheduledImportRoutes(app2);
   registerBackupRoutes(app2);
   registerKPIRoutes(app2);
+  registerFileRoutes(app2);
+  registerConversationRoutes(app2);
   const httpServer = createServer(app2);
   return httpServer;
 }
@@ -5922,14 +6850,14 @@ app.use((req, res, next) => {
   try {
     const { db: db2 } = await Promise.resolve().then(() => (init_db(), db_exports));
     const { importJobs: importJobs2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-    const { eq: eq4, or, and: and4, like } = await import("drizzle-orm");
+    const { eq: eq3, or, and: and3, like } = await import("drizzle-orm");
     const { importWorker: importWorker2 } = await Promise.resolve().then(() => (init_import_worker(), import_worker_exports));
     const interruptedJobs = await db2.select().from(importJobs2).where(
       or(
-        eq4(importJobs2.status, "running"),
-        eq4(importJobs2.status, "pending"),
-        and4(
-          eq4(importJobs2.status, "failed"),
+        eq3(importJobs2.status, "running"),
+        eq3(importJobs2.status, "pending"),
+        and3(
+          eq3(importJobs2.status, "failed"),
           like(importJobs2.error, "%connection timeout%")
         )
       )
@@ -5945,13 +6873,13 @@ app.use((req, res, next) => {
           status: "pending",
           error: null,
           updatedAt: /* @__PURE__ */ new Date()
-        }).where(eq4(importJobs2.id, job.id));
-        const scheduledImport = await db2.select().from(scheduledImports2).where(eq4(scheduledImports2.organizationId, job.organizationId)).limit(1);
+        }).where(eq3(importJobs2.id, job.id));
+        const scheduledImport = await db2.select().from(scheduledImports2).where(eq3(scheduledImports2.organizationId, job.organizationId)).limit(1);
         if (scheduledImport.length > 0 && scheduledImport[0].lastRunError?.includes("connection timeout")) {
           await db2.update(scheduledImports2).set({
             lastRunStatus: "running",
             lastRunError: null
-          }).where(eq4(scheduledImports2.organizationId, job.organizationId));
+          }).where(eq3(scheduledImports2.organizationId, job.organizationId));
           console.log(`[Auto-Resume] Cleared scheduler error for org ${job.organizationId}`);
         }
         await importWorker2.processJob(job.id);

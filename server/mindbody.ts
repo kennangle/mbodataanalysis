@@ -600,8 +600,9 @@ export class MindbodyService {
 
     // Fetch ONE page of visits per iteration (resumable pagination)
     // Using /class/classvisits endpoint which supports date range filtering
-    const startDateStr = startDate.toISOString().split('T')[0]; // YYYY-MM-DD
-    const endDateStr = endDate.toISOString().split('T')[0]; // YYYY-MM-DD
+    // Mindbody API requires full ISO 8601 format with timezone (YYYY-MM-DDTHH:mm:ssZ)
+    const startDateStr = startDate.toISOString(); // Full ISO format
+    const endDateStr = endDate.toISOString(); // Full ISO format
     const { results: visits, totalResults, hasMore } = await this.fetchPage<MindbodyVisit>(
       organizationId,
       `/class/classvisits?StartDate=${startDateStr}&EndDate=${endDateStr}`,
