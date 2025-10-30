@@ -86,4 +86,24 @@ export function registerScheduledImportRoutes(app: Express) {
       res.status(500).json({ error: "Failed to start import" });
     }
   });
+
+  // Clear last run status
+  app.post("/api/scheduled-imports/clear-status", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.user as User)?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      await storage.updateScheduledImport(organizationId, {
+        lastRunStatus: null,
+        lastRunError: null,
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error clearing scheduled import status:", error);
+      res.status(500).json({ error: "Failed to clear status" });
+    }
+  });
 }

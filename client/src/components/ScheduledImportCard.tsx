@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Clock, Play, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { Clock, Play, AlertCircle, CheckCircle2, Loader2, X } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
@@ -235,6 +235,26 @@ export function ScheduledImportCard() {
     },
   });
 
+  const clearStatusMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", "/api/scheduled-imports/clear-status", {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/scheduled-imports"] });
+      toast({
+        title: "Status cleared",
+        description: "Last run status has been cleared.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSave = async () => {
     await updateConfigMutation.mutateAsync({
       enabled,
@@ -258,17 +278,41 @@ export function ScheduledImportCard() {
     switch (config.lastRunStatus) {
       case "success":
         return (
-          <Badge variant="default" className="gap-1">
-            <CheckCircle2 className="h-3 w-3" />
-            Success
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="default" className="gap-1">
+              <CheckCircle2 className="h-3 w-3" />
+              Success
+            </Badge>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => clearStatusMutation.mutate()}
+              disabled={clearStatusMutation.isPending}
+              data-testid="button-clear-status"
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
         );
       case "failed":
         return (
-          <Badge variant="destructive" className="gap-1">
-            <AlertCircle className="h-3 w-3" />
-            Failed
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="destructive" className="gap-1">
+              <AlertCircle className="h-3 w-3" />
+              Failed
+            </Badge>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => clearStatusMutation.mutate()}
+              disabled={clearStatusMutation.isPending}
+              data-testid="button-clear-status"
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
         );
       case "running":
         return (
