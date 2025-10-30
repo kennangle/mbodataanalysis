@@ -317,13 +317,6 @@ export function ScheduledImportCard() {
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        {config?.lastRunError && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{config.lastRunError}</AlertDescription>
-          </Alert>
-        )}
-
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
             <Label htmlFor="scheduled-enabled">Enable Scheduled Imports</Label>

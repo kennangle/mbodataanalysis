@@ -13,6 +13,7 @@ import { format } from "date-fns";
 import { formatDateTime, formatDateShort } from "@/lib/timezone";
 import { useAuth } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Collapsible,
   CollapsibleContent,
@@ -65,6 +66,16 @@ interface JobStatus {
   updatedAt?: string;
 }
 
+interface ScheduledImportConfig {
+  enabled: boolean;
+  schedule: string;
+  dataTypes: string;
+  daysToImport: number;
+  lastRunAt: string | null;
+  lastRunStatus: string | null;
+  lastRunError: string | null;
+}
+
 // Map internal data type names to user-friendly display names
 const getDisplayName = (dataType: string): string => {
   const displayNames: Record<string, string> = {
@@ -96,6 +107,11 @@ export function DataImportCard() {
   const [isBackgroundJobsOpen, setIsBackgroundJobsOpen] = useState(true);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  // Fetch scheduled import config to show last run errors
+  const { data: scheduledImportConfig } = useQuery<ScheduledImportConfig>({
+    queryKey: ["/api/scheduled-imports"],
+  });
 
   // Fetch import history - always enabled to detect running imports
   const { data: importHistory = [] } = useQuery<JobStatus[]>({
@@ -586,6 +602,15 @@ export function DataImportCard() {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {scheduledImportConfig?.lastRunError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Last scheduled import failed: {scheduledImportConfig.lastRunError}
+            </AlertDescription>
+          </Alert>
+        )}
+        
         {!isJobActive && !isJobResumable && !isJobCompleted && !isJobCancelled && (
           <div className="space-y-6">
             <p className="text-sm text-muted-foreground">
