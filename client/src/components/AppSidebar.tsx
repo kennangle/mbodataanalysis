@@ -12,6 +12,7 @@ import {
   TrendingUp,
   FileWarning,
   Stethoscope,
+  Sparkles,
 } from "lucide-react";
 import {
   Sidebar,
@@ -37,6 +38,12 @@ const menuItems = [
       { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
       { title: "Analytics", url: "/analytics", icon: BarChart3 },
       { title: "KPIs", url: "/kpi", icon: TrendingUp },
+    ],
+  },
+  {
+    title: "AI Insights",
+    items: [
+      { title: "AI Powered Insights", url: "/ai-query", icon: Sparkles },
     ],
   },
   {
