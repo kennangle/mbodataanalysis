@@ -488,3 +488,37 @@ export const insertConversationMessageSchema = createInsertSchema(conversationMe
 });
 export type InsertConversationMessage = z.infer<typeof insertConversationMessageSchema>;
 export type ConversationMessage = typeof conversationMessages.$inferSelect;
+
+export const pricingOptions = pgTable(
+  "pricing_options",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id").notNull(),
+    mindbodyServiceId: text("mindbody_service_id").notNull(),
+    name: text("name").notNull(),
+    description: text("description"),
+    onlineDescription: text("online_description"),
+    price: decimal("price", { precision: 10, scale: 2 }),
+    onlinePrice: decimal("online_price", { precision: 10, scale: 2 }),
+    taxRate: decimal("tax_rate", { precision: 5, scale: 2 }),
+    taxIncluded: boolean("tax_included").default(false),
+    programId: text("program_id"),
+    defaultTimeLength: integer("default_time_length"), // in minutes
+    type: text("type"),
+    count: integer("count"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    orgIdx: index("pricing_options_org_idx").on(table.organizationId),
+    serviceIdx: uniqueIndex("pricing_options_service_idx").on(table.organizationId, table.mindbodyServiceId),
+  })
+);
+
+export const insertPricingOptionSchema = createInsertSchema(pricingOptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertPricingOption = z.infer<typeof insertPricingOptionSchema>;
+export type PricingOption = typeof pricingOptions.$inferSelect;

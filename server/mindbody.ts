@@ -976,6 +976,79 @@ export class MindbodyService {
     }
   }
 
+  async importServicesResumable(
+    organizationId: string,
+    onProgress: (current: number, total: number) => Promise<void>,
+    startOffset: number = 0
+  ): Promise<{ imported: number; updated: number; nextOffset: number; completed: boolean }> {
+    const BATCH_SIZE = 200;
+
+    // Fetch pricing options/services from Mindbody
+    const endpoint = `/site/services?Limit=${BATCH_SIZE}&Offset=${startOffset}`;
+    const data = await this.makeAuthenticatedRequest(organizationId, endpoint);
+
+    const pagination: MindbodyPaginationResponse | undefined = data.PaginationResponse;
+    const totalResults = pagination?.TotalResults || 0;
+    const services: any[] = data.Services || [];
+
+    if (services.length === 0) {
+      return { imported: 0, updated: 0, nextOffset: startOffset, completed: true };
+    }
+
+    // Load existing pricing options for duplicate detection
+    const existingPricingOptions = await storage.getPricingOptions(organizationId);
+    const pricingMap = new Map(existingPricingOptions.map((p) => [p.mindbodyServiceId, p]));
+
+    let imported = 0;
+    let updated = 0;
+
+    // Process this batch
+    for (const service of services) {
+      try {
+        if (!service.Id || !service.Name) {
+          continue;
+        }
+
+        const serviceId = service.Id.toString();
+        const existingOption = pricingMap.get(serviceId);
+
+        const pricingData = {
+          organizationId,
+          mindbodyServiceId: serviceId,
+          name: service.Name,
+          description: service.Description || null,
+          onlineDescription: service.OnlineDescription || null,
+          price: service.Price ? service.Price.toString() : null,
+          onlinePrice: service.OnlinePrice ? service.OnlinePrice.toString() : null,
+          taxRate: service.TaxRate ? service.TaxRate.toString() : null,
+          taxIncluded: service.TaxIncluded || false,
+          programId: service.ProgramId ? service.ProgramId.toString() : null,
+          defaultTimeLength: service.DefaultTimeLength || null,
+          type: service.Type || null,
+          count: service.Count || null,
+        };
+
+        if (existingOption) {
+          await storage.updatePricingOption(existingOption.id, pricingData);
+          updated++;
+        } else {
+          await storage.createPricingOption(pricingData);
+          imported++;
+        }
+      } catch (error) {
+        console.error(`Failed to import service ${service.Id}:`, error);
+      }
+    }
+
+    const nextOffset = startOffset + services.length;
+    const completed = nextOffset >= totalResults;
+
+    // Report progress
+    await onProgress(nextOffset, totalResults);
+
+    return { imported, updated, nextOffset, completed };
+  }
+
   async createWebhookSubscription(
     organizationId: string,
     eventType: string,
