@@ -34,7 +34,7 @@ This application supports enhanced AI interaction through slash commands for aut
 | `/bug`                  | Bug reporting              | Capture and document issues systematically      |
 | `/unanswered`           | Find pending questions     | Identify unresolved questions in conversation   |
 | `/arch`                 | Architect consultation     | Consult with architect agent for review/guidance |
-| `/pnr`                  | Update project narrative   | Update the Complete Project Narrative report     |
+| `/narrative`            | Update project narrative   | Update the Complete Project Narrative report     |
 
 ## Key Command Details
 
@@ -211,7 +211,7 @@ This application supports enhanced AI interaction through slash commands for aut
   - Plan complex refactoring or system improvements
 - **Example**: `/arch review the import worker architecture for potential improvements`
 
-### `/pnr` - Update Project Narrative Report
+### `/narrative` - Update Project Narrative Report
 
 - **Purpose**: Update the "Mindbody Data Analysis SaaS Platform: Complete Project Narrative" report with recent accomplishments
 - **Behavior**: Reviews recent conversation history, identifies completed features and milestones, and adds them chronologically to PROJECT_NARRATIVE_REPORT.md as new phases
@@ -224,7 +224,7 @@ This application supports enhanced AI interaction through slash commands for aut
   - Updated "current capabilities" section
   - Increment version number and update date
 - **Structure**: Follow existing phase format (Problem → Solution → Technical Implementation → Impact)
-- **Example**: `/pnr add the timezone support implementation`
+- **Example**: `/narrative add the timezone support implementation`
 
 ## Best Practices for Command Usage
 
@@ -257,4 +257,4 @@ These commands are particularly valuable for maintaining the time tracking appli
 - **Bug Tracking**: `/bug` documents issues with break management, clock in/out functionality
 - **Performance Analysis**: `/anal performance` monitors database query performance for time entries
 - **Architecture Review**: `/arch` provides expert analysis of system design, code quality, and strategic technical decisions
-- **Project Documentation**: `/pnr` keeps the Complete Project Narrative current with recent accomplishments
+- **Project Documentation**: `/narrative` keeps the Complete Project Narrative current with recent accomplishments
