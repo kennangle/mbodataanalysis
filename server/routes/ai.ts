@@ -3,6 +3,7 @@ import { requireAuth } from "../auth";
 import type { User } from "@shared/schema";
 import { openaiService } from "../openai";
 import { storage } from "../storage";
+import { processAIQuery } from "../ai-worker";
 
 export function registerAIRoutes(app: Express) {
   app.post("/api/ai/query", requireAuth, async (req, res) => {
@@ -14,7 +15,7 @@ export function registerAIRoutes(app: Express) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const { query, conversationHistory, fileIds, conversationId, saveToHistory } = req.body;
+      const { query, conversationId } = req.body;
       if (!query || typeof query !== "string" || query.trim().length === 0) {
         return res.status(400).json({ error: "Query is required" });
       }
@@ -38,105 +39,95 @@ export function registerAIRoutes(app: Express) {
         }
       }
 
-      // Validate conversation history if provided
-      const history: Array<{ role: string; content: string }> = [];
-      
-      if (Array.isArray(conversationHistory)) {
-        // Limit history to last 20 messages (10 exchanges) to prevent token overflow
-        if (conversationHistory.length > 20) {
-          return res.status(400).json({ error: "Conversation history too long (max 20 messages)" });
-        }
-
-        // Validate each history entry
-        for (const entry of conversationHistory) {
-          // Must be an object with role and content
-          if (typeof entry !== "object" || entry === null) {
-            return res.status(400).json({ error: "Invalid conversation history format" });
-          }
-
-          const { role, content } = entry;
-
-          // Role must be "user" or "assistant" only (prevent system message injection)
-          if (role !== "user" && role !== "assistant") {
-            return res.status(400).json({ error: "Invalid role in conversation history. Only 'user' and 'assistant' are allowed." });
-          }
-
-          // Content must be a non-empty string with reasonable length
-          if (typeof content !== "string" || content.trim().length === 0) {
-            return res.status(400).json({ error: "Invalid content in conversation history" });
-          }
-
-          if (content.length > 2000) {
-            return res.status(400).json({ error: "Conversation history message too long (max 2000 characters per message)" });
-          }
-
-          history.push({ role, content: content.trim() });
-        }
+      // Create new conversation if none exists
+      if (!activeConversation) {
+        // Generate title from first 50 characters of query
+        const title = query.trim().substring(0, 50) + (query.length > 50 ? "..." : "");
+        activeConversation = await storage.createConversation({
+          organizationId,
+          userId,
+          title,
+        });
       }
 
-      let fileContext = "";
-      if (Array.isArray(fileIds) && fileIds.length > 0) {
-        for (const fileId of fileIds) {
-          if (typeof fileId !== "string") continue;
-          
-          const file = await storage.getUploadedFile(fileId);
-          if (!file || file.organizationId !== organizationId || file.userId !== userId) {
-            continue;
-          }
+      // Save user message with status="completed" (user messages are always complete)
+      const userMessage = await storage.createConversationMessage({
+        conversationId: activeConversation.id,
+        role: "user",
+        content: query.trim(),
+        status: "completed",
+      });
 
-          if (file.extractedText) {
-            fileContext += `\n\n--- File: ${file.originalName} ---\n${file.extractedText}\n`;
-          }
-        }
-      }
-      
-      const result = await openaiService.generateInsight(organizationId, userId, query, history, fileContext);
+      // Create placeholder assistant message with status="pending" and empty content
+      const assistantMessage = await storage.createConversationMessage({
+        conversationId: activeConversation.id,
+        role: "assistant",
+        content: "",
+        status: "pending",
+      });
 
-      // Save messages to conversation if requested
-      let savedConversationId: string | undefined;
-      if (saveToHistory !== false) { // Default to true
-        try {
-          // Create new conversation if none exists
-          if (!activeConversation) {
-            // Generate title from first 50 characters of query
-            const title = query.trim().substring(0, 50) + (query.length > 50 ? "..." : "");
-            activeConversation = await storage.createConversation({
-              organizationId,
-              userId,
-              title,
-            });
-          }
+      // Update conversation timestamp
+      await storage.updateConversation(activeConversation.id, {});
 
-          // Save user message
-          await storage.createConversationMessage({
-            conversationId: activeConversation.id,
-            role: "user",
-            content: query.trim(),
-          });
+      // Trigger background processing asynchronously (don't await)
+      processAIQuery(assistantMessage.id).catch(error => {
+        console.error("[API] Background processing error:", error);
+      });
 
-          // Save assistant response
-          await storage.createConversationMessage({
-            conversationId: activeConversation.id,
-            role: "assistant",
-            content: result.response,
-          });
-
-          // Update conversation timestamp
-          await storage.updateConversation(activeConversation.id, {});
-
-          savedConversationId = activeConversation.id;
-        } catch (saveError) {
-          console.error("Error saving to conversation:", saveError);
-          // Don't fail the request if saving fails
-        }
-      }
-
+      // Return immediately with pending message ID
       res.json({
-        ...result,
-        ...(savedConversationId && { conversationId: savedConversationId }),
+        conversationId: activeConversation.id,
+        messageId: assistantMessage.id,
+        status: "pending",
       });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to generate AI insight";
+      const errorMessage = error instanceof Error ? error.message : "Failed to create AI query";
+      res.status(500).json({ error: errorMessage });
+    }
+  });
+
+  app.get("/api/ai/message/:id", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.user as User)?.organizationId;
+      const userId = (req.user as User)?.id;
+
+      if (!organizationId || !userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const messageId = req.params.id;
+      if (!messageId) {
+        return res.status(400).json({ error: "Message ID is required" });
+      }
+
+      // Get the message
+      const message = await storage.getConversationMessage(messageId);
+      if (!message) {
+        return res.status(404).json({ error: "Message not found" });
+      }
+
+      // Get the conversation to verify ownership
+      const conversation = await storage.getConversation(message.conversationId);
+      if (!conversation) {
+        return res.status(404).json({ error: "Conversation not found" });
+      }
+
+      // Verify ownership
+      if (conversation.organizationId !== organizationId || conversation.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      // Return message with current status
+      res.json({
+        id: message.id,
+        role: message.role,
+        content: message.content,
+        status: message.status,
+        error: message.error,
+        createdAt: message.createdAt,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to fetch message status";
       res.status(500).json({ error: errorMessage });
     }
   });

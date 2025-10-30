@@ -19,14 +19,19 @@ declare global {
 }
 
 interface Message {
+  id?: string;
   role: "user" | "assistant";
   content: string;
+  status?: "pending" | "completed" | "failed";
+  error?: string;
 }
 
 interface ConversationMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
+  status?: "pending" | "completed" | "failed";
+  error?: string;
   createdAt: string;
 }
 
@@ -69,11 +74,13 @@ export function AIQueryInterface() {
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [pendingMessageId, setPendingMessageId] = useState<string | null>(null);
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const { data: uploadedFiles = [] } = useQuery<UploadedFile[]>({
     queryKey: ["/api/files"],
@@ -96,8 +103,11 @@ export function AIQueryInterface() {
   useEffect(() => {
     if (conversationData?.messages) {
       setMessages(conversationData.messages.map(msg => ({
+        id: msg.id,
         role: msg.role,
         content: msg.content,
+        status: msg.status,
+        error: msg.error,
       })));
     }
   }, [conversationData]);
@@ -106,6 +116,66 @@ export function AIQueryInterface() {
   useEffect(() => {
     endOfMessagesRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Poll for message status when there's a pending message
+  useEffect(() => {
+    if (!pendingMessageId) {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      return;
+    }
+
+    const pollMessageStatus = async () => {
+      try {
+        const response = await apiRequest("GET", `/api/ai/message/${pendingMessageId}`);
+        const messageData = await response.json() as {
+          id: string;
+          role: "user" | "assistant";
+          content: string;
+          status: "pending" | "completed" | "failed";
+          error?: string;
+        };
+
+        // Update the message in the messages array
+        setMessages(prev => prev.map(msg => 
+          msg.id === messageData.id 
+            ? { ...msg, content: messageData.content, status: messageData.status, error: messageData.error }
+            : msg
+        ));
+
+        // Stop polling if the message is no longer pending
+        if (messageData.status === "completed" || messageData.status === "failed") {
+          setPendingMessageId(null);
+          
+          if (messageData.status === "failed") {
+            toast({
+              variant: "destructive",
+              title: "AI query failed",
+              description: messageData.error || "An error occurred while processing your query",
+            });
+          }
+
+          // Invalidate conversations list to refresh the sidebar
+          queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+        }
+      } catch (error) {
+        console.error("Error polling message status:", error);
+      }
+    };
+
+    // Poll immediately, then every 2 seconds
+    pollMessageStatus();
+    pollingIntervalRef.current = setInterval(pollMessageStatus, 2000);
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [pendingMessageId, toast]);
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -144,31 +214,23 @@ export function AIQueryInterface() {
 
   const mutation = useMutation({
     mutationFn: async (query: string) => {
-      const conversationHistory = messages.map(msg => ({
-        role: msg.role,
-        content: msg.content
-      }));
-
       const response = await apiRequest("POST", "/api/ai/query", { 
         query,
-        conversationHistory,
-        fileIds: attachedFileIds.length > 0 ? attachedFileIds : undefined,
         conversationId: currentConversationId,
-        saveToHistory: true,
       });
       const result = (await response.json()) as { 
-        response: string; 
-        tokensUsed: number;
-        conversationId?: string;
+        conversationId: string;
+        messageId: string;
+        status: "pending";
       };
       return result;
     },
     onSuccess: (data, queryText) => {
-      // Add user message and AI response to conversation
+      // Add user message and pending assistant message immediately
       setMessages(prev => [
         ...prev,
-        { role: "user", content: queryText },
-        { role: "assistant", content: data.response }
+        { role: "user", content: queryText, status: "completed" },
+        { id: data.messageId, role: "assistant", content: "", status: "pending" }
       ]);
       setQuery("");
 
@@ -176,6 +238,9 @@ export function AIQueryInterface() {
       if (data.conversationId && !currentConversationId) {
         setCurrentConversationId(data.conversationId);
       }
+
+      // Set pending message ID to trigger polling
+      setPendingMessageId(data.messageId);
 
       // Invalidate conversations list to refresh the sidebar
       queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
@@ -200,6 +265,7 @@ export function AIQueryInterface() {
     setQuery("");
     setAttachedFileIds([]);
     setCurrentConversationId(null);
+    setPendingMessageId(null);
   };
 
   const handleNewChat = () => {
@@ -207,12 +273,14 @@ export function AIQueryInterface() {
     setQuery("");
     setAttachedFileIds([]);
     setCurrentConversationId(null);
+    setPendingMessageId(null);
   };
 
   const handleSelectConversation = (conversationId: string | null) => {
     setCurrentConversationId(conversationId);
     setQuery("");
     setAttachedFileIds([]);
+    setPendingMessageId(null);
     // Messages will be loaded by the useEffect hook
   };
 
@@ -407,36 +475,50 @@ export function AIQueryInterface() {
                     }`}
                   >
                     {message.role === "assistant" ? (
-                      (() => {
-                        const { text, downloads } = extractDownloadLinks(message.content);
-                        return (
-                          <div className="space-y-3">
-                            <p className="text-sm whitespace-pre-line break-words">{text}</p>
-                            {downloads.length > 0 && (
-                              <div className="flex flex-col gap-2 pt-2 border-t">
-                                {downloads.map((download, idx) => (
-                                  <a
-                                    key={idx}
-                                    href={download.url}
-                                    download={download.filename}
-                                    className="inline-flex"
-                                  >
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="gap-2"
-                                      data-testid={`button-download-${idx}`}
+                      message.status === "pending" ? (
+                        <div className="flex items-center gap-2" data-testid="message-loading">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span className="text-sm text-muted-foreground">Processing your query...</span>
+                        </div>
+                      ) : message.status === "failed" ? (
+                        <div className="space-y-2">
+                          <p className="text-sm text-destructive">Failed to process query</p>
+                          {message.error && (
+                            <p className="text-xs text-muted-foreground">{message.error}</p>
+                          )}
+                        </div>
+                      ) : (
+                        (() => {
+                          const { text, downloads } = extractDownloadLinks(message.content);
+                          return (
+                            <div className="space-y-3">
+                              <p className="text-sm whitespace-pre-line break-words">{text}</p>
+                              {downloads.length > 0 && (
+                                <div className="flex flex-col gap-2 pt-2 border-t">
+                                  {downloads.map((download, idx) => (
+                                    <a
+                                      key={idx}
+                                      href={download.url}
+                                      download={download.filename}
+                                      className="inline-flex"
                                     >
-                                      <Download className="h-4 w-4" />
-                                      Download {download.filename}
-                                    </Button>
-                                  </a>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })()
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="gap-2"
+                                        data-testid={`button-download-${idx}`}
+                                      >
+                                        <Download className="h-4 w-4" />
+                                        Download {download.filename}
+                                      </Button>
+                                    </a>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()
+                      )
                     ) : (
                       <p className="text-sm whitespace-pre-line break-words">{message.content}</p>
                     )}

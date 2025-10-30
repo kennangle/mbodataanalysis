@@ -252,6 +252,9 @@ export interface IStorage {
   // Conversation Messages
   createConversationMessage(message: InsertConversationMessage): Promise<ConversationMessage>;
   getConversationMessages(conversationId: string): Promise<ConversationMessage[]>;
+  getConversationMessage(messageId: string): Promise<ConversationMessage | undefined>;
+  getPendingConversationMessages(): Promise<ConversationMessage[]>;
+  updateConversationMessageStatus(id: string, status: string, content?: string, error?: string): Promise<void>;
   deleteConversationMessages(conversationId: string): Promise<void>;
 
   // Pricing Options
@@ -1435,6 +1438,42 @@ export class DbStorage implements IStorage {
 
   async deleteConversationMessages(conversationId: string): Promise<void> {
     await db.delete(conversationMessages).where(eq(conversationMessages.conversationId, conversationId));
+  }
+
+  async getConversationMessage(messageId: string): Promise<ConversationMessage | undefined> {
+    const result = await db
+      .select()
+      .from(conversationMessages)
+      .where(eq(conversationMessages.id, messageId))
+      .limit(1);
+    return result[0];
+  }
+
+  async getPendingConversationMessages(): Promise<ConversationMessage[]> {
+    return await db
+      .select()
+      .from(conversationMessages)
+      .where(eq(conversationMessages.status, "pending"))
+      .orderBy(conversationMessages.createdAt);
+  }
+
+  async updateConversationMessageStatus(
+    id: string,
+    status: string,
+    content?: string,
+    error?: string
+  ): Promise<void> {
+    const updates: Partial<InsertConversationMessage> = { status };
+    if (content !== undefined) {
+      updates.content = content;
+    }
+    if (error !== undefined) {
+      updates.error = error;
+    }
+    await db
+      .update(conversationMessages)
+      .set(updates)
+      .where(eq(conversationMessages.id, id));
   }
 
   async getPricingOptions(organizationId: string): Promise<PricingOption[]> {

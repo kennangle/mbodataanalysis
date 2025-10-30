@@ -477,11 +477,14 @@ export const conversationMessages = pgTable(
     conversationId: uuid("conversation_id").notNull(),
     role: text("role").notNull(), // "user" or "assistant"
     content: text("content").notNull(),
+    status: text("status").default("completed"), // "pending" | "completed" | "failed"
+    error: text("error"), // Error message if status is "failed"
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({
     conversationIdx: index("conversation_messages_conversation_idx").on(table.conversationId),
     createdIdx: index("conversation_messages_created_idx").on(table.createdAt),
+    statusIdx: index("conversation_messages_status_idx").on(table.status),
   })
 );
 
