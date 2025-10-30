@@ -165,10 +165,10 @@ export default function DataCoverage() {
                     </div>
                   )}
                   {data.dataQuality.studentsWithoutAttendance > 0 && (
-                    <div>• {data.dataQuality.studentsWithoutAttendance} students have no attendance records</div>
+                    <div>• {data.dataQuality.studentsWithoutAttendance.toLocaleString()} students have no attendance records</div>
                   )}
                   {data.dataQuality.classesWithoutSchedules > 0 && (
-                    <div>• {data.dataQuality.classesWithoutSchedules} classes have no schedules</div>
+                    <div>• {data.dataQuality.classesWithoutSchedules.toLocaleString()} classes have no schedules</div>
                   )}
                 </div>
               </AlertDescription>
