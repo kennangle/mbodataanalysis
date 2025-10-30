@@ -9,10 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { LogOut, Download, Database, Code2, CheckCircle, AlertTriangle, Loader2, Globe } from "lucide-react";
+import { LogOut, Download, Database, Code2, CheckCircle, AlertTriangle, Loader2, Globe, Key } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import TimezoneSelect, { type ITimezone } from "react-timezone-select";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 
 export default function Settings() {
   const { user, isLoading, logout, refreshUser } = useAuth();
@@ -37,6 +39,56 @@ export default function Settings() {
   const [isCheckingIntegrity, setIsCheckingIntegrity] = useState(false);
   const [selectedTimezone, setSelectedTimezone] = useState<ITimezone>(user?.timezone || "UTC");
   const [isSavingTimezone, setIsSavingTimezone] = useState(false);
+
+  // Mindbody credentials state
+  const [mindbodyCredentials, setMindbodyCredentials] = useState({
+    siteId: "",
+    apiKey: "",
+    staffUsername: "",
+    staffPassword: "",
+  });
+
+  // Fetch Mindbody credentials
+  const { data: credentials } = useQuery({
+    queryKey: ["/api/organization/mindbody-credentials"],
+    enabled: user?.role === "admin",
+  });
+
+  // Update credentials when fetched
+  useEffect(() => {
+    if (credentials) {
+      setMindbodyCredentials({
+        siteId: credentials.siteId || "",
+        apiKey: credentials.apiKey || "",
+        staffUsername: credentials.staffUsername || "",
+        staffPassword: credentials.staffPassword || "",
+      });
+    }
+  }, [credentials]);
+
+  // Save Mindbody credentials mutation
+  const saveCredentialsMutation = useMutation({
+    mutationFn: async (data: typeof mindbodyCredentials) => {
+      return await apiRequest("/api/organization/mindbody-credentials", {
+        method: "PATCH",
+        body: data,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/organization/mindbody-credentials"] });
+      toast({
+        title: "Success",
+        description: "Mindbody credentials updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to update Mindbody credentials",
+      });
+    },
+  });
 
   // Sync selectedTimezone when user data loads
   useEffect(() => {
@@ -336,6 +388,118 @@ export default function Settings() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Mindbody Integration (Admin Only) */}
+              {user.role === "admin" && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Key className="h-5 w-5" />
+                      Mindbody Integration
+                    </CardTitle>
+                    <CardDescription>
+                      Configure your Mindbody API credentials to enable data imports
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="mindbody-site-id">Site ID</Label>
+                        <Input
+                          id="mindbody-site-id"
+                          placeholder="e.g., 133"
+                          value={mindbodyCredentials.siteId}
+                          onChange={(e) =>
+                            setMindbodyCredentials((prev) => ({
+                              ...prev,
+                              siteId: e.target.value,
+                            }))
+                          }
+                          data-testid="input-mindbody-site-id"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="mindbody-api-key">API Key</Label>
+                        <Input
+                          id="mindbody-api-key"
+                          type="password"
+                          placeholder="Your Mindbody API Key"
+                          value={mindbodyCredentials.apiKey}
+                          onChange={(e) =>
+                            setMindbodyCredentials((prev) => ({
+                              ...prev,
+                              apiKey: e.target.value,
+                            }))
+                          }
+                          data-testid="input-mindbody-api-key"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="mindbody-username">Staff Username</Label>
+                        <Input
+                          id="mindbody-username"
+                          placeholder="e.g., _YHC"
+                          value={mindbodyCredentials.staffUsername}
+                          onChange={(e) =>
+                            setMindbodyCredentials((prev) => ({
+                              ...prev,
+                              staffUsername: e.target.value,
+                            }))
+                          }
+                          data-testid="input-mindbody-username"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Source name with underscore prefix (e.g., _YHC)
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="mindbody-password">Staff Password</Label>
+                        <Input
+                          id="mindbody-password"
+                          type="password"
+                          placeholder="Your staff password"
+                          value={mindbodyCredentials.staffPassword}
+                          onChange={(e) =>
+                            setMindbodyCredentials((prev) => ({
+                              ...prev,
+                              staffPassword: e.target.value,
+                            }))
+                          }
+                          data-testid="input-mindbody-password"
+                        />
+                      </div>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-end">
+                      <Button
+                        onClick={() => saveCredentialsMutation.mutate(mindbodyCredentials)}
+                        disabled={
+                          saveCredentialsMutation.isPending ||
+                          !mindbodyCredentials.siteId ||
+                          !mindbodyCredentials.apiKey ||
+                          !mindbodyCredentials.staffUsername ||
+                          !mindbodyCredentials.staffPassword
+                        }
+                        data-testid="button-save-mindbody-credentials"
+                      >
+                        {saveCredentialsMutation.isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Key className="h-4 w-4 mr-2" />
+                            Save Credentials
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Revenue Data Check (Admin Only) */}
               {user.role === "admin" && (
