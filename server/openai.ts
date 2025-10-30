@@ -12,6 +12,11 @@ const openai = new OpenAI({
 
 const MAX_TOKENS_PER_QUERY = 2000;
 const MONTHLY_QUERY_LIMIT = 1000;
+const MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY = 1000; // 1 second
+
+// Helper function to wait
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Database schema description for the AI
 const DATABASE_SCHEMA = `
@@ -302,14 +307,41 @@ You can answer ANY question about the data - just write the appropriate SQL quer
     const downloadLinks: Array<{ filename: string; url: string }> = [];
 
     while (iterationCount < maxIterations) {
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages,
-        tools: QUERY_TOOLS as any,
-        tool_choice: "auto",
-        max_tokens: MAX_TOKENS_PER_QUERY,
-        temperature: 0.7,
-      });
+      let completion;
+      let retryCount = 0;
+      
+      // Retry loop with exponential backoff for rate limits
+      while (retryCount <= MAX_RETRIES) {
+        try {
+          completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages,
+            tools: QUERY_TOOLS as any,
+            tool_choice: "auto",
+            max_tokens: MAX_TOKENS_PER_QUERY,
+            temperature: 0.7,
+          });
+          break; // Success, exit retry loop
+        } catch (error: any) {
+          // Check if it's a rate limit error (429)
+          if (error?.status === 429 && retryCount < MAX_RETRIES) {
+            const retryDelay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount); // Exponential backoff
+            console.log(`[OpenAI] Rate limit hit, retrying in ${retryDelay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})`);
+            await sleep(retryDelay);
+            retryCount++;
+          } else {
+            // Not a rate limit error or max retries exceeded
+            if (error?.status === 429) {
+              throw new Error("OpenAI API is currently experiencing high demand. Please try again in a few moments.");
+            }
+            throw error; // Re-throw other errors
+          }
+        }
+      }
+
+      if (!completion) {
+        throw new Error("Failed to get response from OpenAI after retries");
+      }
 
       totalTokensUsed += completion.usage?.total_tokens || 0;
       const message = completion.choices[0]?.message;
