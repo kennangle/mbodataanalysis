@@ -145,6 +145,19 @@ export const attendance = pgTable(
     studentIdx: index("attendance_student_idx").on(table.studentId),
     scheduleIdx: index("attendance_schedule_idx").on(table.scheduleId),
     timeIdx: index("attendance_time_idx").on(table.attendedAt),
+    // Optimized for AI queries: "Find all classes for specific students with date ordering"
+    studentClassesIdx: index("attendance_student_classes_idx").on(
+      table.organizationId,
+      table.studentId,
+      table.attendedAt
+    ),
+    // Optimized for "which students attended which classes in a date range"
+    classAttendanceIdx: index("attendance_class_attendance_idx").on(
+      table.organizationId,
+      table.scheduleId,
+      table.attendedAt,
+      table.studentId
+    ),
     // Note: Unique constraint attendance_unique_student_schedule_date_idx exists in database
     // Created via raw SQL to prevent duplicates: (organizationId, studentId, scheduleId, attendedAt::date)
     // Not defined here because Drizzle can't generate proper migration SQL for partial indexes with date casting
@@ -180,6 +193,18 @@ export const revenue = pgTable(
       table.organizationId,
       table.mindbodySaleId,
       table.mindbodyItemId
+    ),
+    // Optimized for AI queries: "Find Intro Offer purchases and get student IDs"
+    introOfferIdx: index("revenue_intro_offer_idx").on(
+      table.organizationId,
+      table.description,
+      table.studentId
+    ),
+    // Optimized for "students who purchased on a date range"
+    studentPurchaseIdx: index("revenue_student_purchase_idx").on(
+      table.organizationId,
+      table.studentId,
+      table.transactionDate
     ),
   })
 );
