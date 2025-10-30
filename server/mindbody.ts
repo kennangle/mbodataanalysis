@@ -123,20 +123,56 @@ export class MindbodyService {
     return data.access_token;
   }
 
-  private async getUserToken(organizationId?: string): Promise<string> {
-    if (!organizationId) {
+  private async getUserToken(organizationId?: string, overrideCredentials?: {
+    siteId: string;
+    apiKey: string;
+    username: string;
+    password: string;
+  }): Promise<string> {
+    if (!organizationId && !overrideCredentials) {
       throw new Error("Organization ID required for authentication");
+    }
+
+    // If override credentials provided, don't use cache (for testing)
+    if (overrideCredentials) {
+      const response = await fetch(`${MINDBODY_API_BASE}/usertoken/issue`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Api-Key": overrideCredentials.apiKey,
+          SiteId: overrideCredentials.siteId,
+        },
+        body: JSON.stringify({
+          Username: overrideCredentials.username,
+          Password: overrideCredentials.password,
+        }),
+      });
+
+      const responseText = await response.text();
+
+      if (!response.ok) {
+        throw new Error(`Failed to authenticate with Mindbody (${response.status}). Please check your credentials.`);
+      }
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        throw new Error(`Mindbody auth returned invalid JSON`);
+      }
+
+      return data.AccessToken;
     }
 
     // Check cached token for this organization
     const now = Date.now();
-    const cached = this.tokenCache.get(organizationId);
+    const cached = this.tokenCache.get(organizationId!);
     if (cached && now < cached.expiryTime) {
       return cached.token;
     }
 
     // Get organization credentials
-    const org = await storage.getOrganization(organizationId);
+    const org = await storage.getOrganization(organizationId!);
     let apiKey = org?.mindbodyApiKey || process.env.MINDBODY_API_KEY;
     let siteId = org?.mindbodySiteId || "133";
     let username = org?.mindbodyStaffUsername || "_YHC";
@@ -174,7 +210,7 @@ export class MindbodyService {
     }
 
     // Cache token per organization for 55 minutes (expires in 60)
-    this.tokenCache.set(organizationId, {
+    this.tokenCache.set(organizationId!, {
       token: data.AccessToken,
       expiryTime: now + 55 * 60 * 1000,
     });
@@ -185,6 +221,21 @@ export class MindbodyService {
   // Clear cached token for an organization (call when credentials change)
   clearTokenCache(organizationId: string): void {
     this.tokenCache.delete(organizationId);
+  }
+
+  // Public method to test credentials without caching
+  async testCredentials(credentials: {
+    siteId: string;
+    apiKey: string;
+    username: string;
+    password: string;
+  }): Promise<boolean> {
+    try {
+      const token = await this.getUserToken(undefined, credentials);
+      return !!token;
+    } catch (error) {
+      throw error;
+    }
   }
 
   async makeAuthenticatedRequest(

@@ -529,7 +529,64 @@ export function registerMindbodyRoutes(app: Express) {
     }
   });
 
-  // Test Mindbody API connection - diagnostic endpoint
+  // Test Mindbody API connection with provided credentials
+  app.post("/api/mindbody/test-connection", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const organizationId = user?.organizationId;
+
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { siteId, apiKey, staffUsername, staffPassword } = req.body;
+
+      if (!siteId || !apiKey || !staffUsername || !staffPassword) {
+        return res.status(400).json({ 
+          success: false,
+          error: "All credentials required for testing (Site ID, API Key, Staff Username, Staff Password)" 
+        });
+      }
+
+      const mindbodyService = new MindbodyService();
+
+      try {
+        // Test authentication with provided credentials
+        const isValid = await mindbodyService.testCredentials({
+          siteId,
+          apiKey,
+          username: staffUsername,
+          password: staffPassword,
+        });
+
+        if (isValid) {
+          res.json({
+            success: true,
+            message: "Connection successful! Credentials are valid.",
+          });
+        } else {
+          res.status(401).json({
+            success: false,
+            error: "Failed to authenticate with provided credentials",
+          });
+        }
+      } catch (error: any) {
+        // Return 401 for authentication failures
+        const statusCode = error.message?.includes("authenticate") || error.message?.includes("401") ? 401 : 400;
+        res.status(statusCode).json({
+          success: false,
+          error: error.message || "Failed to connect to Mindbody API",
+        });
+      }
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        error: "Internal server error during connection test",
+      });
+    }
+  });
+
+  // Test Mindbody API connection with saved credentials - diagnostic endpoint
   app.get("/api/mindbody/test-connection", requireAuth, async (req, res) => {
     try {
       const user = req.user as User;

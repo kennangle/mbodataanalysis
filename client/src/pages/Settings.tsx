@@ -107,6 +107,41 @@ export default function Settings() {
     },
   });
 
+  // Test Mindbody connection mutation
+  const testConnectionMutation = useMutation({
+    mutationFn: async (data: typeof mindbodyCredentials) => {
+      const response = await fetch("/api/mindbody/test-connection", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(data),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to test connection");
+      }
+      
+      return result;
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Connection successful",
+        description: data.message || "Credentials are valid!",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Connection failed",
+        description: error.message,
+      });
+    },
+  });
+
   // Sync selectedTimezone when user data loads
   useEffect(() => {
     if (user?.timezone) {
@@ -499,7 +534,28 @@ export default function Settings() {
                       </div>
                     </div>
                     <Separator />
-                    <div className="flex justify-end">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => testConnectionMutation.mutate(mindbodyCredentials)}
+                        disabled={
+                          testConnectionMutation.isPending ||
+                          !mindbodyCredentials.siteId ||
+                          !mindbodyCredentials.apiKey ||
+                          !mindbodyCredentials.staffUsername ||
+                          !mindbodyCredentials.staffPassword
+                        }
+                        data-testid="button-test-mindbody-connection"
+                      >
+                        {testConnectionMutation.isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Testing...
+                          </>
+                        ) : (
+                          "Test Connection"
+                        )}
+                      </Button>
                       <Button
                         onClick={() => saveCredentialsMutation.mutate(mindbodyCredentials)}
                         disabled={
