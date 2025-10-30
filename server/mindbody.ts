@@ -151,13 +151,24 @@ export class MindbodyService {
       const responseText = await response.text();
 
       if (!response.ok) {
-        throw new Error(`Failed to authenticate with Mindbody (${response.status}). Please check your credentials.`);
+        console.error(`[Mindbody Test] Auth failed (${response.status}):`, responseText);
+        let errorMessage = `Failed to authenticate with Mindbody (${response.status})`;
+        try {
+          const errorData = JSON.parse(responseText);
+          if (errorData.Error?.Message) {
+            errorMessage = `Mindbody Error: ${errorData.Error.Message}`;
+          }
+        } catch (e) {
+          // If we can't parse the error, just use the status
+        }
+        throw new Error(errorMessage);
       }
 
       let data;
       try {
         data = JSON.parse(responseText);
       } catch (parseError) {
+        console.error(`[Mindbody Test] Invalid JSON response:`, responseText);
         throw new Error(`Mindbody auth returned invalid JSON`);
       }
 
