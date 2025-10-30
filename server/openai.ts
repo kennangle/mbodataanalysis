@@ -274,6 +274,7 @@ INSTRUCTIONS:
 - For ANY question about the data, use the execute_sql_query tool to write and run a SQL SELECT query
 - Always include "WHERE organization_id = $1" in your queries for data isolation
 - Be creative with SQL - you can use JOINs, aggregations, subqueries, date functions, etc.
+- IMPORTANT: Try to answer questions in ONE tool call when possible to reduce API usage
 - After getting results, analyze them and provide clear, actionable insights
 - When users ask follow-up questions, refer to conversation history for context
 - When users ask to create a spreadsheet, export to Excel, or download data, use the create_excel_spreadsheet tool
