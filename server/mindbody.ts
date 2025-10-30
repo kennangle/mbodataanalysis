@@ -85,8 +85,6 @@ export class MindbodyService {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Token exchange failed:", errorText);
       throw new Error(`Failed to exchange authorization code: ${response.status}`);
     }
 
@@ -139,8 +137,6 @@ export class MindbodyService {
       throw new Error("MINDBODY_API_KEY and MINDBODY_CLIENT_SECRET required");
     }
 
-    console.log(`[getUserToken] Requesting user token for site ${siteId} with username _YHC`);
-    
     // Source credentials username must be prefixed with underscore
     const response = await fetch(`${MINDBODY_API_BASE}/usertoken/issue`, {
       method: "POST",
@@ -155,11 +151,9 @@ export class MindbodyService {
       }),
     });
 
-    console.log(`[getUserToken] Response status: ${response.status}`);
     const responseText = await response.text();
 
     if (!response.ok) {
-      console.error(`[getUserToken] Failed to get user token: ${response.status}`);
       throw new Error(`Failed to authenticate with Mindbody (${response.status})`);
     }
 
@@ -167,7 +161,6 @@ export class MindbodyService {
     try {
       data = JSON.parse(responseText);
     } catch (parseError) {
-      console.error(`[getUserToken] Failed to parse Mindbody response as JSON`);
       throw new Error(`Mindbody auth returned invalid JSON`);
     }
 
@@ -199,8 +192,6 @@ export class MindbodyService {
     // Create AbortController for timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
-
-    console.log(`[Mindbody API] Requesting: ${endpoint}`);
     
     try {
       const response = await fetch(`${MINDBODY_API_BASE}${endpoint}`, {
@@ -222,12 +213,9 @@ export class MindbodyService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`Mindbody API error: ${response.status} - ${errorText}`);
-        console.error(`Request URL: ${MINDBODY_API_BASE}${endpoint}`);
 
         // Clear cached token on authentication errors and retry once
         if (response.status === 401) {
-          console.log("Authentication error detected, clearing token cache and retrying...");
           this.cachedUserToken = null;
           this.tokenExpiryTime = 0;
 
@@ -245,8 +233,6 @@ export class MindbodyService {
           });
 
           if (!retryResponse.ok) {
-            const retryErrorText = await retryResponse.text();
-            console.error(`Mindbody API retry failed: ${retryResponse.status} - ${retryErrorText}`);
             throw new Error(`Mindbody API error: ${retryResponse.statusText}`);
           }
 
@@ -259,9 +245,6 @@ export class MindbodyService {
         // Retry on 500/503 errors with exponential backoff
         if ((response.status === 500 || response.status === 503) && retryCount < MAX_RETRIES) {
           const backoffMs = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
-          console.log(
-            `Mindbody API ${response.status} error, retrying in ${backoffMs}ms (attempt ${retryCount + 1}/${MAX_RETRIES})...`
-          );
 
           // Wait for backoff period
           await new Promise((resolve) => setTimeout(resolve, backoffMs));
@@ -279,7 +262,6 @@ export class MindbodyService {
       
       // Handle timeout error
       if (error.name === 'AbortError') {
-        console.error(`[Mindbody API] Request timeout after ${REQUEST_TIMEOUT/1000}s: ${endpoint}`);
         throw new Error(`Mindbody API request timeout (${REQUEST_TIMEOUT/1000}s): ${endpoint}`);
       }
       
@@ -321,9 +303,6 @@ export class MindbodyService {
       if (pagination) {
         // Guard against offset exceeding total results
         if (offset >= pagination.TotalResults) {
-          console.warn(
-            `Offset ${offset} exceeds TotalResults ${pagination.TotalResults}, stopping pagination`
-          );
           hasMorePages = false;
         }
         // Check if we've retrieved all results
@@ -333,13 +312,6 @@ export class MindbodyService {
           // Use actual results length as the increment (PageSize may not reflect true count)
           const actualPageSize =
             results.length > 0 ? results.length : pagination.RequestedLimit || pageSize;
-
-          // Verify offset won't skip records
-          if (pagination.PageSize > results.length && results.length > 0) {
-            console.warn(
-              `PageSize (${pagination.PageSize}) > actual results (${results.length}), using results.length`
-            );
-          }
 
           offset += actualPageSize;
         }
@@ -411,7 +383,6 @@ export class MindbodyService {
         // Skip clients with missing critical data (name)
         if (!client.FirstName || !client.LastName) {
           const reason = `Missing name (FirstName: ${client.FirstName || 'null'}, LastName: ${client.LastName || 'null'})`;
-          console.warn(`Skipping client ${client.Id}: ${reason}`);
           
           // Log to database for reporting
           try {
@@ -569,16 +540,11 @@ export class MindbodyService {
     startOffset: number = 0,
     schedulesByTime?: Map<string, any> // Pass cached schedules to avoid reloading
   ): Promise<{ imported: number; nextStudentIndex: number; completed: boolean; schedulesByTime?: Map<string, any> }> {
-    console.log(`[Visits Optimized] Starting import for ${startDate.toISOString()} to ${endDate.toISOString()}`);
-    
     // Load schedules once, reuse on subsequent batches
     if (!schedulesByTime) {
       try {
-        console.log(`[Visits] Loading class schedules for organization ${organizationId}...`);
         const schedules = await storage.getClassSchedules(organizationId);
-        console.log(`[Visits] Retrieved ${schedules.length} schedules from database`);
         schedulesByTime = new Map(schedules.map((s) => [s.startTime.toISOString(), s]));
-        console.log(`[Visits] Loaded ${schedules.length} schedules into memory (one-time load)`);
       } catch (error) {
         console.error(`[Visits] CRITICAL ERROR loading schedules:`, error);
         throw new Error(`Failed to load class schedules: ${error instanceof Error ? error.message : String(error)}`);
@@ -586,14 +552,12 @@ export class MindbodyService {
     }
 
     // Load all students into a map for quick lookup by Mindbody Client ID
-    console.log(`[Visits] Loading students for organization ${organizationId}...`);
     const allStudents = await storage.getStudents(organizationId, 100000); // Get all students
     const studentsByMindbodyId = new Map(
       allStudents
         .filter(s => s.mindbodyClientId)
         .map(s => [s.mindbodyClientId!, s])
     );
-    console.log(`[Visits] Loaded ${studentsByMindbodyId.size} students into lookup map`);
     
     // Convert Map to Array for iteration
     const studentsArray = Array.from(allStudents).filter(s => s.mindbodyClientId);
@@ -611,8 +575,6 @@ export class MindbodyService {
     // Get batch of clients to process (resumable)
     const batchEnd = Math.min(startOffset + CLIENTS_PER_BATCH, totalStudents);
     const clientBatch = studentsArray.slice(startOffset, batchEnd);
-    
-    console.log(`[Visits] Processing clients ${startOffset}-${batchEnd} of ${totalStudents}`);
     
     // Process clients in parallel using /client/clientvisits endpoint
     const results = await Promise.allSettled(
@@ -679,8 +641,6 @@ export class MindbodyService {
     // Update progress
     await onProgress(batchEnd, totalStudents);
     
-    console.log(`[Visits] Batch complete: imported ${imported}, skipped ${skippedNoSchedule} (no schedule)`);
-    console.log(`[Visits] Progress: ${batchEnd}/${totalStudents} clients processed, completed=${completed}`);
     
     return { imported, nextStudentIndex: nextOffset, completed, schedulesByTime };
   }
@@ -704,29 +664,16 @@ export class MindbodyService {
     const dateFormat = startDate.toISOString().split("T")[0]; // YYYY-MM-DD
     const endDateFormat = endDate.toISOString().split("T")[0];
 
-    console.log(
-      `[Sales Import] Fetching site-level sales, date range: ${dateFormat} to ${endDateFormat}`
-    );
-
     try {
       // Make a test call to see what we get
       const testEndpoint = `/sale/sales?StartDate=${dateFormat}&EndDate=${endDateFormat}&Limit=10&Offset=0`;
-      console.log(`[Sales Import] Test endpoint: ${testEndpoint}`);
-      console.log(`[Sales Import] Requested date range: ${dateFormat} to ${endDateFormat}`);
 
       const testData = await this.makeAuthenticatedRequest(organizationId, testEndpoint);
-      console.log(
-        `[Sales Import] PaginationResponse:`,
-        JSON.stringify(testData.PaginationResponse)
-      );
 
       const totalResults = testData.PaginationResponse?.TotalResults || 0;
 
       // If /sale/sales returns no results, try /sale/transactions as fallback
       if (totalResults === 0) {
-        console.log(
-          `[Sales Import] /sale/sales returned 0 results, falling back to /sale/transactions`
-        );
 
         // Use ISO datetime format with timezone for transactions endpoint
         const startDateTime = startDate.toISOString(); // e.g., 2024-01-01T00:00:00.000Z
@@ -738,7 +685,6 @@ export class MindbodyService {
         let hasMoreTransactions = true;
         let totalProcessed = 0;
 
-        console.log(`[Sales Import] Processing transactions page-by-page from /sale/transactions`);
 
         while (hasMoreTransactions) {
           const { results: transactions, totalResults, hasMore } = await this.fetchPage<any>(
@@ -755,12 +701,6 @@ export class MindbodyService {
           }
 
           hasMoreTransactions = hasMore;
-
-          // Log first transaction to see structure (only once)
-          if (transactionOffset === 0 && transactions.length > 0) {
-            console.log(`[Sales Import] Total transactions: ${totalResults}`);
-            console.log(`[Sales Import] Sample transaction fields:`, Object.keys(transactions[0]));
-          }
 
           // Process this page immediately
           for (const transaction of transactions) {
@@ -780,25 +720,12 @@ export class MindbodyService {
               transaction.AuthTime;
 
             if (!dateStr) {
-              // Log first skipped transaction for debugging
-              if (skipped === 0) {
-                console.log(
-                  `[Sales Import] First skipped transaction structure:`,
-                  JSON.stringify(transaction, null, 2)
-                );
-              }
-              console.log(
-                `[Sales Import] Transaction ${transaction.TransactionId || transaction.Id} has no valid date field, skipping`
-              );
               skipped++;
               continue;
             }
 
             const transactionDate = new Date(dateStr);
             if (isNaN(transactionDate.getTime())) {
-              console.log(
-                `[Sales Import] Transaction ${transaction.TransactionId || transaction.Id} has invalid date "${dateStr}", skipping`
-              );
               skipped++;
               continue;
             }
@@ -861,7 +788,6 @@ export class MindbodyService {
                 }
               } catch (saleError) {
                 // If fetching sale details fails, fall back to basic transaction record
-                console.log(`[Sales Import] Could not fetch sale details for ${saleId}, using transaction data`);
                 
                 const paymentMethod = transaction.Method || transaction.CardType || "Payment";
                 const lastFour = transaction.CCLastFour || transaction.LastFour || "";
@@ -920,14 +846,6 @@ export class MindbodyService {
         await new Promise(resolve => setImmediate(resolve));
       }
 
-        console.log(
-          `[Sales Import] Results: ${imported} imported, ${skipped} skipped (invalid dates)`
-        );
-
-        console.log(
-          `[Sales Import] Completed - imported ${imported} revenue records from ${totalProcessed} transactions`
-        );
-
         return { imported, nextStudentIndex: totalProcessed, completed: true };
       }
 
@@ -940,7 +858,6 @@ export class MindbodyService {
       let totalProcessed = 0;
       let totalFilteredOut = 0; // Track sales filtered by date
 
-      console.log(`[Sales Import] Processing sales page-by-page from /sale/sales`);
 
       while (hasMoreSales) {
         const { results: sales, totalResults, hasMore } = await this.fetchPage<any>(
@@ -958,10 +875,6 @@ export class MindbodyService {
 
         hasMoreSales = hasMore;
 
-        // Log total count (only once)
-        if (salesOffset === 0) {
-          console.log(`[Sales Import] Total sales: ${totalResults}`);
-        }
 
         // Process this page immediately
         let filteredOutThisPage = 0;
@@ -970,7 +883,6 @@ export class MindbodyService {
         try {
           // Skip if missing sale date/time
           if (!sale.SaleDateTime) {
-            console.log(`Sale ${sale.Id} missing SaleDateTime, skipping`);
             continue;
           }
 
@@ -1057,18 +969,6 @@ export class MindbodyService {
         await new Promise(resolve => setImmediate(resolve));
       }
 
-      console.log(
-        `[Sales Import] Completed - imported ${imported} revenue records from ${totalProcessed} sales`
-      );
-      if (totalFilteredOut > 0) {
-        console.log(
-          `[Sales Import] Filtered out ${totalFilteredOut} sales outside date range (${dateFormat} to ${endDateFormat})`
-        );
-      }
-      console.log(
-        `[Sales Import] Client matching: ${matchedClients} matched, ${unmatchedClients} unmatched (linked to null studentId)`
-      );
-
       return { imported, nextStudentIndex: totalProcessed, completed: true };
     } catch (error) {
       console.error(`Failed to fetch site-level sales:`, error);
@@ -1098,8 +998,6 @@ export class MindbodyService {
       siteIds: [parseInt(org.mindbodySiteId)],
     };
 
-    console.log(`[Webhook] Creating subscription with payload:`, JSON.stringify(requestBody, null, 2));
-    console.log(`[Webhook] Using webhook URL: ${webhookUrl}`);
 
     const response = await fetch(`${WEBHOOKS_API_BASE}/subscriptions`, {
       method: "POST",
@@ -1111,11 +1009,8 @@ export class MindbodyService {
       body: JSON.stringify(requestBody),
     });
 
-    console.log(`[Webhook] Response status: ${response.status}`);
-    console.log(`[Webhook] Response headers:`, Object.fromEntries(response.headers.entries()));
 
     const responseText = await response.text();
-    console.log(`[Webhook] Response body (first 1000 chars):`, responseText.substring(0, 1000));
 
     if (!response.ok) {
       console.error(`Mindbody webhook subscription failed: ${response.status} - ${responseText}`);

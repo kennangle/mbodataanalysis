@@ -20,15 +20,28 @@ export default function Settings() {
   const { toast } = useToast();
   const [isDownloadingDb, setIsDownloadingDb] = useState(false);
   const [isDownloadingCode, setIsDownloadingCode] = useState(false);
-  const [integrityCheck, setIntegrityCheck] = useState<any>(null);
+  const [integrityCheck, setIntegrityCheck] = useState<{
+    totalRecords: number;
+    sampleSize: number;
+    conclusion: string;
+    message: string;
+    analysis?: {
+      withBothIds?: number;
+      withMindbodyIds?: number;
+      withSaleIdOnly?: number;
+      withItemIdOnly?: number;
+      withoutIds?: number;
+    };
+    deduplicationInfo?: string;
+  } | null>(null);
   const [isCheckingIntegrity, setIsCheckingIntegrity] = useState(false);
-  const [selectedTimezone, setSelectedTimezone] = useState<ITimezone>((user as any)?.timezone || "UTC");
+  const [selectedTimezone, setSelectedTimezone] = useState<ITimezone>(user?.timezone || "UTC");
   const [isSavingTimezone, setIsSavingTimezone] = useState(false);
 
   // Sync selectedTimezone when user data loads
   useEffect(() => {
-    if (user && (user as any).timezone) {
-      setSelectedTimezone((user as any).timezone);
+    if (user?.timezone) {
+      setSelectedTimezone(user.timezone);
     }
   }, [user]);
 
@@ -418,7 +431,7 @@ export default function Settings() {
                                 <div className="flex justify-between">
                                   <span className="text-muted-foreground">Item ID Only (Duplicates):</span>
                                   <span className="font-medium text-red-600 dark:text-red-400">
-                                    {integrityCheck.analysis.withItemIdOnly} / {integrityCheck.sampleSize}
+                                    {integrityCheck.analysis?.withItemIdOnly ?? 0} / {integrityCheck.sampleSize}
                                   </span>
                                 </div>
                               )}
@@ -428,7 +441,7 @@ export default function Settings() {
                                   {integrityCheck.analysis?.withoutIds ?? 0} / {integrityCheck.sampleSize}
                                 </span>
                               </div>
-                              {integrityCheck.deduplicationInfo && (
+                              {integrityCheck?.deduplicationInfo && (
                                 <>
                                   <Separator />
                                   <p className="text-xs text-muted-foreground italic">

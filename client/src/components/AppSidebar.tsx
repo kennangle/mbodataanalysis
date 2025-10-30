@@ -111,7 +111,10 @@ export function AppSidebar() {
                   .map((item) => (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton asChild>
-                        <a href={item.url}>
+                        <a 
+                          href={item.url}
+                          data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
+                        >
                           <item.icon className="h-4 w-4" />
                           <span>{item.title}</span>
                         </a>
