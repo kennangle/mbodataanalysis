@@ -37,12 +37,16 @@ export function PricingOptionsTable() {
   });
 
   const importMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/pricing-options/import"),
-    onSuccess: (response: any) => {
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/pricing-options/import");
+      const result = await response.json() as { success: boolean; imported: number; updated: number };
+      return result;
+    },
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["/api/pricing-options"] });
       toast({
         title: "Import Successful",
-        description: `Imported ${response.imported} new pricing options, updated ${response.updated} existing options`,
+        description: `Imported ${result.imported} new pricing options, updated ${result.updated} existing options`,
       });
     },
     onError: (error: Error) => {

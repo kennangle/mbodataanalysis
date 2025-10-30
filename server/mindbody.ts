@@ -984,7 +984,7 @@ export class MindbodyService {
     const BATCH_SIZE = 200;
 
     // Fetch pricing options/services from Mindbody
-    const endpoint = `/site/services?Limit=${BATCH_SIZE}&Offset=${startOffset}`;
+    const endpoint = `/sale/services?Limit=${BATCH_SIZE}&Offset=${startOffset}`;
     const data = await this.makeAuthenticatedRequest(organizationId, endpoint);
 
     const pagination: MindbodyPaginationResponse | undefined = data.PaginationResponse;
