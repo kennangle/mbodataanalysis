@@ -2,7 +2,7 @@
 
 ## Overview
 
-This platform is an enterprise-grade analytics solution for Mindbody data, covering students, classes, schedules, attendance, memberships, purchases, and income. It offers robust data synchronization, AI-powered natural language querying, real-time analytics dashboards, custom report generation, and role-based access control. Key features include a resumable background import system with cancellation handling and multi-tenancy support with data isolation per organization. The platform's vision is to empower fitness and wellness businesses with comprehensive, reliable data insights for informed decision-making and strategic growth.
+This platform is an enterprise-grade analytics solution for Mindbody data, covering students, classes, schedules, attendance, memberships, purchases, pricing options, and income. It offers robust data synchronization, AI-powered natural language querying, real-time analytics dashboards, custom report generation, and role-based access control. Key features include a resumable background import system with cancellation handling and multi-tenancy support with data isolation per organization. The platform's vision is to empower fitness and wellness businesses with comprehensive, reliable data insights for informed decision-making and strategic growth.
 
 ## User Preferences
 
@@ -47,13 +47,14 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
 - **Configurable Imports**: Users can specify date ranges and data types for selective data fetching.
 - **Revenue Import Strategy**: Prioritizes CSV for historical data, scheduled API imports for ongoing synchronization.
 - **Students Data Management**: Comprehensive student roster with filtering and Excel export.
+- **Pricing Options Management**: Complete service and pricing catalog from Mindbody with one-click import, search/filter capabilities, and Excel export. Integrated with AI for natural language queries about pricing and services.
 - **Authentication**: Multi-provider support (Email/Password, Google OAuth 2.0) with secure password reset.
 - **User Timezone Preferences**: Comprehensive timezone support throughout the application, displaying all date/time-related information in the user's selected timezone.
 - **Database Schema**: Optimized PostgreSQL schema for multi-tenancy, with row-level data isolation via `organizationId`.
 
 ## External Dependencies
 
-- **Mindbody Public API**: For importing client, class, visit, and sales data.
+- **Mindbody Public API**: For importing client, class, visit, sales, and pricing options data.
 - **OpenAI API**: For AI-powered natural language querying with file analysis.
 - **Neon (PostgreSQL)**: Cloud-hosted PostgreSQL database.
 - **Google OAuth 2.0**: For single sign-on authentication.
