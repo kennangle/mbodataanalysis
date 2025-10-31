@@ -74,7 +74,7 @@ export function AIQueryInterface() {
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [pendingMessageId, setPendingMessageId] = useState<string | null>(null);
+  const [pendingMessageIds, setPendingMessageIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
@@ -117,9 +117,9 @@ export function AIQueryInterface() {
     endOfMessagesRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Poll for message status when there's a pending message
+  // Poll for message status when there are pending messages
   useEffect(() => {
-    if (!pendingMessageId) {
+    if (pendingMessageIds.size === 0) {
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
         pollingIntervalRef.current = null;
@@ -127,47 +127,61 @@ export function AIQueryInterface() {
       return;
     }
 
-    const pollMessageStatus = async () => {
-      try {
-        const response = await apiRequest("GET", `/api/ai/message/${pendingMessageId}`);
-        const messageData = await response.json() as {
-          id: string;
-          role: "user" | "assistant";
-          content: string;
-          status: "pending" | "completed" | "failed";
-          error?: string;
-        };
+    const pollAllPendingMessages = async () => {
+      // Poll each pending message
+      const idsToRemove: string[] = [];
+      
+      for (const messageId of Array.from(pendingMessageIds)) {
+        try {
+          const response = await apiRequest("GET", `/api/ai/message/${messageId}`);
+          const messageData = await response.json() as {
+            id: string;
+            role: "user" | "assistant";
+            content: string;
+            status: "pending" | "completed" | "failed";
+            error?: string;
+          };
 
-        // Update the message in the messages array
-        setMessages(prev => prev.map(msg => 
-          msg.id === messageData.id 
-            ? { ...msg, content: messageData.content, status: messageData.status, error: messageData.error }
-            : msg
-        ));
+          // Update the message in the messages array
+          setMessages(prev => prev.map(msg => 
+            msg.id === messageData.id 
+              ? { ...msg, content: messageData.content, status: messageData.status, error: messageData.error }
+              : msg
+          ));
 
-        // Stop polling if the message is no longer pending
-        if (messageData.status === "completed" || messageData.status === "failed") {
-          setPendingMessageId(null);
-          
-          if (messageData.status === "failed") {
-            toast({
-              variant: "destructive",
-              title: "AI query failed",
-              description: messageData.error || "An error occurred while processing your query",
-            });
+          // Mark for removal if no longer pending
+          if (messageData.status === "completed" || messageData.status === "failed") {
+            idsToRemove.push(messageId);
+            
+            if (messageData.status === "failed") {
+              toast({
+                variant: "destructive",
+                title: "AI query failed",
+                description: messageData.error || "An error occurred while processing your query",
+              });
+            }
           }
-
-          // Invalidate conversations list to refresh the sidebar
-          queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+        } catch (error) {
+          console.error(`Error polling message ${messageId}:`, error);
         }
-      } catch (error) {
-        console.error("Error polling message status:", error);
+      }
+
+      // Remove completed/failed messages from pending set
+      if (idsToRemove.length > 0) {
+        setPendingMessageIds(prev => {
+          const newSet = new Set(prev);
+          idsToRemove.forEach(id => newSet.delete(id));
+          return newSet;
+        });
+
+        // Invalidate conversations list to refresh the sidebar
+        queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
       }
     };
 
     // Poll immediately, then every 2 seconds
-    pollMessageStatus();
-    pollingIntervalRef.current = setInterval(pollMessageStatus, 2000);
+    pollAllPendingMessages();
+    pollingIntervalRef.current = setInterval(pollAllPendingMessages, 2000);
 
     return () => {
       if (pollingIntervalRef.current) {
@@ -175,7 +189,7 @@ export function AIQueryInterface() {
         pollingIntervalRef.current = null;
       }
     };
-  }, [pendingMessageId, toast]);
+  }, [pendingMessageIds, toast]);
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -217,6 +231,7 @@ export function AIQueryInterface() {
       const response = await apiRequest("POST", "/api/ai/query", { 
         query,
         conversationId: currentConversationId,
+        fileIds: attachedFileIds.length > 0 ? attachedFileIds : undefined,
       });
       const result = (await response.json()) as { 
         conversationId: string;
@@ -233,14 +248,15 @@ export function AIQueryInterface() {
         { id: data.messageId, role: "assistant", content: "", status: "pending" }
       ]);
       setQuery("");
+      setAttachedFileIds([]); // Clear attached files after sending
 
       // Update current conversation ID if a new one was created
       if (data.conversationId && !currentConversationId) {
         setCurrentConversationId(data.conversationId);
       }
 
-      // Set pending message ID to trigger polling
-      setPendingMessageId(data.messageId);
+      // Add to pending message IDs set to trigger polling
+      setPendingMessageIds(prev => new Set(prev).add(data.messageId));
 
       // Invalidate conversations list to refresh the sidebar
       queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
@@ -265,7 +281,7 @@ export function AIQueryInterface() {
     setQuery("");
     setAttachedFileIds([]);
     setCurrentConversationId(null);
-    setPendingMessageId(null);
+    setPendingMessageIds(new Set());
   };
 
   const handleNewChat = () => {
@@ -273,14 +289,23 @@ export function AIQueryInterface() {
     setQuery("");
     setAttachedFileIds([]);
     setCurrentConversationId(null);
-    setPendingMessageId(null);
+    setPendingMessageIds(new Set());
   };
 
   const handleSelectConversation = (conversationId: string | null) => {
     setCurrentConversationId(conversationId);
     setQuery("");
     setAttachedFileIds([]);
-    setPendingMessageId(null);
+    
+    // Check if any messages in the conversation are still pending and poll them
+    if (conversationId && conversationData?.messages) {
+      const pendingIds = conversationData.messages
+        .filter(msg => msg.status === "pending")
+        .map(msg => msg.id);
+      setPendingMessageIds(new Set(pendingIds));
+    } else {
+      setPendingMessageIds(new Set());
+    }
     // Messages will be loaded by the useEffect hook
   };
 

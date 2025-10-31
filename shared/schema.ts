@@ -502,6 +502,7 @@ export const conversationMessages = pgTable(
     conversationId: uuid("conversation_id").notNull(),
     role: text("role").notNull(), // "user" or "assistant"
     content: text("content").notNull(),
+    fileIds: text("file_ids").array(), // Array of uploaded file IDs attached to this message
     status: text("status").default("completed"), // "pending" | "completed" | "failed"
     error: text("error"), // Error message if status is "failed"
     createdAt: timestamp("created_at").defaultNow().notNull(),

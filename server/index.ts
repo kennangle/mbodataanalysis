@@ -144,6 +144,15 @@ app.use((req, res, next) => {
     // Don't abort startup if auto-resume fails
   }
 
+  // Auto-recover pending AI messages on startup
+  try {
+    const { recoverPendingMessages } = await import("./ai-worker");
+    await recoverPendingMessages();
+  } catch (error) {
+    console.error("[AI Recovery] Failed to recover pending AI messages on startup:", error);
+    // Don't abort startup if recovery fails
+  }
+
   // Start the import scheduler
   try {
     const { importScheduler } = await import("./scheduler");

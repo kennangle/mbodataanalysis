@@ -15,7 +15,7 @@ export function registerAIRoutes(app: Express) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const { query, conversationId } = req.body;
+      const { query, conversationId, fileIds } = req.body;
       if (!query || typeof query !== "string" || query.trim().length === 0) {
         return res.status(400).json({ error: "Query is required" });
       }
@@ -23,6 +23,9 @@ export function registerAIRoutes(app: Express) {
       if (query.length > 500) {
         return res.status(400).json({ error: "Query too long (max 500 characters)" });
       }
+
+      // Validate fileIds if provided
+      const validatedFileIds = Array.isArray(fileIds) ? fileIds.filter((id: any) => typeof id === "string") : [];
 
       // Verify conversation ownership if conversationId is provided
       let activeConversation = null;
@@ -55,6 +58,7 @@ export function registerAIRoutes(app: Express) {
         conversationId: activeConversation.id,
         role: "user",
         content: query.trim(),
+        fileIds: validatedFileIds.length > 0 ? validatedFileIds : undefined,
         status: "completed",
       });
 
