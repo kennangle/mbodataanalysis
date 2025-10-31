@@ -1251,6 +1251,9 @@ export class MindbodyService {
                         itemDescription = `${itemDescription} (Qty: ${item.Quantity})`;
                       }
 
+                      // Identify fees by CategoryId === -16 (Mindbody system category for fees)
+                      const isFee = item.CategoryId === -16;
+
                       await storage.upsertRevenue({
                         organizationId,
                         studentId: studentId || null,
@@ -1260,6 +1263,8 @@ export class MindbodyService {
                         type: item.IsService ? "Service" : (item.Type || "Product"),
                         description: itemDescription,
                         transactionDate,
+                        isFee,
+                        categoryId: item.CategoryId ?? null,
                       });
                       imported++;
                       
@@ -1274,6 +1279,8 @@ export class MindbodyService {
                           type: "Tax",
                           description: `Tax for ${itemDescription}`,
                           transactionDate,
+                          isFee: false,
+                          categoryId: null,
                         });
                         imported++;
                       }
@@ -1460,6 +1467,9 @@ export class MindbodyService {
                 description = `${description} (Qty: ${item.Quantity})`;
               }
 
+              // Identify fees by CategoryId === -16 (Mindbody system category for fees)
+              const isFee = item.CategoryId === -16;
+
               await storage.upsertRevenue({
                 organizationId,
                 studentId,
@@ -1469,6 +1479,8 @@ export class MindbodyService {
                 type: item.IsService ? "Service" : (item.Type || "Product"),
                 description,
                 transactionDate: new Date(sale.SaleDateTime),
+                isFee,
+                categoryId: item.CategoryId ?? null,
               });
               imported++;
               
@@ -1483,6 +1495,8 @@ export class MindbodyService {
                   type: "Tax",
                   description: `Tax for ${description}`,
                   transactionDate: new Date(sale.SaleDateTime),
+                  isFee: false,
+                  categoryId: null,
                 });
                 imported++;
               }

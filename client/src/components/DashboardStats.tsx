@@ -5,6 +5,8 @@ import { TrendingUp, TrendingDown, Users, DollarSign, Calendar, Activity } from 
 interface DashboardStatsData {
   totalRevenue: number;
   revenueChange: string;
+  totalFees: number;
+  feeChange: string;
   activeStudents: number;
   totalStudents: number;
   studentChange: string;
@@ -23,8 +25,8 @@ export function DashboardStats() {
 
   if (isLoading) {
     return (
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {[...Array(5)].map((_, index) => (
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        {[...Array(6)].map((_, index) => (
           <Card key={index}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div className="h-4 w-24 bg-muted animate-pulse rounded" />
@@ -47,7 +49,15 @@ export function DashboardStats() {
       change: `${data?.revenueChange || "0"}%`,
       trend: parseFloat(data?.revenueChange || "0") >= 0 ? "up" : "down",
       icon: DollarSign,
-      note: "Excludes processing & service fees",
+      note: "Excludes processing fees (not in API)",
+    },
+    {
+      title: "Fees Collected",
+      value: `$${data?.totalFees.toLocaleString(undefined, { maximumFractionDigits: 0 }) || "0"}`,
+      change: `${data?.feeChange || "0"}%`,
+      trend: parseFloat(data?.feeChange || "0") >= 0 ? "up" : "down",
+      icon: DollarSign,
+      note: "Convenience & service fees",
     },
     {
       title: "Active Students",
@@ -80,7 +90,7 @@ export function DashboardStats() {
   ];
 
   return (
-    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
       {stats.map((stat, index) => {
         const Icon = stat.icon;
         const TrendIcon = stat.trend === "up" ? TrendingUp : TrendingDown;

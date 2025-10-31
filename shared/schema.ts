@@ -183,6 +183,8 @@ export const revenue = pgTable(
     type: text("type").notNull(),
     description: text("description"),
     transactionDate: timestamp("transaction_date").notNull(),
+    isFee: boolean("is_fee").default(false).notNull(),
+    categoryId: integer("category_id"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({

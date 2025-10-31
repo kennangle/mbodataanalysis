@@ -172,6 +172,11 @@ export interface IStorage {
     startDate: Date,
     endDate: Date
   ): Promise<{ total: number; count: number }>;
+  getFeeStats(
+    organizationId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<{ total: number; count: number }>;
   getAllTimeRevenueStats(organizationId: string): Promise<{ total: number; count: number }>;
   getMonthlyRevenueTrend(
     organizationId: string,
@@ -748,6 +753,8 @@ export class DbStorage implements IStorage {
               type: revenueData.type,
               description: revenueData.description,
               transactionDate: revenueData.transactionDate,
+              isFee: revenueData.isFee,
+              categoryId: revenueData.categoryId,
             })
             .where(eq(revenue.id, existing[0].id))
             .returning();
@@ -768,6 +775,8 @@ export class DbStorage implements IStorage {
               type: revenueData.type,
               description: revenueData.description,
               transactionDate: revenueData.transactionDate,
+              isFee: revenueData.isFee,
+              categoryId: revenueData.categoryId,
             },
           })
           .returning();
@@ -805,6 +814,35 @@ export class DbStorage implements IStorage {
       .where(
         and(
           eq(revenue.organizationId, organizationId),
+          gte(revenue.transactionDate, startDate),
+          lt(revenue.transactionDate, nextDay)
+        )
+      );
+
+    return {
+      total: Number(result[0].total || 0),
+      count: Number(result[0].count || 0),
+    };
+  }
+
+  async getFeeStats(
+    organizationId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<{ total: number; count: number }> {
+    // Make end date inclusive by adding one day and using < comparison
+    const nextDay = addDays(endDate, 1);
+
+    const result = await db
+      .select({
+        total: sql<number>`sum(CAST(${revenue.amount} AS NUMERIC))`,
+        count: sql<number>`count(*)`,
+      })
+      .from(revenue)
+      .where(
+        and(
+          eq(revenue.organizationId, organizationId),
+          eq(revenue.isFee, true),
           gte(revenue.transactionDate, startDate),
           lt(revenue.transactionDate, nextDay)
         )

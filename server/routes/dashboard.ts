@@ -86,12 +86,14 @@ export function registerDashboardRoutes(app: Express) {
         prevEndDate = subtractPeriod(endDate, 1);
       }
 
-      // Fetch current period and previous period revenue
+      // Fetch current period and previous period revenue (including fees separately)
       const [
         totalStudentCount,
         activeStudentCount,
         currentPeriodRevenue,
         previousPeriodRevenue,
+        currentPeriodFees,
+        previousPeriodFees,
         attendanceRecords,
         previousAttendanceRecords,
         classes,
@@ -100,6 +102,8 @@ export function registerDashboardRoutes(app: Express) {
         storage.getActiveStudentCount(organizationId),
         storage.getRevenueStats(organizationId, startDate, endDate),
         storage.getRevenueStats(organizationId, prevStartDate, prevEndDate),
+        storage.getFeeStats(organizationId, startDate, endDate),
+        storage.getFeeStats(organizationId, prevStartDate, prevEndDate),
         storage.getAttendance(organizationId, startDate, endDate),
         storage.getAttendance(organizationId, prevStartDate, prevEndDate),
         storage.getClasses(organizationId),
@@ -129,6 +133,13 @@ export function registerDashboardRoutes(app: Express) {
       const attendanceChange =
         previousAttendanceRate > 0 ? attendanceRate - previousAttendanceRate : 0;
 
+      const feeChange =
+        previousPeriodFees.total > 0
+          ? ((currentPeriodFees.total - previousPeriodFees.total) /
+              previousPeriodFees.total) *
+            100
+          : 0;
+
       // Prevent browser caching to ensure fresh attendance data
       res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
       res.setHeader("Pragma", "no-cache");
@@ -137,10 +148,14 @@ export function registerDashboardRoutes(app: Express) {
       console.log(`[Dashboard Stats] Attendance records count: ${attendanceRecords.length}`);
       console.log(`[Dashboard Stats] Current period revenue: $${currentPeriodRevenue.total.toFixed(2)} (${currentPeriodRevenue.count} transactions)`);
       console.log(`[Dashboard Stats] Previous period revenue: $${previousPeriodRevenue.total.toFixed(2)} (${previousPeriodRevenue.count} transactions)`);
+      console.log(`[Dashboard Stats] Current period fees: $${currentPeriodFees.total.toFixed(2)} (${currentPeriodFees.count} fee items)`);
+      console.log(`[Dashboard Stats] Previous period fees: $${previousPeriodFees.total.toFixed(2)} (${previousPeriodFees.count} fee items)`);
 
       res.json({
         totalRevenue: currentPeriodRevenue.total,
         revenueChange: revenueChange.toFixed(1),
+        totalFees: currentPeriodFees.total,
+        feeChange: feeChange.toFixed(1),
         activeStudents: activeStudentCount,
         totalStudents: totalStudentCount,
         studentChange: "+12.5",

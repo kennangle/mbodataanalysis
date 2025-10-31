@@ -21,7 +21,7 @@ export function AppHeader({ title }: AppHeaderProps) {
       </div>
       <div className="flex items-center gap-2">
         <span className="text-xs text-muted-foreground" data-testid="text-version">
-          v0.02
+          v0.03
         </span>
         <Button
           variant="ghost"

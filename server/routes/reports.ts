@@ -135,10 +135,10 @@ export function registerReportRoutes(app: Express) {
       const revenueData = await storage.getRevenue(organizationId, startDate, endDate);
 
       const csv = [
-        "Date,Description,Amount,Type",
+        "Date,Description,Amount,Type,Is Fee",
         ...revenueData.map(
           (r) =>
-            `${r.transactionDate.toISOString().split("T")[0]},"${r.description || "N/A"}",${r.amount},"${r.type}"`
+            `${r.transactionDate.toISOString().split("T")[0]},"${r.description || "N/A"}",${r.amount},"${r.type}","${r.isFee ? 'Yes' : 'No'}"`
         ),
       ].join("\n");
 

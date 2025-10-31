@@ -2,9 +2,16 @@
 
 ## Overview
 
-This platform is an enterprise-grade analytics solution for Mindbody data, covering students, classes, schedules, attendance, memberships, purchases, pricing options, and income. It offers robust data synchronization, AI-powered natural language querying, real-time analytics dashboards, custom report generation, and role-based access control. Key features include a resumable background import system with cancellation handling and multi-tenancy support with data isolation per organization. **Revenue tracking uses Mindbody's `TotalAmount` field (which includes discounts already applied) and captures optional sales tax separately for complete financial visibility.** The platform's vision is to empower fitness and wellness businesses with comprehensive, reliable data insights for informed decision-making and strategic growth.
+This platform is an enterprise-grade analytics solution for Mindbody data, covering students, classes, schedules, attendance, memberships, purchases, pricing options, and income. It offers robust data synchronization, AI-powered natural language querying, real-time analytics dashboards, custom report generation, and role-based access control. Key features include a resumable background import system with cancellation handling and multi-tenancy support with data isolation per organization. **Revenue tracking uses Mindbody's `TotalAmount` field (which includes discounts already applied), automatically identifies and tracks convenience & service fees via `CategoryId: -16`, and captures optional sales tax separately for complete financial visibility.** The platform's vision is to empower fitness and wellness businesses with comprehensive, reliable data insights for informed decision-making and strategic growth.
 
 ## Version History
+
+### v0.03 (October 31, 2025)
+- **Fee Tracking Implementation**: Confirmed via Mindbody Developer Support that convenience & service fees ARE available in the API as regular service items with `CategoryId: -16`. Updated import logic to automatically identify and flag fee items.
+- **Separate Fee Display**: Dashboard now shows "Fees Collected" as a separate metric with month-over-month comparison, giving complete visibility into fee revenue.
+- **Enhanced Revenue Reports**: CSV exports now include "Is Fee" column to distinguish fee items from regular revenue, enabling detailed financial analysis.
+- **Accurate Revenue Totals**: Total revenue now includes all convenience and service fees collected, matching Mindbody's reporting (processing fees still excluded as they're not in the API).
+- **Database Schema Enhancement**: Added `isFee` boolean and `categoryId` integer fields to revenue table for precise fee identification and tracking.
 
 ### v0.02 (October 31, 2025)
 - **Revenue Import Accuracy Fix**: Updated sales import to use Mindbody's `TotalAmount` field (which already includes discounts) instead of calculating from `UnitPrice * Quantity`. This ensures accurate revenue tracking that matches Mindbody's calculations.
