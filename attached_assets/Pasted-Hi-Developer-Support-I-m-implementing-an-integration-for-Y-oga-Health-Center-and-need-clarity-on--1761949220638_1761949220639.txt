@@ -1,0 +1,79 @@
+Hi Developer Support,
+
+I’m implementing an integration for ​Y​oga Health Center and need clarity on how processing fees and service fees/surcharges are represented and managed through the MINDBODY APIs.
+
+Could you please confirm the following and point me to the relevant docs/sample payloads?
+
+
+Creating/Importing Fees (Write Paths)
+
+
+Is there an API-supported way to create or attach a fee line item (e.g., “Processing Fee” or “Service Fee/Surcharge”) to a sale/checkout?
+
+If yes, which endpoints/objects support this (e.g., CheckoutShoppingCart, PurchaseContract, etc.) and what fields/schemas should be used (codes, item types, taxability flags)?
+
+Are there constraints on fee naming, tax treatment, or caps? Any validation rules we should anticipate?
+
+
+Reading/Reconciling Fees (Read Paths)
+
+
+For transactions processed with MINDBODY Payments, are processing fees available via API as separate, itemized fields (vs. only implicit in net deposits/payouts)?
+
+Which read endpoints expose fee details (e.g., Sales, Purchases, Payments, PaymentTransactions, Payouts/Deposits if available)?
+
+Are fees broken out at the line-item level or only at the payment/settlement level? Please specify the objects/fields.
+
+
+Historical/Backfill
+
+
+Is there official support to backfill historical fee data via API or export services? If API isn’t supported, what is the recommended approach (data export program, report endpoints, or partner services)?
+
+
+Refunds/Chargebacks/Adjustments
+
+
+How are fee reversals or chargeback fees represented via API?
+
+Are there webhook events we can subscribe to for adjustments, and do those payloads include fee components?
+
+
+Surcharging vs. Convenience Fees (Compliance & Configuration)
+
+
+Does MINDBODY support card surcharging or convenience fees configuration natively, and can those be set/updated via API?
+
+If not, is the recommended workaround to create a fee as a product/service and add it as a normal line item at checkout?
+
+
+Multiple Merchant Accounts / Payment Types
+
+
+If a business uses multiple processors or flows (in-person vs. ecommerce), can we differentiate fee sources in API responses (e.g., fields identifying processor, MID/TID, channel)?
+
+
+Sandbox & Examples
+
+
+Is there a sandbox object set that includes sample transactions with fees, refunds, and chargebacks for end-to-end testing?
+
+Could you share example requests/responses that illustrate best practice for (a) adding a fee to a sale, and (b) reading fees for reconciliation?
+
+Context:
+
+
+Goal: Accurate P&L and reconciliation in a data warehouse (line-item truth for sales, taxes, discounts, and fees).
+
+Stack: We’re pulling MINDBODY into an analytics pipeline and need deterministic mappings for fee fields.
+
+If helpful, I can share our specific account/app details for deeper investigation.
+
+Thanks in advance for the guidance and links.
+
+Best regards
+
+
+Ken Nangle
+ken@yogahealthcenter.com
+www.yogahealthcenter.com
