@@ -2,7 +2,7 @@
 
 ## Overview
 
-This platform is an enterprise-grade analytics solution for Mindbody data, covering students, classes, schedules, attendance, memberships, purchases, pricing options, and income. It offers robust data synchronization, AI-powered natural language querying, real-time analytics dashboards, custom report generation, and role-based access control. Key features include a resumable background import system with cancellation handling and multi-tenancy support with data isolation per organization. **Revenue tracking accurately matches Mindbody's totals by capturing processing fees, service fees, discounts (as negative revenue), and optional tax - ensuring complete financial visibility.** The platform's vision is to empower fitness and wellness businesses with comprehensive, reliable data insights for informed decision-making and strategic growth.
+This platform is an enterprise-grade analytics solution for Mindbody data, covering students, classes, schedules, attendance, memberships, purchases, pricing options, and income. It offers robust data synchronization, AI-powered natural language querying, real-time analytics dashboards, custom report generation, and role-based access control. Key features include a resumable background import system with cancellation handling and multi-tenancy support with data isolation per organization. **Revenue tracking uses Mindbody's `TotalAmount` field (which includes discounts already applied) and captures optional sales tax separately for complete financial visibility.** The platform's vision is to empower fitness and wellness businesses with comprehensive, reliable data insights for informed decision-making and strategic growth.
 
 ## User Preferences
 

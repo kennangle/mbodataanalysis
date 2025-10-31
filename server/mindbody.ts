@@ -1238,16 +1238,15 @@ export class MindbodyService {
                   if (purchasedItems.length > 0) {
                     // Create a revenue record for each purchased item
                     for (const item of purchasedItems) {
-                      const itemAmount = 
-                        item.Amount ?? 
+                      // Use TotalAmount (final amount after discounts) or fallback
+                      const itemAmount = item.TotalAmount ?? item.Amount ?? 
                         (item.UnitPrice && item.Quantity ? item.UnitPrice * item.Quantity : null);
 
-                      // Skip items with no amount
-                      if (!itemAmount && itemAmount !== 0) continue;
-                      if (itemAmount === 0) continue;
+                      // Skip items with no amount (but allow zero for comps/discounts)
+                      if (itemAmount === null || itemAmount === undefined) continue;
 
                       // Build description: Item name + quantity (if > 1)
-                      let itemDescription = item.Name || item.Description || "Unknown item";
+                      let itemDescription = item.Description || item.Name || "Unknown item";
                       if (item.Quantity && item.Quantity > 1) {
                         itemDescription = `${itemDescription} (Qty: ${item.Quantity})`;
                       }
@@ -1263,72 +1262,21 @@ export class MindbodyService {
                         transactionDate,
                       });
                       imported++;
-                    }
-                    
-                    // Capture processing fees if present (typically transaction fees charged by payment processor)
-                    const processingFee = sale.ProcessingFee || sale.ProcessingFeeAmount || sale.PaymentProcessingFee;
-                    if (processingFee && processingFee > 0) {
-                      await storage.upsertRevenue({
-                        organizationId,
-                        studentId: studentId || null,
-                        mindbodySaleId: saleId,
-                        mindbodyItemId: "fee-processing",
-                        amount: processingFee.toString(),
-                        type: "Processing Fee",
-                        description: "Payment processing fee",
-                        transactionDate,
-                      });
-                      imported++;
-                    }
-                    
-                    // Capture service fees if present
-                    const serviceFee = sale.ServiceFee || sale.ServiceFeeAmount;
-                    if (serviceFee && serviceFee > 0) {
-                      await storage.upsertRevenue({
-                        organizationId,
-                        studentId: studentId || null,
-                        mindbodySaleId: saleId,
-                        mindbodyItemId: "fee-service",
-                        amount: serviceFee.toString(),
-                        type: "Service Fee",
-                        description: "Service fee",
-                        transactionDate,
-                      });
-                      imported++;
-                    }
-                    
-                    // Capture discounts as negative revenue (if they reduce the total)
-                    const discountAmount = sale.DiscountAmount || sale.TotalDiscounts || sale.Discount;
-                    if (discountAmount && discountAmount !== 0) {
-                      // Discounts are typically positive numbers representing the amount reduced
-                      // We store them as negative to show the reduction in revenue
-                      await storage.upsertRevenue({
-                        organizationId,
-                        studentId: studentId || null,
-                        mindbodySaleId: saleId,
-                        mindbodyItemId: "discount",
-                        amount: (-Math.abs(discountAmount)).toString(),
-                        type: "Discount",
-                        description: "Sale discount applied",
-                        transactionDate,
-                      });
-                      imported++;
-                    }
-                    
-                    // Capture tax if present (optional - for complete revenue tracking)
-                    const taxAmount = sale.TaxTotal || sale.Tax || sale.TaxAmount;
-                    if (taxAmount && taxAmount > 0) {
-                      await storage.upsertRevenue({
-                        organizationId,
-                        studentId: studentId || null,
-                        mindbodySaleId: saleId,
-                        mindbodyItemId: "tax",
-                        amount: taxAmount.toString(),
-                        type: "Tax",
-                        description: "Sales tax",
-                        transactionDate,
-                      });
-                      imported++;
+                      
+                      // Capture tax separately if present (for complete financial tracking)
+                      if (item.TaxAmount && item.TaxAmount > 0) {
+                        await storage.upsertRevenue({
+                          organizationId,
+                          studentId: studentId || null,
+                          mindbodySaleId: saleId,
+                          mindbodyItemId: `${item.Id || item.SaleDetailId}-tax`,
+                          amount: item.TaxAmount.toString(),
+                          type: "Tax",
+                          description: `Tax for ${itemDescription}`,
+                          transactionDate,
+                        });
+                        imported++;
+                      }
                     }
                   } else {
                     // No line items, fall back to payment transaction record
@@ -1499,17 +1447,15 @@ export class MindbodyService {
           // Create a revenue record for each purchased item (line-item tracking)
           for (const item of purchasedItems) {
             try {
-              // Get amount from correct field: Amount, or calculate from UnitPrice * Quantity
-              const amount =
-                item.Amount ??
+              // Use TotalAmount (final amount after discounts) or fallback to UnitPrice * Quantity
+              const amount = item.TotalAmount ?? item.Amount ?? 
                 (item.UnitPrice && item.Quantity ? item.UnitPrice * item.Quantity : null);
 
-              // Skip items with no amount or zero amount
-              if (!amount && amount !== 0) continue;
-              if (amount === 0) continue;
+              // Skip items with no amount (but allow zero for comps/discounts)
+              if (amount === null || amount === undefined) continue;
 
               // Build description: Item name + quantity (if > 1)
-              let description = item.Name || item.Description || "Unknown item";
+              let description = item.Description || item.Name || "Unknown item";
               if (item.Quantity && item.Quantity > 1) {
                 description = `${description} (Qty: ${item.Quantity})`;
               }
@@ -1520,78 +1466,29 @@ export class MindbodyService {
                 mindbodySaleId: sale.Id?.toString() || null,
                 mindbodyItemId: item.Id?.toString() || item.SaleDetailId?.toString() || null,
                 amount: amount.toString(),
-                type: item.IsService ? "Service" : item.Type || "Product",
+                type: item.IsService ? "Service" : (item.Type || "Product"),
                 description,
                 transactionDate: new Date(sale.SaleDateTime),
               });
               imported++;
+              
+              // Capture tax separately if present (for complete financial tracking)
+              if (item.TaxAmount && item.TaxAmount > 0) {
+                await storage.upsertRevenue({
+                  organizationId,
+                  studentId,
+                  mindbodySaleId: sale.Id?.toString() || null,
+                  mindbodyItemId: `${item.Id || item.SaleDetailId}-tax`,
+                  amount: item.TaxAmount.toString(),
+                  type: "Tax",
+                  description: `Tax for ${description}`,
+                  transactionDate: new Date(sale.SaleDateTime),
+                });
+                imported++;
+              }
             } catch (error) {
               console.error(`Failed to import purchased item from sale ${sale.Id}:`, error);
             }
-          }
-          
-          // Capture processing fees if present
-          const processingFee = sale.ProcessingFee || sale.ProcessingFeeAmount || sale.PaymentProcessingFee;
-          if (processingFee && processingFee > 0) {
-            await storage.upsertRevenue({
-              organizationId,
-              studentId,
-              mindbodySaleId: sale.Id?.toString() || null,
-              mindbodyItemId: "fee-processing",
-              amount: processingFee.toString(),
-              type: "Processing Fee",
-              description: "Payment processing fee",
-              transactionDate: new Date(sale.SaleDateTime),
-            });
-            imported++;
-          }
-          
-          // Capture service fees if present
-          const serviceFee = sale.ServiceFee || sale.ServiceFeeAmount;
-          if (serviceFee && serviceFee > 0) {
-            await storage.upsertRevenue({
-              organizationId,
-              studentId,
-              mindbodySaleId: sale.Id?.toString() || null,
-              mindbodyItemId: "fee-service",
-              amount: serviceFee.toString(),
-              type: "Service Fee",
-              description: "Service fee",
-              transactionDate: new Date(sale.SaleDateTime),
-            });
-            imported++;
-          }
-          
-          // Capture discounts as negative revenue
-          const discountAmount = sale.DiscountAmount || sale.TotalDiscounts || sale.Discount;
-          if (discountAmount && discountAmount !== 0) {
-            await storage.upsertRevenue({
-              organizationId,
-              studentId,
-              mindbodySaleId: sale.Id?.toString() || null,
-              mindbodyItemId: "discount",
-              amount: (-Math.abs(discountAmount)).toString(),
-              type: "Discount",
-              description: "Sale discount applied",
-              transactionDate: new Date(sale.SaleDateTime),
-            });
-            imported++;
-          }
-          
-          // Capture tax if present
-          const taxAmount = sale.TaxTotal || sale.Tax || sale.TaxAmount;
-          if (taxAmount && taxAmount > 0) {
-            await storage.upsertRevenue({
-              organizationId,
-              studentId,
-              mindbodySaleId: sale.Id?.toString() || null,
-              mindbodyItemId: "tax",
-              amount: taxAmount.toString(),
-              type: "Tax",
-              description: "Sales tax",
-              transactionDate: new Date(sale.SaleDateTime),
-            });
-            imported++;
           }
         } catch (error) {
           console.error(`Failed to process sale ${sale.Id}:`, error);
