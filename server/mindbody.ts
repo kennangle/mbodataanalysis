@@ -1199,6 +1199,23 @@ export class MindbodyService {
                 if (saleData && saleData.Sale) {
                   const sale = saleData.Sale;
                   
+                  // Diagnostic: Log what fee/discount fields exist (no PII)
+                  const feeFields = {
+                    hasProcessingFee: !!sale.ProcessingFee,
+                    hasProcessingFeeAmount: !!sale.ProcessingFeeAmount,
+                    hasPaymentProcessingFee: !!sale.PaymentProcessingFee,
+                    hasServiceFee: !!sale.ServiceFee,
+                    hasServiceFeeAmount: !!sale.ServiceFeeAmount,
+                    hasDiscountAmount: !!sale.DiscountAmount,
+                    hasTotalDiscounts: !!sale.TotalDiscounts,
+                    hasDiscount: !!sale.Discount,
+                    hasTaxTotal: !!sale.TaxTotal,
+                    hasTax: !!sale.Tax,
+                    hasTaxAmount: !!sale.TaxAmount,
+                    allSaleKeys: Object.keys(sale).filter(k => k.toLowerCase().includes('fee') || k.toLowerCase().includes('discount') || k.toLowerCase().includes('tax'))
+                  };
+                  console.log('[Sales Import Debug] Fee/discount fields for sale:', feeFields);
+                  
                   // Handle both array and single object for PurchasedItems
                   const purchasedItems = Array.isArray(sale.PurchasedItems)
                     ? sale.PurchasedItems
