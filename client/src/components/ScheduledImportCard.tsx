@@ -5,11 +5,13 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Clock, Play, AlertCircle, CheckCircle2, Loader2, X } from "lucide-react";
+import { Clock, Play, AlertCircle, CheckCircle2, Loader2, X, ArrowUp, TrendingUp } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useActiveImportJob } from "@/hooks/use-active-import-job";
+import { Progress } from "@/components/ui/progress";
 
 interface ScheduledImportConfig {
   enabled: boolean;
@@ -166,6 +168,9 @@ export function ScheduledImportCard() {
   const [minute, setMinute] = useState("0"); // Minute of hour (preserve from config)
   const [daysToImport, setDaysToImport] = useState("7");
   const [dataTypes, setDataTypes] = useState<string[]>(["students", "classes", "visits", "sales"]);
+  
+  // Track active import job for progress display
+  const { jobStatus, isJobActive, progressPercentage } = useActiveImportJob({ showToasts: false });
 
   const { data: config, isLoading } = useQuery<ScheduledImportConfig>({
     queryKey: ["/api/scheduled-imports"],
@@ -361,6 +366,32 @@ export function ScheduledImportCard() {
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Show import progress if active */}
+        {isJobActive && jobStatus && (
+          <Alert className="border-primary bg-primary/5">
+            <TrendingUp className="h-4 w-4" />
+            <AlertDescription className="space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-medium">Import in progress</span>
+                <span className="text-xs text-muted-foreground">{progressPercentage}%</span>
+              </div>
+              <Progress value={progressPercentage} className="h-2" />
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => {
+                  document.getElementById('data-import-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }}
+                data-testid="button-view-import-details"
+              >
+                <ArrowUp className="h-3 w-3 mr-1" />
+                View detailed progress above
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
             <Label htmlFor="scheduled-enabled">Enable Scheduled Imports</Label>

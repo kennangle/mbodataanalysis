@@ -568,7 +568,7 @@ export function DataImportCard() {
   }, [activeHistoryJob, currentJobId]);
 
   return (
-    <Card>
+    <Card id="data-import-section">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
