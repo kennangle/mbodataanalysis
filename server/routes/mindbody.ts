@@ -122,6 +122,51 @@ export function registerMindbodyRoutes(app: Express) {
     }
   });
 
+  // Test utility function for faster visits import
+  app.post("/api/mindbody/test-utility-function", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.user as User)?.organizationId;
+
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { startDate, endDate } = req.body;
+
+      if (!startDate || !endDate) {
+        return res.status(400).json({ error: "startDate and endDate are required" });
+      }
+
+      const mindbodyService = new MindbodyService();
+      
+      console.log(`[Test Utility] Fetching visits from ${startDate} to ${endDate}`);
+      const start = Date.now();
+      
+      const visits = await mindbodyService.getVisitsByDateRange(
+        organizationId,
+        new Date(startDate),
+        new Date(endDate)
+      );
+      
+      const duration = ((Date.now() - start) / 1000).toFixed(2);
+      
+      console.log(`[Test Utility] Received ${visits.length} visits in ${duration}s`);
+      
+      // Return sample of data for inspection
+      res.json({
+        success: true,
+        totalVisits: visits.length,
+        duration: `${duration}s`,
+        sample: visits.slice(0, 10), // First 10 visits for inspection
+        columns: visits.length > 0 ? Object.keys(visits[0]) : [],
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to test utility function";
+      console.error('[Test Utility] Error:', error);
+      res.status(500).json({ error: errorMessage });
+    }
+  });
+
   // New resumable import endpoints
   app.get("/api/mindbody/import/active", requireAuth, async (req, res) => {
     try {

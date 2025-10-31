@@ -628,6 +628,166 @@ export class MindbodyService {
     return { imported, nextOffset, completed };
   }
 
+  async getVisitsByDateRange(
+    organizationId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<any[]> {
+    // Use Mindbody's UtilityFunction_VisitsV4 to fetch all visits in date range
+    // This is MUCH faster than per-client API calls
+    const formatDate = (date: Date): string => {
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${month}/${day}/${year}`; // MM/DD/YYYY format
+    };
+
+    const endpoint = '/utility/function';
+    const token = await this.getUserToken(organizationId);
+    const org = await storage.getOrganization(organizationId);
+    const apiKey = org?.mindbodyApiKey || process.env.MINDBODY_API_KEY;
+    const siteId = org?.mindbodySiteId || "133";
+
+    const response = await fetch(`${MINDBODY_API_BASE}${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'API-Key': apiKey || '',
+        'SiteID': siteId,
+        'Authorization': token,
+      },
+      body: JSON.stringify({
+        FunctionName: 'UtilityFunction_VisitsV4',
+        FunctionParams: [
+          {
+            ParamName: '@StartDate',
+            ParamValue: formatDate(startDate),
+            ParamDataType: 'datetime',
+          },
+          {
+            ParamName: '@EndDate',
+            ParamValue: formatDate(endDate),
+            ParamDataType: 'datetime',
+          },
+          {
+            ParamName: '@ModifiedDate',
+            ParamValue: '01/01/1900',
+            ParamDataType: 'datetime',
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[Mindbody Utility Function] Error:`, errorText);
+      throw new Error(`Failed to fetch visits via utility function (${response.status})`);
+    }
+
+    const data = await response.json();
+    console.log(`[Mindbody Utility Function] Response:`, JSON.stringify(data).substring(0, 500));
+    
+    // The response format may vary, so we'll need to inspect it
+    // Typically it returns a Table or Results array
+    return data.Table || data.Results || data;
+  }
+
+  async importVisitsViaUtilityFunction(
+    organizationId: string,
+    startDate: Date,
+    endDate: Date,
+    onProgress: (current: number, total: number) => Promise<void>,
+    jobId?: string
+  ): Promise<{ imported: number; skipped: number }> {
+    console.log(`[Visits Utility] Fetching all visits from ${startDate.toISOString()} to ${endDate.toISOString()}`);
+    
+    // Fetch ALL visits in one API call!
+    const visits = await this.getVisitsByDateRange(organizationId, startDate, endDate);
+    console.log(`[Visits Utility] Received ${visits.length} visits from utility function`);
+    
+    // Load students and schedules for matching
+    const [students, schedules] = await Promise.all([
+      storage.getStudents(organizationId, 100000),
+      storage.getClassSchedules(organizationId),
+    ]);
+    
+    console.log(`[Visits Utility] Loaded ${students.length} students and ${schedules.length} schedules`);
+    
+    // Create lookup maps
+    const studentsByClientId = new Map(
+      students.filter(s => s.mindbodyClientId).map(s => [s.mindbodyClientId!, s])
+    );
+    const schedulesByTime = new Map(
+      schedules.map(s => [s.startTime.toISOString(), s])
+    );
+    
+    let imported = 0;
+    let skipped = 0;
+    const total = visits.length;
+    
+    // Process visits in batches to avoid overwhelming the database
+    const BATCH_SIZE = 500;
+    for (let i = 0; i < visits.length; i += BATCH_SIZE) {
+      const batch = visits.slice(i, Math.min(i + BATCH_SIZE, visits.length));
+      
+      for (const visit of batch) {
+        try {
+          // Match student by ClientId
+          const student = studentsByClientId.get(String(visit.ClientId || visit.ClientID));
+          if (!student) {
+            skipped++;
+            await storage.createSkippedImportRecord({
+              organizationId,
+              importJobId: jobId || null,
+              dataType: "visits",
+              mindbodyId: String(visit.ClientId || visit.ClientID || "unknown"),
+              reason: "Student not found",
+              rawData: JSON.stringify(visit),
+            }).catch(() => {});
+            continue;
+          }
+          
+          // Match schedule by start time
+          const startDateTime = new Date(visit.StartDateTime || visit.ClassDateTime || visit.VisitDateTime);
+          const schedule = schedulesByTime.get(startDateTime.toISOString());
+          
+          if (!schedule) {
+            skipped++;
+            await storage.createSkippedImportRecord({
+              organizationId,
+              importJobId: jobId || null,
+              dataType: "visits",
+              mindbodyId: String(visit.ClientId || visit.ClientID || "unknown"),
+              reason: "No matching class schedule found",
+              rawData: JSON.stringify(visit),
+            }).catch(() => {});
+            continue;
+          }
+          
+          // Create attendance record
+          await storage.createAttendance({
+            organizationId,
+            studentId: student.id,
+            scheduleId: schedule.id,
+            attendedAt: startDateTime,
+            status: visit.SignedIn ? "attended" : "noshow",
+          });
+          
+          imported++;
+        } catch (error) {
+          console.error(`[Visits Utility] Error processing visit:`, error);
+          skipped++;
+        }
+      }
+      
+      // Report progress after each batch
+      await onProgress(Math.min(i + BATCH_SIZE, total), total);
+    }
+    
+    console.log(`[Visits Utility] Complete: ${imported} imported, ${skipped} skipped`);
+    return { imported, skipped };
+  }
+
   async importVisitsResumable(
     organizationId: string,
     startDate: Date,
