@@ -78,7 +78,10 @@ export function RevenueChart({ startDate, endDate }: RevenueChartProps) {
     <Card>
       <CardHeader>
         <CardTitle>Revenue & Growth Trend</CardTitle>
-        <CardDescription>{getDescription()}</CardDescription>
+        <CardDescription>
+          {getDescription()}
+          <span className="block text-xs mt-1 italic">Note: Excludes processing & service fees</span>
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="h-[350px]">

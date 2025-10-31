@@ -143,7 +143,7 @@ export default function Reports() {
   const reportTypes = [
     {
       title: "Revenue Report",
-      description: "Detailed breakdown of revenue by source, class, and time period",
+      description: "Detailed breakdown of revenue by source, class, and time period (excludes processing & service fees)",
       icon: DollarSign,
       color: "text-green-600 dark:text-green-400",
       endpoint: "/api/reports/revenue",

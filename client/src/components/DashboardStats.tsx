@@ -47,6 +47,7 @@ export function DashboardStats() {
       change: `${data?.revenueChange || "0"}%`,
       trend: parseFloat(data?.revenueChange || "0") >= 0 ? "up" : "down",
       icon: DollarSign,
+      note: "Excludes processing & service fees",
     },
     {
       title: "Active Students",
@@ -110,6 +111,11 @@ export function DashboardStats() {
                   {stat.trend !== "neutral" ? " from last month" : ""}
                 </span>
               </div>
+              {'note' in stat && (
+                <div className="text-xs text-muted-foreground mt-1.5 italic">
+                  {stat.note}
+                </div>
+              )}
             </CardContent>
           </Card>
         );
