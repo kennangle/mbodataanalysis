@@ -1432,6 +1432,34 @@ export class MindbodyService {
         
         for (const sale of sales) {
         try {
+          // Diagnostic: Log first sale structure to understand Mindbody's response format
+          if (!this.loggedSaleStructure && sale) {
+            const sampleStructure = {
+              topLevelKeys: Object.keys(sale).sort(),
+              hasPayments: !!sale.Payments,
+              paymentsCount: Array.isArray(sale.Payments) ? sale.Payments.length : (sale.Payments ? 1 : 0),
+              firstPaymentKeys: sale.Payments ? (Array.isArray(sale.Payments) && sale.Payments[0] ? Object.keys(sale.Payments[0]).sort() : Object.keys(sale.Payments).sort()) : null,
+              firstPaymentSample: sale.Payments ? (Array.isArray(sale.Payments) && sale.Payments[0] ? {
+                Amount: sale.Payments[0].Amount,
+                Method: sale.Payments[0].Method,
+                Type: sale.Payments[0].Type,
+                hasProcessingFee: !!sale.Payments[0].ProcessingFee,
+                hasProcessingAmount: !!sale.Payments[0].ProcessingAmount
+              } : null) : null,
+              firstItemKeys: sale.PurchasedItems && sale.PurchasedItems[0] ? Object.keys(sale.PurchasedItems[0]).sort() : null,
+              firstItemSample: sale.PurchasedItems && sale.PurchasedItems[0] ? {
+                Name: sale.PurchasedItems[0].Name,
+                Amount: sale.PurchasedItems[0].Amount,
+                hasDiscount: !!sale.PurchasedItems[0].Discount,
+                hasDiscountAmount: !!sale.PurchasedItems[0].DiscountAmount,
+                hasDiscountPercent: !!sale.PurchasedItems[0].DiscountPercent
+              } : null,
+              saleId: sale.Id
+            };
+            console.log('[Sales Import] Sale structure (bulk path):', JSON.stringify(sampleStructure, null, 2));
+            this.loggedSaleStructure = true;
+          }
+          
           // Skip if missing sale date/time
           if (!sale.SaleDateTime) {
             continue;

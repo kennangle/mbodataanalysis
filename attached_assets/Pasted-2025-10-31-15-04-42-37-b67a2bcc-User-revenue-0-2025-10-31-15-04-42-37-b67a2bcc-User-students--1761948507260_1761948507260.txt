@@ -1,0 +1,164 @@
+2025-10-31 15:04:42.37
+b67a2bcc
+User
+"revenue": 0,
+2025-10-31 15:04:42.37
+b67a2bcc
+User
+"students": 178
+2025-10-31 15:04:42.37
+b67a2bcc
+User
+"revenue": 912.25,
+2025-10-31 15:04:50.14
+b67a2bcc
+User
+10:04:50 PM [express] GET /api/reports/quick-stats 200 in 8054ms :: {"totalStudents":36706,"totalClas…
+2025-10-31 15:04:50.60
+b67a2bcc
+User
+[Auth] /me check - Session ID: fNiVsga9JI8QkFQnRDzBonMfdD_03xq3 Authenticated: true Cookie header: connect.sid=s%3AfNiVsga9JI8QkFQnRDzBonMfdD_03xq3.xubEdhOhimlvHT4p4tXY0vlmz6COWeyQ57%2Fy0aZKyms
+2025-10-31 15:04:50.85
+b67a2bcc
+User
+10:04:50 PM [express] GET /api/mindbody/import/active 404 in 71ms :: {"error":"No active import job"}
+2025-10-31 15:04:50.85
+b67a2bcc
+User
+10:04:50 PM [express] GET /api/revenue/import-progress 304 in 70ms :: {"status":"idle"}
+2025-10-31 15:04:50.85
+b67a2bcc
+User
+10:04:50 PM [express] GET /api/scheduled-imports 200 in 72ms :: {"id":"afc4410d-8eff-44df-b937-e1bdda…
+2025-10-31 15:04:50.87
+b67a2bcc
+User
+10:04:50 PM [express] GET /api/mindbody/import/history 200 in 70ms :: [{"id":"b7570d9b-e0d6-477e-adc1…
+2025-10-31 15:04:51.05
+b67a2bcc
+User
+10:04:51 PM [express] GET /api/mindbody/import/active 404 in 70ms :: {"error":"No active import job"}
+2025-10-31 15:05:00.42
+b67a2bcc
+User
+[Import Start] Request body: {
+2025-10-31 15:05:00.42
+b67a2bcc
+User
+"config": {
+2025-10-31 15:05:00.42
+b67a2bcc
+User
+"startDate": "2024-10-30",
+2025-10-31 15:05:00.42
+b67a2bcc
+User
+"endDate": "2025-10-31",
+2025-10-31 15:05:00.42
+b67a2bcc
+User
+"dataTypes": {
+2025-10-31 15:05:00.42
+b67a2bcc
+User
+"clients": false,
+2025-10-31 15:05:00.42
+b67a2bcc
+User
+"classes": false,
+2025-10-31 15:05:00.42
+b67a2bcc
+User
+"visits": false,
+2025-10-31 15:05:00.42
+b67a2bcc
+User
+"sales": true
+2025-10-31 15:05:00.42
+b67a2bcc
+User
+},
+2025-10-31 15:05:00.42
+b67a2bcc
+User
+"useUtilityFunction": true
+2025-10-31 15:05:00.42
+b67a2bcc
+User
+}
+2025-10-31 15:05:00.42
+b67a2bcc
+User
+}
+2025-10-31 15:05:00.42
+b67a2bcc
+User
+[Import Start] Raw startDate from frontend: 2024-10-30
+2025-10-31 15:05:00.42
+b67a2bcc
+User
+[Import Start] Raw endDate from frontend: 2025-10-31
+2025-10-31 15:05:00.45
+b67a2bcc
+User
+[Import Start] Parsed startDate: 2024-10-30T00:00:00.000Z from: 2024-10-30
+2025-10-31 15:05:00.45
+b67a2bcc
+User
+[Import Start] Parsed endDate: 2025-10-31T00:00:00.000Z from: 2025-10-31
+2025-10-31 15:05:00.45
+b67a2bcc
+User
+[Import Start] Parsed dataTypes: [ 'sales' ]
+2025-10-31 15:05:00.45
+b67a2bcc
+User
+[Import Start] Fast Mode (Utility Function): true
+2025-10-31 15:05:00.49
+b67a2bcc
+User
+[Memory] Starting job 05762cdd-6fc7-4db5-ab76-f966490f9997 - RSS: 409.90MB, Heap Used: 299.83MB / 313.96MB
+2025-10-31 15:05:00.54
+b67a2bcc
+User
+10:05:00 PM [express] POST /api/mindbody/import/start 200 in 119ms :: {"success":true,"message":"Impo…
+2025-10-31 15:05:00.56
+b67a2bcc
+User
+[Import] Starting periodic heartbeat for job 05762cdd-6fc7-4db5-ab76-f966490f9997
+2025-10-31 15:05:00.56
+b67a2bcc
+User
+[Memory] Before processing sales - RSS: 397.77MB, Heap Used: 295.37MB / 302.21MB
+2025-10-31 15:05:03.83
+b67a2bcc
+User
+10:05:03 PM [express] GET /api/mindbody/import/05762cdd-6fc7-4db5-ab76-f966490f9997/status 200 in 101…
+2025-10-31 15:05:04.08
+b67a2bcc
+User
+[Memory] After processing sales - RSS: 476.25MB, Heap Used: 332.17MB / 350.85MB
+2025-10-31 15:05:04.15
+b67a2bcc
+User
+[Memory] Job 05762cdd-6fc7-4db5-ab76-f966490f9997 completed successfully - RSS: 476.25MB, Heap Used: 332.30MB / 350.85MB
+2025-10-31 15:05:04.15
+b67a2bcc
+User
+Import job 05762cdd-6fc7-4db5-ab76-f966490f9997 completed successfully
+2025-10-31 15:05:04.15
+b67a2bcc
+User
+[Import] Stopped periodic heartbeat for job 05762cdd-6fc7-4db5-ab76-f966490f9997
+2025-10-31 15:05:05.75
+b67a2bcc
+User
+10:05:05 PM [express] GET /api/mindbody/import/05762cdd-6fc7-4db5-ab76-f966490f9997/status 200 in 269…
+2025-10-31 15:05:05.97
+b67a2bcc
+User
+10:05:05 PM [express] GET /api/scheduled-imports 200 in 72ms :: {"id":"afc4410d-8eff-44df-b937-e1bdda…
+2025-10-31 15:05:06.00
+b67a2bcc
+User
+10:05:06 PM [express] GET /api/mindbody/import/history 200 in 102ms :: [{"id":"05762cdd-6fc7-4db5-ab7…
