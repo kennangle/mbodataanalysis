@@ -62,6 +62,7 @@ function getRedirectUri(): string {
 export class MindbodyService {
   private tokenCache: Map<string, { token: string; expiryTime: number }> = new Map();
   private apiCallCounter: number = 0;
+  private loggedSaleStructure: boolean = false;
 
   async exchangeCodeForTokens(code: string, organizationId: string): Promise<void> {
     const redirectUri = getRedirectUri();
@@ -1199,18 +1200,31 @@ export class MindbodyService {
                 if (saleData && saleData.Sale) {
                   const sale = saleData.Sale;
                   
-                  // Diagnostic: Log complete sale structure (first sale only, no PII)
+                  // Diagnostic: Check if fees/discounts are in Payments or PurchasedItems
                   if (!this.loggedSaleStructure) {
                     const sampleStructure = {
                       topLevelKeys: Object.keys(sale).sort(),
                       hasPayments: !!sale.Payments,
-                      paymentsStructure: sale.Payments ? (Array.isArray(sale.Payments) ? Object.keys(sale.Payments[0] || {}).sort() : Object.keys(sale.Payments).sort()) : null,
-                      hasPurchasedItems: !!sale.PurchasedItems,
+                      paymentsCount: Array.isArray(sale.Payments) ? sale.Payments.length : (sale.Payments ? 1 : 0),
+                      firstPaymentKeys: sale.Payments ? (Array.isArray(sale.Payments) && sale.Payments[0] ? Object.keys(sale.Payments[0]).sort() : Object.keys(sale.Payments).sort()) : null,
+                      firstPaymentSample: sale.Payments ? (Array.isArray(sale.Payments) && sale.Payments[0] ? {
+                        Amount: sale.Payments[0].Amount,
+                        Method: sale.Payments[0].Method,
+                        Type: sale.Payments[0].Type,
+                        hasProcessingFee: !!sale.Payments[0].ProcessingFee,
+                        hasProcessingAmount: !!sale.Payments[0].ProcessingAmount
+                      } : null) : null,
                       firstItemKeys: sale.PurchasedItems && sale.PurchasedItems[0] ? Object.keys(sale.PurchasedItems[0]).sort() : null,
-                      totalAmount: sale.TotalAmount,
+                      firstItemSample: sale.PurchasedItems && sale.PurchasedItems[0] ? {
+                        Name: sale.PurchasedItems[0].Name,
+                        Amount: sale.PurchasedItems[0].Amount,
+                        hasDiscount: !!sale.PurchasedItems[0].Discount,
+                        hasDiscountAmount: !!sale.PurchasedItems[0].DiscountAmount,
+                        hasDiscountPercent: !!sale.PurchasedItems[0].DiscountPercent
+                      } : null,
                       saleId: sale.Id
                     };
-                    console.log('[Sales Import] Complete sale structure:', JSON.stringify(sampleStructure, null, 2));
+                    console.log('[Sales Import] Sale structure with fees/discounts check:', JSON.stringify(sampleStructure, null, 2));
                     this.loggedSaleStructure = true;
                   }
                   
