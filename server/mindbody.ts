@@ -763,19 +763,92 @@ export class MindbodyService {
           }
           
           // Parse visit date/time from utility function response
-          // VisitDate format: "2024-02-01" or "2/1/2024"
+          // VisitDate format: "2/1/2024" or "2024-02-01"
           // StartTime format: "10:00 AM" or "10:00:00"
           let visitDateTime: Date;
           
           if (visit.VisitDate && visit.StartTime) {
-            // Combine VisitDate and StartTime
-            const dateStr = visit.VisitDate;
-            const timeStr = visit.StartTime;
-            visitDateTime = new Date(`${dateStr} ${timeStr}`);
+            try {
+              // Parse US date format (M/D/YYYY or MM/DD/YYYY)
+              const dateStr = String(visit.VisitDate);
+              const timeStr = String(visit.StartTime);
+              
+              // Check if it's ISO format (YYYY-MM-DD) or US format (M/D/YYYY)
+              if (dateStr.includes('/')) {
+                // US format: "2/1/2024 10:00 AM"
+                const [month, day, year] = dateStr.split('/').map(Number);
+                
+                // Parse time (handle both 12-hour and 24-hour formats)
+                const timeParts = timeStr.match(/(\d+):(\d+)(?::(\d+))?\s*(AM|PM)?/i);
+                if (!timeParts) {
+                  throw new Error(`Invalid time format: ${timeStr}`);
+                }
+                
+                let hours = parseInt(timeParts[1]);
+                const minutes = parseInt(timeParts[2]);
+                const seconds = timeParts[3] ? parseInt(timeParts[3]) : 0;
+                const ampm = timeParts[4];
+                
+                // Convert to 24-hour format if needed
+                if (ampm) {
+                  if (ampm.toUpperCase() === 'PM' && hours !== 12) {
+                    hours += 12;
+                  } else if (ampm.toUpperCase() === 'AM' && hours === 12) {
+                    hours = 0;
+                  }
+                }
+                
+                // Create date in local timezone (Mindbody returns local studio time)
+                visitDateTime = new Date(year, month - 1, day, hours, minutes, seconds);
+              } else {
+                // ISO format: "2024-02-01 10:00 AM" or "2024-02-01T10:00:00"
+                visitDateTime = new Date(`${dateStr} ${timeStr}`);
+              }
+              
+              // Validate the date
+              if (isNaN(visitDateTime.getTime())) {
+                throw new Error(`Invalid date: ${dateStr} ${timeStr}`);
+              }
+            } catch (error) {
+              skipped++;
+              await storage.createSkippedImportRecord({
+                organizationId,
+                importJobId: jobId || null,
+                dataType: "visits",
+                mindbodyId: clientId,
+                reason: `Failed to parse date/time: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                rawData: JSON.stringify(visit),
+              }).catch(() => {});
+              continue;
+            }
           } else if (visit.StartDateTime) {
             visitDateTime = new Date(visit.StartDateTime);
+            if (isNaN(visitDateTime.getTime())) {
+              skipped++;
+              await storage.createSkippedImportRecord({
+                organizationId,
+                importJobId: jobId || null,
+                dataType: "visits",
+                mindbodyId: clientId,
+                reason: "Invalid StartDateTime",
+                rawData: JSON.stringify(visit),
+              }).catch(() => {});
+              continue;
+            }
           } else if (visit.ClassDateTime) {
             visitDateTime = new Date(visit.ClassDateTime);
+            if (isNaN(visitDateTime.getTime())) {
+              skipped++;
+              await storage.createSkippedImportRecord({
+                organizationId,
+                importJobId: jobId || null,
+                dataType: "visits",
+                mindbodyId: clientId,
+                reason: "Invalid ClassDateTime",
+                rawData: JSON.stringify(visit),
+              }).catch(() => {});
+              continue;
+            }
           } else {
             skipped++;
             await storage.createSkippedImportRecord({
