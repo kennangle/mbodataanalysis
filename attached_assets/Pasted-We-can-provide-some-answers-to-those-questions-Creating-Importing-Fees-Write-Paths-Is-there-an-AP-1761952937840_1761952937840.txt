@@ -1,0 +1,66 @@
+We can provide some answers to those questions:
+Creating/Importing Fees (Write Paths)
+Is there an API-supported way to create or attach a fee line item (e.g., “Processing Fee” or “Service Fee/Surcharge”) to a sale/checkout?
+
+Yes, you can create pricing options to represent fees and label them as needed. For more information on doing that, see: How to create and charge a fee
+
+If yes, which endpoints/objects support this (e.g., CheckoutShoppingCart, PurchaseContract, etc.) and what fields/schemas should be used (codes, item types, taxability flags)?
+
+Once created in the Mindbody site, they can be sold through the POST CheckoutShoppingCart like you would any other pricing option.
+
+Are there constraints on fee naming, tax treatment, or caps? Any validation rules we should anticipate?
+
+No constraints. You can choose to make them taxable or non-taxable as needed. 
+
+
+Reading/Reconciling Fees (Read Paths)
+For transactions processed with MINDBODY Payments, are processing fees available via API as separate, itemized fields (vs. only implicit in net deposits/payouts)?
+
+Processing fees charged by the payment processor are not available in the API. You can view the sale detail, but nothing on the payment processing side. 
+
+Which read endpoints expose fee details (e.g., Sales, Purchases, Payments, PaymentTransactions, Payouts/Deposits if available)?
+
+You can view sale information in GET Sales , GET ClientPurchases , and credit card transaction information in GET Transactions .
+
+Are fees broken out at the line-item level or only at the payment/settlement level? Please specify the objects/fields.
+
+All purchases are broken down by the items sold in the Sales objects in GET Sales.
+
+
+Historical/Backfill
+Is there official support to backfill historical fee data via API or export services? If API isn’t supported, what is the recommended approach (data export program, report endpoints, or partner services)?
+
+You can get historical sales data from GET Sales, but if there is a large amount of data, it may be more efficient to pull export the CSV from the Reports section in the Core software. 
+
+
+Refunds/Chargebacks/Adjustments
+How are fee reversals or chargeback fees represented via API?
+
+Chargebacks will not appear in the API and we recommend to clients that the transaction be kept as-is if a chargeback is initiated. If there is a return/refund of an item, those will appear in the GET Sales endpoint, but appear nearly identicial to a proper sale except the Amount and Quantity will be represented by negative values indicating a return. 
+
+Are there webhook events we can subscribe to for adjustments, and do those payloads include fee components?
+
+We have a few different webhooks related to sales. They will each indicate the items sold. 
+
+Surcharging vs. Convenience Fees (Compliance & Configuration)
+Does MINDBODY support card surcharging or convenience fees configuration natively, and can those be set/updated via API?
+
+The business can add a pricing option to represent a fee. These cannot be set up in the API, only in the Core software, but once created, they can be sold in the API.
+
+If not, is the recommended workaround to create a fee as a product/service and add it as a normal line item at checkout?
+
+All fees would need to be added as pricing options.
+
+Multiple Merchant Accounts / Payment Types
+If a business uses multiple processors or flows (in-person vs. ecommerce), can we differentiate fee sources in API responses (e.g., fields identifying processor, MID/TID, channel)?
+
+The Sales objects in the GET Sales response will indicate which LocationID the sale originated from. 
+
+Sandbox & Examples
+Is there a sandbox object set that includes sample transactions with fees, refunds, and chargebacks for end-to-end testing?
+
+We offer our API Sandbox site for testing and development. It won't have any chargeback examples, but in the Mindbody software, those won't appear different from other sales. 
+
+Could you share example requests/responses that illustrate best practice for (a) adding a fee to a sale, and (b) reading fees for reconciliation?
+
+This is a POST CheckoutShoppingCart request that is selling a $15 "Convenience Fee" to a client:
