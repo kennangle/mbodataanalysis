@@ -705,6 +705,14 @@ export class MindbodyService {
     const visits = await this.getVisitsByDateRange(organizationId, startDate, endDate);
     console.log(`[Visits Utility] Received ${visits.length} visits from utility function`);
     
+    if (visits.length === 0) {
+      console.log(`[Visits Utility] No visits found for date range`);
+      return { imported: 0, skipped: 0 };
+    }
+    
+    // Log sample data structure
+    console.log(`[Visits Utility] Sample visit data:`, JSON.stringify(visits[0]).substring(0, 200));
+    
     // Load students and schedules for matching
     const [students, schedules] = await Promise.all([
       storage.getStudents(organizationId, 100000),
@@ -713,12 +721,17 @@ export class MindbodyService {
     
     console.log(`[Visits Utility] Loaded ${students.length} students and ${schedules.length} schedules`);
     
-    // Create lookup maps
+    // Create lookup maps - try multiple ID fields from utility function response
     const studentsByClientId = new Map(
       students.filter(s => s.mindbodyClientId).map(s => [s.mindbodyClientId!, s])
     );
-    const schedulesByTime = new Map(
+    
+    // Create multiple schedule lookup strategies
+    const schedulesByTimeUTC = new Map(
       schedules.map(s => [s.startTime.toISOString(), s])
+    );
+    const schedulesByClassScheduleId = new Map(
+      schedules.filter(s => s.mindbodyClassId).map(s => [s.mindbodyClassId!, s])
     );
     
     let imported = 0;
@@ -732,24 +745,60 @@ export class MindbodyService {
       
       for (const visit of batch) {
         try {
-          // Match student by ClientId
-          const student = studentsByClientId.get(String(visit.ClientId || visit.ClientID));
+          // Match student by ID field (from utility function)
+          const clientId = String(visit.ID || visit.ClientId || visit.ClientID || visit.UniqueID);
+          const student = studentsByClientId.get(clientId);
+          
           if (!student) {
             skipped++;
             await storage.createSkippedImportRecord({
               organizationId,
               importJobId: jobId || null,
               dataType: "visits",
-              mindbodyId: String(visit.ClientId || visit.ClientID || "unknown"),
+              mindbodyId: clientId,
               reason: "Student not found",
               rawData: JSON.stringify(visit),
             }).catch(() => {});
             continue;
           }
           
-          // Match schedule by start time
-          const startDateTime = new Date(visit.StartDateTime || visit.ClassDateTime || visit.VisitDateTime);
-          const schedule = schedulesByTime.get(startDateTime.toISOString());
+          // Parse visit date/time from utility function response
+          // VisitDate format: "2024-02-01" or "2/1/2024"
+          // StartTime format: "10:00 AM" or "10:00:00"
+          let visitDateTime: Date;
+          
+          if (visit.VisitDate && visit.StartTime) {
+            // Combine VisitDate and StartTime
+            const dateStr = visit.VisitDate;
+            const timeStr = visit.StartTime;
+            visitDateTime = new Date(`${dateStr} ${timeStr}`);
+          } else if (visit.StartDateTime) {
+            visitDateTime = new Date(visit.StartDateTime);
+          } else if (visit.ClassDateTime) {
+            visitDateTime = new Date(visit.ClassDateTime);
+          } else {
+            skipped++;
+            await storage.createSkippedImportRecord({
+              organizationId,
+              importJobId: jobId || null,
+              dataType: "visits",
+              mindbodyId: clientId,
+              reason: "No visit date/time found",
+              rawData: JSON.stringify(visit),
+            }).catch(() => {});
+            continue;
+          }
+          
+          // Try matching schedule by ClassScheduleID first (most reliable)
+          let schedule = null;
+          if (visit.ClassScheduleID) {
+            schedule = schedulesByClassScheduleId.get(Number(visit.ClassScheduleID));
+          }
+          
+          // Fallback: try matching by timestamp
+          if (!schedule) {
+            schedule = schedulesByTimeUTC.get(visitDateTime.toISOString());
+          }
           
           if (!schedule) {
             skipped++;
@@ -757,11 +806,23 @@ export class MindbodyService {
               organizationId,
               importJobId: jobId || null,
               dataType: "visits",
-              mindbodyId: String(visit.ClientId || visit.ClientID || "unknown"),
+              mindbodyId: clientId,
               reason: "No matching class schedule found",
               rawData: JSON.stringify(visit),
             }).catch(() => {});
             continue;
+          }
+          
+          // Determine status from utility function response
+          // Status field or SignedIn boolean
+          let status: "attended" | "noshow" = "attended";
+          if (visit.Status) {
+            const statusLower = String(visit.Status).toLowerCase();
+            if (statusLower.includes("noshow") || statusLower.includes("no show")) {
+              status = "noshow";
+            }
+          } else if (visit.SignedIn !== undefined) {
+            status = visit.SignedIn ? "attended" : "noshow";
           }
           
           // Create attendance record
@@ -769,8 +830,8 @@ export class MindbodyService {
             organizationId,
             studentId: student.id,
             scheduleId: schedule.id,
-            attendedAt: startDateTime,
-            status: visit.SignedIn ? "attended" : "noshow",
+            attendedAt: visitDateTime,
+            status,
           });
           
           imported++;

@@ -561,37 +561,26 @@ export class ImportWorker {
     baselineApiCallCount: number = 0
   ): Promise<void> {
     if (!progress.visits) {
-      progress.visits = { current: 0, total: 0, imported: 0, completed: false };
+      progress.visits = { current: 0, total: 0, imported: 0, completed: false, skipped: 0 };
     }
 
-    // MEMORY OPTIMIZATION: Load schedules once and reuse across all batches
-    let schedulesByTime: Map<string, any> | undefined = undefined;
+    // Check if utility function mode is enabled (default: true for new imports)
+    const useUtilityFunction = job.useUtilityFunction !== false; // Default to true
 
-    let batchResult;
-    do {
-      // CRITICAL: Keep database connection alive and update heartbeat
-      await keepAliveAndHeartbeat(job.id, `visits batch ${progress.visits.current || 0}`);
+    if (useUtilityFunction) {
+      // FAST MODE: Use UtilityFunction_VisitsV4 (1-2 API calls, seconds instead of hours)
+      console.log(`[Import] Using FAST MODE (Utility Function) for visits import`);
       
-      console.log(`[Import] Processing visits batch: student ${progress.visits.current || 0}/${progress.visits.total || 0}`);
-
-      // Check if job has been cancelled before processing next batch
-      const currentJob = await withDatabaseRetry(
-        () => storage.getImportJob(job.id),
-        'Check job status before visits batch'
-      );
-      if (currentJob?.status === "paused" || currentJob?.status === "cancelled") {
-        console.log(`[Import] Job ${job.id} has been cancelled, stopping visits import`);
-        return;
-      }
-
-      batchResult = await mindbodyService.importVisitsResumable(
+      // Keep alive before starting
+      await keepAliveAndHeartbeat(job.id, 'visits utility function start');
+      
+      const result = await mindbodyService.importVisitsViaUtilityFunction(
         job.organizationId,
         startDate,
         endDate,
         async (current, total) => {
           progress.visits.current = current;
           progress.visits.total = total;
-          // Update API call count in progress callback
           progress.apiCallCount = baselineApiCallCount + mindbodyService.getApiCallCount();
           await withDatabaseRetry(
             () => storage.updateImportJob(job.id, {
@@ -599,35 +588,96 @@ export class ImportWorker {
               currentDataType: "visits",
               currentOffset: current,
             }),
-            'Update import progress (visits)'
+            'Update import progress (visits utility)'
           );
         },
-        progress.visits.current || 0,
-        schedulesByTime // Pass cached schedules
+        job.id
       );
 
-      // Cache schedules for next batch (loaded on first iteration)
-      if (!schedulesByTime && batchResult.schedulesByTime) {
-        schedulesByTime = batchResult.schedulesByTime;
-      }
-
-      progress.visits.imported += batchResult.imported;
-      progress.visits.current = batchResult.nextStudentIndex;
-      progress.visits.completed = batchResult.completed;
-
-      // Update API call count after batch
+      progress.visits.imported = result.imported;
+      progress.visits.skipped = result.skipped;
+      progress.visits.current = result.imported + result.skipped;
+      progress.visits.total = result.imported + result.skipped;
+      progress.visits.completed = true;
       progress.apiCallCount = baselineApiCallCount + mindbodyService.getApiCallCount();
 
       await withDatabaseRetry(
         () => storage.updateImportJob(job.id, {
           progress: JSON.stringify(progress),
         }),
-        'Update import progress after batch (visits)'
+        'Update import progress after utility function'
       );
 
-      // Log memory usage after each batch to monitor for issues
-      logMemoryUsage(`Visits batch completed: ${progress.visits.current}/${progress.visits.total} students`);
-    } while (!batchResult.completed);
+      console.log(`[Import] FAST MODE complete: ${result.imported} imported, ${result.skipped} skipped`);
+    } else {
+      // LEGACY MODE: Per-client API calls (slower but proven)
+      console.log(`[Import] Using LEGACY MODE (per-client) for visits import`);
+      
+      // MEMORY OPTIMIZATION: Load schedules once and reuse across all batches
+      let schedulesByTime: Map<string, any> | undefined = undefined;
+
+      let batchResult;
+      do {
+        // CRITICAL: Keep database connection alive and update heartbeat
+        await keepAliveAndHeartbeat(job.id, `visits batch ${progress.visits.current || 0}`);
+        
+        console.log(`[Import] Processing visits batch: student ${progress.visits.current || 0}/${progress.visits.total || 0}`);
+
+        // Check if job has been cancelled before processing next batch
+        const currentJob = await withDatabaseRetry(
+          () => storage.getImportJob(job.id),
+          'Check job status before visits batch'
+        );
+        if (currentJob?.status === "paused" || currentJob?.status === "cancelled") {
+          console.log(`[Import] Job ${job.id} has been cancelled, stopping visits import`);
+          return;
+        }
+
+        batchResult = await mindbodyService.importVisitsResumable(
+          job.organizationId,
+          startDate,
+          endDate,
+          async (current, total) => {
+            progress.visits.current = current;
+            progress.visits.total = total;
+            // Update API call count in progress callback
+            progress.apiCallCount = baselineApiCallCount + mindbodyService.getApiCallCount();
+            await withDatabaseRetry(
+              () => storage.updateImportJob(job.id, {
+                progress: JSON.stringify(progress),
+                currentDataType: "visits",
+                currentOffset: current,
+              }),
+              'Update import progress (visits)'
+            );
+          },
+          progress.visits.current || 0,
+          schedulesByTime // Pass cached schedules
+        );
+
+        // Cache schedules for next batch (loaded on first iteration)
+        if (!schedulesByTime && batchResult.schedulesByTime) {
+          schedulesByTime = batchResult.schedulesByTime;
+        }
+
+        progress.visits.imported += batchResult.imported;
+        progress.visits.current = batchResult.nextStudentIndex;
+        progress.visits.completed = batchResult.completed;
+
+        // Update API call count after batch
+        progress.apiCallCount = baselineApiCallCount + mindbodyService.getApiCallCount();
+
+        await withDatabaseRetry(
+          () => storage.updateImportJob(job.id, {
+            progress: JSON.stringify(progress),
+          }),
+          'Update import progress after batch (visits)'
+        );
+
+        // Log memory usage after each batch to monitor for issues
+        logMemoryUsage(`Visits batch completed: ${progress.visits.current}/${progress.visits.total} students`);
+      } while (!batchResult.completed);
+    }
   }
 
   private async processSales(

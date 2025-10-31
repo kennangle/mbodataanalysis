@@ -268,6 +268,7 @@ export const importJobs = pgTable(
     csvData: text("csv_data"), // Compressed CSV data for background processing
     pausedAt: timestamp("paused_at"), // When the import was paused
     heartbeatAt: timestamp("heartbeat_at"), // Last worker heartbeat - updated every minute
+    useUtilityFunction: boolean("use_utility_function").default(true), // Use fast utility function for visits (default: true)
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
