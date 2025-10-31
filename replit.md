@@ -4,6 +4,15 @@
 
 This platform is an enterprise-grade analytics solution for Mindbody data, covering students, classes, schedules, attendance, memberships, purchases, pricing options, and income. It offers robust data synchronization, AI-powered natural language querying, real-time analytics dashboards, custom report generation, and role-based access control. Key features include a resumable background import system with cancellation handling and multi-tenancy support with data isolation per organization. **Revenue tracking uses Mindbody's `TotalAmount` field (which includes discounts already applied) and captures optional sales tax separately for complete financial visibility.** The platform's vision is to empower fitness and wellness businesses with comprehensive, reliable data insights for informed decision-making and strategic growth.
 
+## Version History
+
+### v0.02 (October 31, 2025)
+- **Revenue Import Accuracy Fix**: Updated sales import to use Mindbody's `TotalAmount` field (which already includes discounts) instead of calculating from `UnitPrice * Quantity`. This ensures accurate revenue tracking that matches Mindbody's calculations.
+- **Tax Tracking Enhancement**: Tax amounts now captured separately via `item.TaxAmount` field for complete financial visibility.
+- **Processing Fee Limitation Documented**: Added disclaimer notes throughout the UI (dashboard stats, revenue reports, charts) that revenue totals exclude processing & service fees, as these are not available via Mindbody's Public API.
+- **Diagnostic Logging**: Added temporary logging to production to verify Mindbody API response structure and identify available fee/discount fields.
+- **Developer Support Request**: Submitted comprehensive inquiry to Mindbody Developer Support requesting official documentation on fee field availability in API responses.
+
 ## User Preferences
 
 - Professional business intelligence interface
