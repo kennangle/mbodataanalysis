@@ -20,6 +20,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { useActiveImportJob, type JobStatus } from "@/hooks/use-active-import-job";
 
 interface ImportConfig {
   startDate: string;
@@ -46,26 +47,6 @@ interface JobProgress {
   sales?: { current: number; total: number; imported: number; completed: boolean };
   apiCallCount?: number;
   importStartTime?: string;
-}
-
-interface JobStatus {
-  id: string;
-  status: "pending" | "running" | "completed" | "failed" | "paused" | "cancelled";
-  dataTypes: string[];
-  startDate?: string;
-  endDate?: string;
-  progress: JobProgress;
-  existingCounts?: {
-    students: number;
-    classes: number;
-    visits: number;
-    sales: number;
-  };
-  currentDataType: string | null;
-  error: string | null;
-  pausedAt?: string | null;
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 interface ScheduledImportConfig {
@@ -102,13 +83,20 @@ const parseDateSafe = (dateStr: string): Date => {
 export function DataImportCard() {
   const { user } = useAuth();
   const timezone = user?.timezone || "UTC";
-  const [currentJobId, setCurrentJobId] = useState<string | null>(null);
-  const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
-  const [isLoadingActiveJob, setIsLoadingActiveJob] = useState(true);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isDismissedError, setIsDismissedError] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  
+  // Use the active import job hook
+  const {
+    jobStatus,
+    isLoading: isLoadingActiveJob,
+    progressPercentage,
+    apiMetrics,
+    refreshActiveJob,
+    calculateApiMetrics: calculateApiMetricsFromHook,
+  } = useActiveImportJob();
 
   // Fetch scheduled import config to show last run errors
   const { data: scheduledImportConfig } = useQuery<ScheduledImportConfig>({
@@ -573,7 +561,7 @@ export function DataImportCard() {
     return Math.min(Math.round(avgProgress), 100);
   };
   
-  const isJobActive = displayJob?.status === "running" || displayJob?.status === "pending";
+  const isDisplayJobActive = displayJob?.status === "running" || displayJob?.status === "pending";
   const isJobResumable = displayJob?.status === "failed" || displayJob?.status === "paused";
   const isJobCompleted = displayJob?.status === "completed";
   const isJobCancelled = displayJob?.status === "cancelled";
@@ -616,7 +604,7 @@ export function DataImportCard() {
           </Alert>
         )}
         
-        {!isJobActive && !isJobResumable && !isJobCompleted && !isJobCancelled && (
+        {!isDisplayJobActive && !isJobResumable && !isJobCompleted && !isJobCancelled && (
           <div className="space-y-6">
             <p className="text-sm text-muted-foreground">
               Import your students, classes, schedules, attendance records, and revenue data from
@@ -782,7 +770,7 @@ export function DataImportCard() {
           </div>
         )}
 
-        {isJobActive && displayJob && (
+        {isDisplayJobActive && displayJob && (
           <div className="space-y-4">
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
