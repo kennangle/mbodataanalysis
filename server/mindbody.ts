@@ -1199,22 +1199,20 @@ export class MindbodyService {
                 if (saleData && saleData.Sale) {
                   const sale = saleData.Sale;
                   
-                  // Diagnostic: Log what fee/discount fields exist (no PII)
-                  const feeFields = {
-                    hasProcessingFee: !!sale.ProcessingFee,
-                    hasProcessingFeeAmount: !!sale.ProcessingFeeAmount,
-                    hasPaymentProcessingFee: !!sale.PaymentProcessingFee,
-                    hasServiceFee: !!sale.ServiceFee,
-                    hasServiceFeeAmount: !!sale.ServiceFeeAmount,
-                    hasDiscountAmount: !!sale.DiscountAmount,
-                    hasTotalDiscounts: !!sale.TotalDiscounts,
-                    hasDiscount: !!sale.Discount,
-                    hasTaxTotal: !!sale.TaxTotal,
-                    hasTax: !!sale.Tax,
-                    hasTaxAmount: !!sale.TaxAmount,
-                    allSaleKeys: Object.keys(sale).filter(k => k.toLowerCase().includes('fee') || k.toLowerCase().includes('discount') || k.toLowerCase().includes('tax'))
-                  };
-                  console.log('[Sales Import Debug] Fee/discount fields for sale:', feeFields);
+                  // Diagnostic: Log complete sale structure (first sale only, no PII)
+                  if (!this.loggedSaleStructure) {
+                    const sampleStructure = {
+                      topLevelKeys: Object.keys(sale).sort(),
+                      hasPayments: !!sale.Payments,
+                      paymentsStructure: sale.Payments ? (Array.isArray(sale.Payments) ? Object.keys(sale.Payments[0] || {}).sort() : Object.keys(sale.Payments).sort()) : null,
+                      hasPurchasedItems: !!sale.PurchasedItems,
+                      firstItemKeys: sale.PurchasedItems && sale.PurchasedItems[0] ? Object.keys(sale.PurchasedItems[0]).sort() : null,
+                      totalAmount: sale.TotalAmount,
+                      saleId: sale.Id
+                    };
+                    console.log('[Sales Import] Complete sale structure:', JSON.stringify(sampleStructure, null, 2));
+                    this.loggedSaleStructure = true;
+                  }
                   
                   // Handle both array and single object for PurchasedItems
                   const purchasedItems = Array.isArray(sale.PurchasedItems)
