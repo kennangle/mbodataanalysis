@@ -333,7 +333,23 @@ export class MindbodyService {
           return this.makeAuthenticatedRequest(organizationId, endpoint, options, retryCount + 1);
         }
 
-        throw new Error(`Mindbody API error: ${response.statusText}`);
+        // Try to parse error response for more details
+        let errorDetails = response.statusText;
+        try {
+          const errorJson = JSON.parse(errorText);
+          if (errorJson.Error) {
+            errorDetails = `${response.statusText} - ${errorJson.Error.Message || JSON.stringify(errorJson.Error)}`;
+          } else {
+            errorDetails = `${response.statusText} - ${JSON.stringify(errorJson)}`;
+          }
+        } catch {
+          // If not JSON, use the text directly
+          if (errorText && errorText.length < 500) {
+            errorDetails = `${response.statusText} - ${errorText}`;
+          }
+        }
+        
+        throw new Error(`Mindbody API error (${endpoint}): ${errorDetails}`);
       }
 
       return await response.json();

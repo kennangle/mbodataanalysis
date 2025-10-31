@@ -35,6 +35,7 @@ __export(schema_exports, {
   insertImportJobSchema: () => insertImportJobSchema,
   insertOrganizationSchema: () => insertOrganizationSchema,
   insertPasswordResetTokenSchema: () => insertPasswordResetTokenSchema,
+  insertPricingOptionSchema: () => insertPricingOptionSchema,
   insertRevenueSchema: () => insertRevenueSchema,
   insertScheduledImportSchema: () => insertScheduledImportSchema,
   insertSkippedImportRecordSchema: () => insertSkippedImportRecordSchema,
@@ -45,6 +46,7 @@ __export(schema_exports, {
   insertWebhookSubscriptionSchema: () => insertWebhookSubscriptionSchema,
   organizations: () => organizations,
   passwordResetTokens: () => passwordResetTokens,
+  pricingOptions: () => pricingOptions,
   revenue: () => revenue,
   scheduledImports: () => scheduledImports,
   sessions: () => sessions,
@@ -67,7 +69,7 @@ import {
   uniqueIndex
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-var users, insertUserSchema, organizations, insertOrganizationSchema, students, insertStudentSchema, classes, insertClassSchema, classSchedules, insertClassScheduleSchema, attendance, insertAttendanceSchema, revenue, insertRevenueSchema, aiQueries, insertAIQuerySchema, sessions, importJobs, insertImportJobSchema, skippedImportRecords, insertSkippedImportRecordSchema, passwordResetTokens, insertPasswordResetTokenSchema, webhookSubscriptions, insertWebhookSubscriptionSchema, webhookEvents, insertWebhookEventSchema, scheduledImports, insertScheduledImportSchema, uploadedFiles, insertUploadedFileSchema, aiGeneratedFiles, insertAiGeneratedFileSchema, conversations, insertConversationSchema, conversationMessages, insertConversationMessageSchema;
+var users, insertUserSchema, organizations, insertOrganizationSchema, students, insertStudentSchema, classes, insertClassSchema, classSchedules, insertClassScheduleSchema, attendance, insertAttendanceSchema, revenue, insertRevenueSchema, aiQueries, insertAIQuerySchema, sessions, importJobs, insertImportJobSchema, skippedImportRecords, insertSkippedImportRecordSchema, passwordResetTokens, insertPasswordResetTokenSchema, webhookSubscriptions, insertWebhookSubscriptionSchema, webhookEvents, insertWebhookEventSchema, scheduledImports, insertScheduledImportSchema, uploadedFiles, insertUploadedFileSchema, aiGeneratedFiles, insertAiGeneratedFileSchema, conversations, insertConversationSchema, conversationMessages, insertConversationMessageSchema, pricingOptions, insertPricingOptionSchema;
 var init_schema = __esm({
   "shared/schema.ts"() {
     "use strict";
@@ -96,6 +98,9 @@ var init_schema = __esm({
       mindbodyAccessToken: text("mindbody_access_token"),
       mindbodyRefreshToken: text("mindbody_refresh_token"),
       mindbodySiteId: text("mindbody_site_id"),
+      mindbodyApiKey: text("mindbody_api_key"),
+      mindbodyStaffUsername: text("mindbody_staff_username"),
+      mindbodyStaffPassword: text("mindbody_staff_password"),
       createdAt: timestamp("created_at").defaultNow().notNull()
     });
     insertOrganizationSchema = createInsertSchema(organizations).omit({
@@ -183,7 +188,20 @@ var init_schema = __esm({
         orgIdx: index("attendance_org_idx").on(table.organizationId),
         studentIdx: index("attendance_student_idx").on(table.studentId),
         scheduleIdx: index("attendance_schedule_idx").on(table.scheduleId),
-        timeIdx: index("attendance_time_idx").on(table.attendedAt)
+        timeIdx: index("attendance_time_idx").on(table.attendedAt),
+        // Optimized for AI queries: "Find all classes for specific students with date ordering"
+        studentClassesIdx: index("attendance_student_classes_idx").on(
+          table.organizationId,
+          table.studentId,
+          table.attendedAt
+        ),
+        // Optimized for "which students attended which classes in a date range"
+        classAttendanceIdx: index("attendance_class_attendance_idx").on(
+          table.organizationId,
+          table.scheduleId,
+          table.attendedAt,
+          table.studentId
+        )
         // Note: Unique constraint attendance_unique_student_schedule_date_idx exists in database
         // Created via raw SQL to prevent duplicates: (organizationId, studentId, scheduleId, attendedAt::date)
         // Not defined here because Drizzle can't generate proper migration SQL for partial indexes with date casting
@@ -215,6 +233,18 @@ var init_schema = __esm({
           table.organizationId,
           table.mindbodySaleId,
           table.mindbodyItemId
+        ),
+        // Optimized for AI queries: "Find Intro Offer purchases and get student IDs"
+        introOfferIdx: index("revenue_intro_offer_idx").on(
+          table.organizationId,
+          table.description,
+          table.studentId
+        ),
+        // Optimized for "students who purchased on a date range"
+        studentPurchaseIdx: index("revenue_student_purchase_idx").on(
+          table.organizationId,
+          table.studentId,
+          table.transactionDate
         )
       })
     );
@@ -502,16 +532,54 @@ var init_schema = __esm({
         role: text("role").notNull(),
         // "user" or "assistant"
         content: text("content").notNull(),
+        fileIds: text("file_ids").array(),
+        // Array of uploaded file IDs attached to this message
+        status: text("status").default("completed"),
+        // "pending" | "completed" | "failed"
+        error: text("error"),
+        // Error message if status is "failed"
         createdAt: timestamp("created_at").defaultNow().notNull()
       },
       (table) => ({
         conversationIdx: index("conversation_messages_conversation_idx").on(table.conversationId),
-        createdIdx: index("conversation_messages_created_idx").on(table.createdAt)
+        createdIdx: index("conversation_messages_created_idx").on(table.createdAt),
+        statusIdx: index("conversation_messages_status_idx").on(table.status)
       })
     );
     insertConversationMessageSchema = createInsertSchema(conversationMessages).omit({
       id: true,
       createdAt: true
+    });
+    pricingOptions = pgTable(
+      "pricing_options",
+      {
+        id: uuid("id").defaultRandom().primaryKey(),
+        organizationId: uuid("organization_id").notNull(),
+        mindbodyServiceId: text("mindbody_service_id").notNull(),
+        name: text("name").notNull(),
+        description: text("description"),
+        onlineDescription: text("online_description"),
+        price: decimal("price", { precision: 10, scale: 2 }),
+        onlinePrice: decimal("online_price", { precision: 10, scale: 2 }),
+        taxRate: decimal("tax_rate", { precision: 5, scale: 2 }),
+        taxIncluded: boolean("tax_included").default(false),
+        programId: text("program_id"),
+        defaultTimeLength: integer("default_time_length"),
+        // in minutes
+        type: text("type"),
+        count: integer("count"),
+        createdAt: timestamp("created_at").defaultNow().notNull(),
+        updatedAt: timestamp("updated_at").defaultNow().notNull()
+      },
+      (table) => ({
+        orgIdx: index("pricing_options_org_idx").on(table.organizationId),
+        serviceIdx: uniqueIndex("pricing_options_service_idx").on(table.organizationId, table.mindbodyServiceId)
+      })
+    );
+    insertPricingOptionSchema = createInsertSchema(pricingOptions).omit({
+      id: true,
+      createdAt: true,
+      updatedAt: true
     });
   }
 });
@@ -632,6 +700,14 @@ var init_storage = __esm({
       }
       async updateOrganizationSiteId(id, siteId) {
         await db.update(organizations).set({ mindbodySiteId: siteId }).where(eq(organizations.id, id));
+      }
+      async updateOrganizationMindbodyCredentials(id, siteId, apiKey, staffUsername, staffPassword) {
+        await db.update(organizations).set({
+          mindbodySiteId: siteId,
+          mindbodyApiKey: apiKey,
+          mindbodyStaffUsername: staffUsername,
+          mindbodyStaffPassword: staffPassword
+        }).where(eq(organizations.id, id));
       }
       async getStudents(organizationId, limit = 100, offset = 0, status, startDate, endDate) {
         const conditions = [eq(students.organizationId, organizationId)];
@@ -1262,6 +1338,44 @@ var init_storage = __esm({
       async deleteConversationMessages(conversationId) {
         await db.delete(conversationMessages).where(eq(conversationMessages.conversationId, conversationId));
       }
+      async getConversationMessage(messageId) {
+        const result = await db.select().from(conversationMessages).where(eq(conversationMessages.id, messageId)).limit(1);
+        return result[0];
+      }
+      async getPendingConversationMessages() {
+        return await db.select().from(conversationMessages).where(eq(conversationMessages.status, "pending")).orderBy(conversationMessages.createdAt);
+      }
+      async updateConversationMessageStatus(id, status, content, error) {
+        const updates = { status };
+        if (content !== void 0) {
+          updates.content = content;
+        }
+        if (error !== void 0) {
+          updates.error = error;
+        }
+        await db.update(conversationMessages).set(updates).where(eq(conversationMessages.id, id));
+      }
+      async getPricingOptions(organizationId) {
+        return await db.select().from(pricingOptions).where(eq(pricingOptions.organizationId, organizationId)).orderBy(pricingOptions.name);
+      }
+      async getPricingOption(id) {
+        const result = await db.select().from(pricingOptions).where(eq(pricingOptions.id, id)).limit(1);
+        return result[0];
+      }
+      async createPricingOption(pricingOption) {
+        const result = await db.insert(pricingOptions).values(pricingOption).returning();
+        return result[0];
+      }
+      async updatePricingOption(id, pricingOption) {
+        await db.update(pricingOptions).set({ ...pricingOption, updatedAt: /* @__PURE__ */ new Date() }).where(eq(pricingOptions.id, id));
+      }
+      async deletePricingOption(id) {
+        await db.delete(pricingOptions).where(eq(pricingOptions.id, id));
+      }
+      async getPricingOptionsCount(organizationId) {
+        const result = await db.select({ count: sql`count(*)` }).from(pricingOptions).where(eq(pricingOptions.organizationId, organizationId));
+        return result[0]?.count || 0;
+      }
     };
     storage = new DbStorage();
   }
@@ -1282,8 +1396,7 @@ var init_mindbody = __esm({
     init_storage();
     MINDBODY_API_BASE = "https://api.mindbodyonline.com/public/v6";
     MindbodyService = class {
-      cachedUserToken = null;
-      tokenExpiryTime = 0;
+      tokenCache = /* @__PURE__ */ new Map();
       apiCallCounter = 0;
       async exchangeCodeForTokens(code, organizationId) {
         const redirectUri = getRedirectUri();
@@ -1303,8 +1416,6 @@ var init_mindbody = __esm({
           body: params.toString()
         });
         if (!response.ok) {
-          const errorText = await response.text();
-          console.error("Token exchange failed:", errorText);
           throw new Error(`Failed to exchange authorization code: ${response.status}`);
         }
         const data = await response.json();
@@ -1315,11 +1426,12 @@ var init_mindbody = __esm({
         if (!org || !org.mindbodyRefreshToken) {
           throw new Error("No refresh token available");
         }
+        const apiKey = org.mindbodyApiKey || process.env.MINDBODY_API_KEY;
         const response = await fetch(`${MINDBODY_API_BASE}/usertoken/issue`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Api-Key": process.env.MINDBODY_API_KEY || ""
+            "Api-Key": apiKey || ""
           },
           body: JSON.stringify({
             refresh_token: org.mindbodyRefreshToken,
@@ -1333,18 +1445,58 @@ var init_mindbody = __esm({
         await storage.updateOrganizationTokens(organizationId, data.access_token, data.refresh_token);
         return data.access_token;
       }
-      async getUserToken() {
+      async getUserToken(organizationId, overrideCredentials) {
+        if (!organizationId && !overrideCredentials) {
+          throw new Error("Organization ID required for authentication");
+        }
+        if (overrideCredentials) {
+          const response2 = await fetch(`${MINDBODY_API_BASE}/usertoken/issue`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Api-Key": overrideCredentials.apiKey,
+              SiteId: overrideCredentials.siteId
+            },
+            body: JSON.stringify({
+              Username: overrideCredentials.username,
+              Password: overrideCredentials.password
+            })
+          });
+          const responseText2 = await response2.text();
+          if (!response2.ok) {
+            console.error(`[Mindbody Test] Auth failed (${response2.status}):`, responseText2);
+            let errorMessage = `Failed to authenticate with Mindbody (${response2.status})`;
+            try {
+              const errorData = JSON.parse(responseText2);
+              if (errorData.Error?.Message) {
+                errorMessage = `Mindbody Error: ${errorData.Error.Message}`;
+              }
+            } catch (e) {
+            }
+            throw new Error(errorMessage);
+          }
+          let data2;
+          try {
+            data2 = JSON.parse(responseText2);
+          } catch (parseError) {
+            console.error(`[Mindbody Test] Invalid JSON response:`, responseText2);
+            throw new Error(`Mindbody auth returned invalid JSON`);
+          }
+          return data2.AccessToken;
+        }
         const now = Date.now();
-        if (this.cachedUserToken && now < this.tokenExpiryTime) {
-          return this.cachedUserToken;
+        const cached = this.tokenCache.get(organizationId);
+        if (cached && now < cached.expiryTime) {
+          return cached.token;
         }
-        const apiKey = process.env.MINDBODY_API_KEY;
-        const clientSecret = process.env.MINDBODY_CLIENT_SECRET;
-        const siteId = "133";
-        if (!apiKey || !clientSecret) {
-          throw new Error("MINDBODY_API_KEY and MINDBODY_CLIENT_SECRET required");
+        const org = await storage.getOrganization(organizationId);
+        let apiKey = org?.mindbodyApiKey || process.env.MINDBODY_API_KEY;
+        let siteId = org?.mindbodySiteId || "133";
+        let username = org?.mindbodyStaffUsername || "_YHC";
+        let password = org?.mindbodyStaffPassword || process.env.MINDBODY_CLIENT_SECRET;
+        if (!apiKey || !password) {
+          throw new Error("Mindbody API credentials not configured. Please set them in Settings.");
         }
-        console.log(`[getUserToken] Requesting user token for site ${siteId} with username _YHC`);
         const response = await fetch(`${MINDBODY_API_BASE}/usertoken/issue`, {
           method: "POST",
           headers: {
@@ -1353,40 +1505,51 @@ var init_mindbody = __esm({
             SiteId: siteId
           },
           body: JSON.stringify({
-            Username: "_YHC",
-            // Source name with underscore prefix
-            Password: clientSecret
+            Username: username,
+            Password: password
           })
         });
-        console.log(`[getUserToken] Response status: ${response.status}`);
         const responseText = await response.text();
         if (!response.ok) {
-          console.error(`[getUserToken] Failed to get user token: ${response.status}`);
-          throw new Error(`Failed to authenticate with Mindbody (${response.status})`);
+          throw new Error(`Failed to authenticate with Mindbody (${response.status}). Please check your credentials in Settings.`);
         }
         let data;
         try {
           data = JSON.parse(responseText);
         } catch (parseError) {
-          console.error(`[getUserToken] Failed to parse Mindbody response as JSON`);
           throw new Error(`Mindbody auth returned invalid JSON`);
         }
-        this.cachedUserToken = data.AccessToken;
-        this.tokenExpiryTime = now + 55 * 60 * 1e3;
+        this.tokenCache.set(organizationId, {
+          token: data.AccessToken,
+          expiryTime: now + 55 * 60 * 1e3
+        });
         return data.AccessToken;
       }
-      async makeAuthenticatedRequest(organizationId, endpoint, options = {}, retryCount = 0) {
-        const apiKey = process.env.MINDBODY_API_KEY;
-        const siteId = "133";
-        const MAX_RETRIES = 3;
-        const REQUEST_TIMEOUT = 6e4;
-        if (!apiKey) {
-          throw new Error("MINDBODY_API_KEY not configured");
+      // Clear cached token for an organization (call when credentials change)
+      clearTokenCache(organizationId) {
+        this.tokenCache.delete(organizationId);
+      }
+      // Public method to test credentials without caching
+      async testCredentials(credentials) {
+        try {
+          const token = await this.getUserToken(void 0, credentials);
+          return !!token;
+        } catch (error) {
+          throw error;
         }
-        const userToken = await this.getUserToken();
+      }
+      async makeAuthenticatedRequest(organizationId, endpoint, options = {}, retryCount = 0) {
+        const MAX_RETRIES2 = 3;
+        const REQUEST_TIMEOUT = 6e4;
+        const org = await storage.getOrganization(organizationId);
+        const apiKey = org?.mindbodyApiKey || process.env.MINDBODY_API_KEY;
+        const siteId = org?.mindbodySiteId || "133";
+        if (!apiKey) {
+          throw new Error("Mindbody API credentials not configured. Please set them in Settings.");
+        }
+        const userToken = await this.getUserToken(organizationId);
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
-        console.log(`[Mindbody API] Requesting: ${endpoint}`);
         try {
           const response = await fetch(`${MINDBODY_API_BASE}${endpoint}`, {
             ...options,
@@ -1403,13 +1566,9 @@ var init_mindbody = __esm({
           this.apiCallCounter++;
           if (!response.ok) {
             const errorText = await response.text();
-            console.error(`Mindbody API error: ${response.status} - ${errorText}`);
-            console.error(`Request URL: ${MINDBODY_API_BASE}${endpoint}`);
             if (response.status === 401) {
-              console.log("Authentication error detected, clearing token cache and retrying...");
-              this.cachedUserToken = null;
-              this.tokenExpiryTime = 0;
-              const newToken = await this.getUserToken();
+              this.clearTokenCache(organizationId);
+              const newToken = await this.getUserToken(organizationId);
               const retryResponse = await fetch(`${MINDBODY_API_BASE}${endpoint}`, {
                 ...options,
                 headers: {
@@ -1421,28 +1580,35 @@ var init_mindbody = __esm({
                 }
               });
               if (!retryResponse.ok) {
-                const retryErrorText = await retryResponse.text();
-                console.error(`Mindbody API retry failed: ${retryResponse.status} - ${retryErrorText}`);
                 throw new Error(`Mindbody API error: ${retryResponse.statusText}`);
               }
               this.apiCallCounter++;
               return await retryResponse.json();
             }
-            if ((response.status === 500 || response.status === 503) && retryCount < MAX_RETRIES) {
+            if ((response.status === 500 || response.status === 503) && retryCount < MAX_RETRIES2) {
               const backoffMs = Math.pow(2, retryCount) * 1e3;
-              console.log(
-                `Mindbody API ${response.status} error, retrying in ${backoffMs}ms (attempt ${retryCount + 1}/${MAX_RETRIES})...`
-              );
               await new Promise((resolve) => setTimeout(resolve, backoffMs));
               return this.makeAuthenticatedRequest(organizationId, endpoint, options, retryCount + 1);
             }
-            throw new Error(`Mindbody API error: ${response.statusText}`);
+            let errorDetails = response.statusText;
+            try {
+              const errorJson = JSON.parse(errorText);
+              if (errorJson.Error) {
+                errorDetails = `${response.statusText} - ${errorJson.Error.Message || JSON.stringify(errorJson.Error)}`;
+              } else {
+                errorDetails = `${response.statusText} - ${JSON.stringify(errorJson)}`;
+              }
+            } catch {
+              if (errorText && errorText.length < 500) {
+                errorDetails = `${response.statusText} - ${errorText}`;
+              }
+            }
+            throw new Error(`Mindbody API error (${endpoint}): ${errorDetails}`);
           }
           return await response.json();
         } catch (error) {
           clearTimeout(timeoutId);
           if (error.name === "AbortError") {
-            console.error(`[Mindbody API] Request timeout after ${REQUEST_TIMEOUT / 1e3}s: ${endpoint}`);
             throw new Error(`Mindbody API request timeout (${REQUEST_TIMEOUT / 1e3}s): ${endpoint}`);
           }
           throw error;
@@ -1470,19 +1636,11 @@ var init_mindbody = __esm({
           const pagination = data.PaginationResponse;
           if (pagination) {
             if (offset >= pagination.TotalResults) {
-              console.warn(
-                `Offset ${offset} exceeds TotalResults ${pagination.TotalResults}, stopping pagination`
-              );
               hasMorePages = false;
             } else if (allResults.length >= pagination.TotalResults || results.length === 0) {
               hasMorePages = false;
             } else {
               const actualPageSize = results.length > 0 ? results.length : pagination.RequestedLimit || pageSize;
-              if (pagination.PageSize > results.length && results.length > 0) {
-                console.warn(
-                  `PageSize (${pagination.PageSize}) > actual results (${results.length}), using results.length`
-                );
-              }
               offset += actualPageSize;
             }
           } else {
@@ -1520,7 +1678,6 @@ var init_mindbody = __esm({
           try {
             if (!client.FirstName || !client.LastName) {
               const reason = `Missing name (FirstName: ${client.FirstName || "null"}, LastName: ${client.LastName || "null"})`;
-              console.warn(`Skipping client ${client.Id}: ${reason}`);
               try {
                 await storage.createSkippedImportRecord({
                   organizationId,
@@ -1627,73 +1784,97 @@ var init_mindbody = __esm({
         return { imported, nextOffset, completed };
       }
       async importVisitsResumable(organizationId, startDate, endDate, onProgress, startOffset = 0, schedulesByTime) {
-        console.log(`[Visits Optimized] Starting import for ${startDate.toISOString()} to ${endDate.toISOString()}`);
+        const VISITS_BATCH_SIZE = 200;
+        const BATCH_DELAY = 0;
         if (!schedulesByTime) {
           try {
-            console.log(`[Visits] Loading class schedules for organization ${organizationId}...`);
             const schedules = await storage.getClassSchedules(organizationId);
-            console.log(`[Visits] Retrieved ${schedules.length} schedules from database`);
             schedulesByTime = new Map(schedules.map((s) => [s.startTime.toISOString(), s]));
-            console.log(`[Visits] Loaded ${schedules.length} schedules into memory (one-time load)`);
+            console.log(`[Visits] Loaded ${schedules.length} class schedules for matching`);
           } catch (error) {
             console.error(`[Visits] CRITICAL ERROR loading schedules:`, error);
             throw new Error(`Failed to load class schedules: ${error instanceof Error ? error.message : String(error)}`);
           }
         }
-        console.log(`[Visits] Loading students for organization ${organizationId}...`);
         const allStudents = await storage.getStudents(organizationId, 1e5);
         const studentsByMindbodyId = new Map(
           allStudents.filter((s) => s.mindbodyClientId).map((s) => [s.mindbodyClientId, s])
         );
-        console.log(`[Visits] Loaded ${studentsByMindbodyId.size} students into lookup map`);
-        const PAGE_SIZE = 200;
+        console.log(`[Visits] Loaded ${studentsByMindbodyId.size} students for ID matching`);
         const startDateStr = startDate.toISOString().split("T")[0];
         const endDateStr = endDate.toISOString().split("T")[0];
-        const { results: visits, totalResults, hasMore } = await this.fetchPage(
-          organizationId,
-          `/class/classvisits?StartDate=${startDateStr}&EndDate=${endDateStr}`,
-          "ClassVisits",
-          startOffset,
-          PAGE_SIZE
-        );
-        console.log(`[Visits] Fetched ${visits.length} visits (offset ${startOffset}, total ${totalResults})`);
+        const endpoint = `/client/clientvisits?StartDate=${startDateStr}&EndDate=${endDateStr}`;
+        console.log(`[Visits] Fetching batch: offset ${startOffset}, limit ${VISITS_BATCH_SIZE}`);
         let imported = 0;
-        let skippedNoStudent = 0;
         let skippedNoSchedule = 0;
-        for (const visit of visits) {
-          try {
-            if (!visit.ClientId || !visit.StartDateTime) {
-              continue;
+        let skippedNoStudent = 0;
+        try {
+          const { results: visits, totalResults } = await this.fetchPage(
+            organizationId,
+            endpoint,
+            "Visits",
+            startOffset,
+            VISITS_BATCH_SIZE
+          );
+          console.log(`[Visits] Processing ${visits.length} visits from total ${totalResults}`);
+          for (const visit of visits) {
+            try {
+              if (!visit.StartDateTime || !visit.ClientId) {
+                continue;
+              }
+              const student = studentsByMindbodyId.get(visit.ClientId);
+              if (!student) {
+                skippedNoStudent++;
+                continue;
+              }
+              const visitStartTime = new Date(visit.StartDateTime).toISOString();
+              const schedule = schedulesByTime.get(visitStartTime);
+              if (!schedule) {
+                skippedNoSchedule++;
+                await storage.createSkippedImportRecord({
+                  organizationId,
+                  dataType: "visits",
+                  mindbodyId: visit.ClientId || "unknown",
+                  reason: "No matching class schedule found",
+                  rawData: JSON.stringify({
+                    clientId: visit.ClientId,
+                    startDateTime: visit.StartDateTime,
+                    className: visit.ClassId || "Unknown"
+                  })
+                }).catch((err) => {
+                  console.error(`[Visits] Failed to log skipped record:`, err);
+                });
+                continue;
+              }
+              await storage.createAttendance({
+                organizationId,
+                studentId: student.id,
+                scheduleId: schedule.id,
+                attendedAt: new Date(visit.StartDateTime),
+                status: visit.SignedIn ? "attended" : "noshow"
+              });
+              imported++;
+            } catch (error) {
+              console.error(`[Visits] Failed to import visit:`, error);
             }
-            const student = studentsByMindbodyId.get(visit.ClientId);
-            if (!student) {
-              skippedNoStudent++;
-              continue;
-            }
-            const visitStartTime = new Date(visit.StartDateTime).toISOString();
-            const schedule = schedulesByTime.get(visitStartTime);
-            if (!schedule) {
-              skippedNoSchedule++;
-              continue;
-            }
-            await storage.createAttendance({
-              organizationId,
-              studentId: student.id,
-              scheduleId: schedule.id,
-              attendedAt: new Date(visit.StartDateTime),
-              status: visit.SignedIn ? "attended" : "noshow"
-            });
-            imported++;
-          } catch (error) {
-            console.error(`[Visits] Failed to import visit:`, error);
           }
+          const nextOffset = startOffset + visits.length;
+          const completed = nextOffset >= totalResults;
+          console.log(`[Visits] Batch complete: imported ${imported}, skipped (no schedule: ${skippedNoSchedule}, no student: ${skippedNoStudent})`);
+          await onProgress(nextOffset, totalResults);
+          if (!completed) {
+            await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY));
+          }
+          return {
+            imported,
+            nextStudentIndex: nextOffset,
+            completed,
+            schedulesByTime
+          };
+        } catch (error) {
+          console.error(`[Visits] Error fetching visits batch:`, error);
+          throw error;
         }
-        const nextOffset = startOffset + visits.length;
-        const completed = !hasMore || nextOffset >= totalResults;
-        await onProgress(nextOffset, totalResults);
-        console.log(`[Visits] Batch complete: imported ${imported}, skipped ${skippedNoStudent} (no student), ${skippedNoSchedule} (no schedule)`);
-        console.log(`[Visits] Progress: ${nextOffset}/${totalResults} visits processed, completed=${completed}`);
-        return { imported, nextStudentIndex: nextOffset, completed, schedulesByTime };
       }
       async importSalesResumable(organizationId, startDate, endDate, onProgress, startOffset = 0, cachedStudents) {
         const SALES_BATCH_SIZE = 200;
@@ -1702,23 +1883,11 @@ var init_mindbody = __esm({
         const studentMap = new Map(allStudents.map((s) => [s.mindbodyClientId, s.id]));
         const dateFormat = startDate.toISOString().split("T")[0];
         const endDateFormat = endDate.toISOString().split("T")[0];
-        console.log(
-          `[Sales Import] Fetching site-level sales, date range: ${dateFormat} to ${endDateFormat}`
-        );
         try {
           const testEndpoint = `/sale/sales?StartDate=${dateFormat}&EndDate=${endDateFormat}&Limit=10&Offset=0`;
-          console.log(`[Sales Import] Test endpoint: ${testEndpoint}`);
-          console.log(`[Sales Import] Requested date range: ${dateFormat} to ${endDateFormat}`);
           const testData = await this.makeAuthenticatedRequest(organizationId, testEndpoint);
-          console.log(
-            `[Sales Import] PaginationResponse:`,
-            JSON.stringify(testData.PaginationResponse)
-          );
           const totalResults = testData.PaginationResponse?.TotalResults || 0;
           if (totalResults === 0) {
-            console.log(
-              `[Sales Import] /sale/sales returned 0 results, falling back to /sale/transactions`
-            );
             const startDateTime = startDate.toISOString();
             const endDateTime = endDate.toISOString();
             let imported2 = 0;
@@ -1726,7 +1895,6 @@ var init_mindbody = __esm({
             let transactionOffset = 0;
             let hasMoreTransactions = true;
             let totalProcessed2 = 0;
-            console.log(`[Sales Import] Processing transactions page-by-page from /sale/transactions`);
             while (hasMoreTransactions) {
               const { results: transactions, totalResults: totalResults2, hasMore } = await this.fetchPage(
                 organizationId,
@@ -1739,32 +1907,16 @@ var init_mindbody = __esm({
                 break;
               }
               hasMoreTransactions = hasMore;
-              if (transactionOffset === 0 && transactions.length > 0) {
-                console.log(`[Sales Import] Total transactions: ${totalResults2}`);
-                console.log(`[Sales Import] Sample transaction fields:`, Object.keys(transactions[0]));
-              }
               for (const transaction of transactions) {
                 try {
                   const dateStr = transaction.SaleDateTime || transaction.CreatedDateTime || transaction.TransactionDate || transaction.CompletedDate || transaction.SettlementDate || transaction.SettlementDateTime || // Handle nested date objects (e.g., {DateTime: "2025-10-22..."})
                   transaction.TransactionTime?.DateTime || transaction.TransactionTime || transaction.AuthTime?.DateTime || transaction.AuthTime;
                   if (!dateStr) {
-                    if (skipped === 0) {
-                      console.log(
-                        `[Sales Import] First skipped transaction structure:`,
-                        JSON.stringify(transaction, null, 2)
-                      );
-                    }
-                    console.log(
-                      `[Sales Import] Transaction ${transaction.TransactionId || transaction.Id} has no valid date field, skipping`
-                    );
                     skipped++;
                     continue;
                   }
                   const transactionDate = new Date(dateStr);
                   if (isNaN(transactionDate.getTime())) {
-                    console.log(
-                      `[Sales Import] Transaction ${transaction.TransactionId || transaction.Id} has invalid date "${dateStr}", skipping`
-                    );
                     skipped++;
                     continue;
                   }
@@ -1805,7 +1957,6 @@ var init_mindbody = __esm({
                         throw new Error("Sale data not found");
                       }
                     } catch (saleError) {
-                      console.log(`[Sales Import] Could not fetch sale details for ${saleId}, using transaction data`);
                       const paymentMethod = transaction.Method || transaction.CardType || "Payment";
                       const lastFour = transaction.CCLastFour || transaction.LastFour || "";
                       const status = transaction.Status || "Completed";
@@ -1849,12 +2000,6 @@ var init_mindbody = __esm({
               await onProgress(totalProcessed2, totalResults2);
               await new Promise((resolve) => setImmediate(resolve));
             }
-            console.log(
-              `[Sales Import] Results: ${imported2} imported, ${skipped} skipped (invalid dates)`
-            );
-            console.log(
-              `[Sales Import] Completed - imported ${imported2} revenue records from ${totalProcessed2} transactions`
-            );
             return { imported: imported2, nextStudentIndex: totalProcessed2, completed: true };
           }
           let imported = 0;
@@ -1864,7 +2009,6 @@ var init_mindbody = __esm({
           let hasMoreSales = true;
           let totalProcessed = 0;
           let totalFilteredOut = 0;
-          console.log(`[Sales Import] Processing sales page-by-page from /sale/sales`);
           while (hasMoreSales) {
             const { results: sales, totalResults: totalResults2, hasMore } = await this.fetchPage(
               organizationId,
@@ -1877,14 +2021,10 @@ var init_mindbody = __esm({
               break;
             }
             hasMoreSales = hasMore;
-            if (salesOffset === 0) {
-              console.log(`[Sales Import] Total sales: ${totalResults2}`);
-            }
             let filteredOutThisPage = 0;
             for (const sale of sales) {
               try {
                 if (!sale.SaleDateTime) {
-                  console.log(`Sale ${sale.Id} missing SaleDateTime, skipping`);
                   continue;
                 }
                 const saleDate = new Date(sale.SaleDateTime);
@@ -1938,30 +2078,72 @@ var init_mindbody = __esm({
             await onProgress(totalProcessed, totalResults2);
             await new Promise((resolve) => setImmediate(resolve));
           }
-          console.log(
-            `[Sales Import] Completed - imported ${imported} revenue records from ${totalProcessed} sales`
-          );
-          if (totalFilteredOut > 0) {
-            console.log(
-              `[Sales Import] Filtered out ${totalFilteredOut} sales outside date range (${dateFormat} to ${endDateFormat})`
-            );
-          }
-          console.log(
-            `[Sales Import] Client matching: ${matchedClients} matched, ${unmatchedClients} unmatched (linked to null studentId)`
-          );
           return { imported, nextStudentIndex: totalProcessed, completed: true };
         } catch (error) {
           console.error(`Failed to fetch site-level sales:`, error);
           throw error;
         }
       }
+      async importServicesResumable(organizationId, onProgress, startOffset = 0) {
+        const BATCH_SIZE = 200;
+        const endpoint = `/sale/services?Limit=${BATCH_SIZE}&Offset=${startOffset}`;
+        const data = await this.makeAuthenticatedRequest(organizationId, endpoint);
+        const pagination = data.PaginationResponse;
+        const totalResults = pagination?.TotalResults || 0;
+        const services = data.Services || [];
+        if (services.length === 0) {
+          return { imported: 0, updated: 0, nextOffset: startOffset, completed: true };
+        }
+        const existingPricingOptions = await storage.getPricingOptions(organizationId);
+        const pricingMap = new Map(existingPricingOptions.map((p) => [p.mindbodyServiceId, p]));
+        let imported = 0;
+        let updated = 0;
+        for (const service of services) {
+          try {
+            if (!service.Id || !service.Name) {
+              continue;
+            }
+            const serviceId = service.Id.toString();
+            const existingOption = pricingMap.get(serviceId);
+            const pricingData = {
+              organizationId,
+              mindbodyServiceId: serviceId,
+              name: service.Name,
+              description: service.Description || null,
+              onlineDescription: service.OnlineDescription || null,
+              price: service.Price ? service.Price.toString() : null,
+              onlinePrice: service.OnlinePrice ? service.OnlinePrice.toString() : null,
+              taxRate: service.TaxRate ? service.TaxRate.toString() : null,
+              taxIncluded: service.TaxIncluded || false,
+              programId: service.ProgramId ? service.ProgramId.toString() : null,
+              defaultTimeLength: service.DefaultTimeLength || null,
+              type: service.Type || null,
+              count: service.Count || null
+            };
+            if (existingOption) {
+              await storage.updatePricingOption(existingOption.id, pricingData);
+              updated++;
+            } else {
+              await storage.createPricingOption(pricingData);
+              imported++;
+            }
+          } catch (error) {
+            console.error(`Failed to import service ${service.Id}:`, error);
+          }
+        }
+        const nextOffset = startOffset + services.length;
+        const completed = nextOffset >= totalResults;
+        await onProgress(nextOffset, totalResults);
+        return { imported, updated, nextOffset, completed };
+      }
       async createWebhookSubscription(organizationId, eventType, webhookUrl, referenceId) {
-        const userToken = await this.getUserToken();
+        const userToken = await this.getUserToken(organizationId);
         const WEBHOOKS_API_BASE = "https://api.mindbodyonline.com/webhooks/v6";
         const org = await storage.getOrganization(organizationId);
         if (!org?.mindbodySiteId) {
           throw new Error("Mindbody site ID not configured");
         }
+        const apiKey = org?.mindbodyApiKey || process.env.MINDBODY_API_KEY;
         const requestBody = {
           eventType,
           webhookUrl,
@@ -1969,21 +2151,16 @@ var init_mindbody = __esm({
           referenceId: referenceId || organizationId,
           siteIds: [parseInt(org.mindbodySiteId)]
         };
-        console.log(`[Webhook] Creating subscription with payload:`, JSON.stringify(requestBody, null, 2));
-        console.log(`[Webhook] Using webhook URL: ${webhookUrl}`);
         const response = await fetch(`${WEBHOOKS_API_BASE}/subscriptions`, {
           method: "POST",
           headers: {
-            "Api-Key": process.env.MINDBODY_API_KEY || "",
+            "Api-Key": apiKey || "",
             Authorization: `Bearer ${userToken}`,
             "Content-Type": "application/json"
           },
           body: JSON.stringify(requestBody)
         });
-        console.log(`[Webhook] Response status: ${response.status}`);
-        console.log(`[Webhook] Response headers:`, Object.fromEntries(response.headers.entries()));
         const responseText = await response.text();
-        console.log(`[Webhook] Response body (first 1000 chars):`, responseText.substring(0, 1e3));
         if (!response.ok) {
           console.error(`Mindbody webhook subscription failed: ${response.status} - ${responseText}`);
           throw new Error(`Failed to create webhook subscription (${response.status}): ${responseText.substring(0, 300)}`);
@@ -2001,12 +2178,14 @@ var init_mindbody = __esm({
         };
       }
       async deleteWebhookSubscription(organizationId, mindbodySubscriptionId) {
-        const userToken = await this.getUserToken();
+        const userToken = await this.getUserToken(organizationId);
         const WEBHOOKS_API_BASE = "https://api.mindbodyonline.com/webhooks/v6";
+        const org = await storage.getOrganization(organizationId);
+        const apiKey = org?.mindbodyApiKey || process.env.MINDBODY_API_KEY;
         const response = await fetch(`${WEBHOOKS_API_BASE}/subscriptions/${mindbodySubscriptionId}`, {
           method: "DELETE",
           headers: {
-            "Api-Key": process.env.MINDBODY_API_KEY || "",
+            "Api-Key": apiKey || "",
             Authorization: `Bearer ${userToken}`
           }
         });
@@ -2559,6 +2738,616 @@ var init_import_worker = __esm({
       }
     };
     importWorker = new ImportWorker();
+  }
+});
+
+// server/objectStorage.ts
+import { Storage } from "@google-cloud/storage";
+var REPLIT_SIDECAR_ENDPOINT, objectStorageClient, ObjectNotFoundError, ObjectStorageService;
+var init_objectStorage = __esm({
+  "server/objectStorage.ts"() {
+    "use strict";
+    REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
+    objectStorageClient = new Storage({
+      credentials: {
+        audience: "replit",
+        subject_token_type: "access_token",
+        token_url: `${REPLIT_SIDECAR_ENDPOINT}/token`,
+        type: "external_account",
+        credential_source: {
+          url: `${REPLIT_SIDECAR_ENDPOINT}/credential`,
+          format: {
+            type: "json",
+            subject_token_field_name: "access_token"
+          }
+        },
+        universe_domain: "googleapis.com"
+      },
+      projectId: ""
+    });
+    ObjectNotFoundError = class _ObjectNotFoundError extends Error {
+      constructor() {
+        super("Object not found");
+        this.name = "ObjectNotFoundError";
+        Object.setPrototypeOf(this, _ObjectNotFoundError.prototype);
+      }
+    };
+    ObjectStorageService = class {
+      constructor() {
+      }
+      getPrivateObjectDir() {
+        const dir = process.env.PRIVATE_OBJECT_DIR || "";
+        if (!dir) {
+          throw new Error(
+            "PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' tool."
+          );
+        }
+        return dir;
+      }
+      parseObjectPath(path4) {
+        if (!path4.startsWith("/")) {
+          path4 = `/${path4}`;
+        }
+        const pathParts = path4.split("/");
+        if (pathParts.length < 3) {
+          throw new Error("Invalid path: must contain at least a bucket name");
+        }
+        const bucketName = pathParts[1];
+        const objectName = pathParts.slice(2).join("/");
+        return { bucketName, objectName };
+      }
+      async saveFile(filePath, buffer) {
+        const { bucketName, objectName } = this.parseObjectPath(filePath);
+        const bucket = objectStorageClient.bucket(bucketName);
+        const file = bucket.file(objectName);
+        await file.save(buffer, {
+          resumable: false
+        });
+      }
+      async getFile(filePath) {
+        const { bucketName, objectName } = this.parseObjectPath(filePath);
+        const bucket = objectStorageClient.bucket(bucketName);
+        const file = bucket.file(objectName);
+        const [exists] = await file.exists();
+        if (!exists) {
+          throw new ObjectNotFoundError();
+        }
+        return file;
+      }
+      async downloadFile(filePath) {
+        const file = await this.getFile(filePath);
+        const [buffer] = await file.download();
+        return buffer;
+      }
+      async deleteFile(filePath) {
+        const file = await this.getFile(filePath);
+        await file.delete();
+      }
+      async downloadObject(file, res, cacheTtlSec = 3600) {
+        try {
+          const [metadata] = await file.getMetadata();
+          res.set({
+            "Content-Type": metadata.contentType || "application/octet-stream",
+            "Content-Length": metadata.size,
+            "Cache-Control": `private, max-age=${cacheTtlSec}`
+          });
+          const stream = file.createReadStream();
+          stream.on("error", (err) => {
+            console.error("Stream error:", err);
+            if (!res.headersSent) {
+              res.status(500).json({ error: "Error streaming file" });
+            }
+          });
+          stream.pipe(res);
+        } catch (error) {
+          console.error("Error downloading file:", error);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "Error downloading file" });
+          }
+        }
+      }
+    };
+  }
+});
+
+// server/openai.ts
+import OpenAI from "openai";
+import { sql as sql2 } from "drizzle-orm";
+import * as XLSX from "xlsx";
+import { randomUUID } from "crypto";
+var openai, MAX_TOKENS_PER_QUERY, MONTHLY_QUERY_LIMIT, MAX_RETRIES, INITIAL_RETRY_DELAY, sleep, DATABASE_SCHEMA, QUERY_TOOLS, OpenAIService, openaiService;
+var init_openai = __esm({
+  "server/openai.ts"() {
+    "use strict";
+    init_storage();
+    init_db();
+    init_objectStorage();
+    openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY || ""
+    });
+    MAX_TOKENS_PER_QUERY = 2e3;
+    MONTHLY_QUERY_LIMIT = 1e3;
+    MAX_RETRIES = 3;
+    INITIAL_RETRY_DELAY = 1e3;
+    sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    DATABASE_SCHEMA = `
+DATABASE SCHEMA:
+
+1. students - Student/client information
+   - id (uuid), organization_id (uuid), mindbody_client_id, first_name, last_name
+   - email, phone, status, membership_type, join_date, created_at
+
+2. classes - Class types offered
+   - id (uuid), organization_id (uuid), mindbody_class_id, name, description
+   - instructor_name, capacity, duration, created_at
+
+3. class_schedules - Individual class sessions
+   - id (uuid), organization_id (uuid), class_id (uuid, FK to classes)
+   - mindbody_schedule_id, start_time, end_time, location, created_at
+
+4. attendance - Student attendance records
+   - id (uuid), organization_id (uuid), student_id (uuid, FK to students)
+   - schedule_id (uuid, FK to class_schedules), attended_at, status, created_at
+
+5. revenue - Financial transactions
+   - id (uuid), organization_id (uuid), student_id (uuid, FK to students)
+   - amount (decimal), type, description, transaction_date, created_at
+
+6. pricing_options - Service/product pricing from Mindbody
+   - id (uuid), organization_id (uuid), mindbody_service_id, name, description
+   - online_description, price (decimal), online_price (decimal), tax_rate (decimal)
+   - tax_included (boolean), program_id, default_time_length (integer minutes)
+   - type, count, created_at, updated_at
+
+IMPORTANT: All queries must include "WHERE organization_id = $1" for data isolation.
+Use JOINs to combine tables. Aggregate functions (COUNT, SUM, AVG) are available.
+Use PostgreSQL functions like EXTRACT(YEAR FROM date), TO_CHAR(), etc.
+`;
+    QUERY_TOOLS = [
+      {
+        type: "function",
+        function: {
+          name: "execute_sql_query",
+          description: "Execute a custom SQL query to retrieve data from the database. You can query students, classes, class_schedules, attendance, revenue, and pricing_options tables. Always include WHERE organization_id = $1 for security.",
+          parameters: {
+            type: "object",
+            properties: {
+              sql_query: {
+                type: "string",
+                description: "The SQL SELECT query to execute. Must be a read-only SELECT statement. Use $1 for organization_id parameter. Example: SELECT COUNT(*) FROM class_schedules WHERE organization_id = $1 AND EXTRACT(YEAR FROM start_time) = 2025"
+              },
+              explanation: {
+                type: "string",
+                description: "Brief explanation of what this query does (for logging/debugging)"
+              }
+            },
+            required: ["sql_query", "explanation"]
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "create_excel_spreadsheet",
+          description: "Create an Excel spreadsheet file (.xlsx) from structured data. Use this when the user asks to export data, create a spreadsheet, or download results as Excel. The data should be formatted as an array of objects where each object represents a row.",
+          parameters: {
+            type: "object",
+            properties: {
+              filename: {
+                type: "string",
+                description: "The filename for the Excel file (without extension). Example: 'student_roster' or 'revenue_report_2025'"
+              },
+              sheet_name: {
+                type: "string",
+                description: "The name of the worksheet/sheet. Example: 'Students' or 'Revenue Data'"
+              },
+              data: {
+                type: "array",
+                description: "Array of objects where each object represents a row. All objects should have the same keys which become column headers. Example: [{name: 'Alice', age: 25}, {name: 'Bob', age: 30}]",
+                items: {
+                  type: "object"
+                }
+              },
+              description: {
+                type: "string",
+                description: "Brief description of what this spreadsheet contains (for the user)"
+              }
+            },
+            required: ["filename", "sheet_name", "data", "description"]
+          }
+        }
+      }
+    ];
+    OpenAIService = class {
+      // Execute database query functions called by AI
+      async executeFunctionCall(functionName, args, organizationId, userId) {
+        try {
+          if (functionName === "execute_sql_query") {
+            const { sql_query, explanation } = args;
+            const trimmedQuery = sql_query.trim().toUpperCase();
+            if (!trimmedQuery.startsWith("SELECT")) {
+              return JSON.stringify({
+                error: "Only SELECT queries are allowed for security reasons"
+              });
+            }
+            const dangerousKeywords = ["DROP", "DELETE", "UPDATE", "INSERT", "ALTER", "CREATE", "TRUNCATE"];
+            for (const keyword of dangerousKeywords) {
+              if (trimmedQuery.includes(keyword)) {
+                return JSON.stringify({
+                  error: `Query contains forbidden keyword: ${keyword}`
+                });
+              }
+            }
+            if (!sql_query.includes("$1") && !sql_query.toLowerCase().includes("organization_id")) {
+              return JSON.stringify({
+                error: "Query must include organization_id filter using $1 parameter"
+              });
+            }
+            console.log(`[AI Query] Executing: ${explanation}`);
+            console.log(`[AI Query] SQL: ${sql_query}`);
+            const finalQuery = sql_query.replace(/\$1/g, `'${organizationId.replace(/'/g, "''")}'`);
+            const result = await db.execute(sql2.raw(finalQuery));
+            console.log(`[AI Query] Result rows: ${result.rows.length}`);
+            return JSON.stringify({
+              success: true,
+              explanation,
+              row_count: result.rows.length,
+              data: result.rows.slice(0, 100)
+              // Limit to 100 rows for response size
+            });
+          }
+          if (functionName === "create_excel_spreadsheet") {
+            const { filename, sheet_name, data, description } = args;
+            console.log(`[AI Excel] Creating spreadsheet: ${filename}`);
+            console.log(`[AI Excel] Data type:`, typeof data);
+            console.log(`[AI Excel] Data:`, JSON.stringify(data).substring(0, 200));
+            if (!data || !Array.isArray(data)) {
+              return JSON.stringify({
+                error: "Data must be a non-empty array",
+                received_type: typeof data
+              });
+            }
+            if (data.length === 0) {
+              return JSON.stringify({
+                error: "Data array cannot be empty"
+              });
+            }
+            console.log(`[AI Excel] Rows: ${data.length}`);
+            const workbook = XLSX.utils.book_new();
+            const worksheet = XLSX.utils.json_to_sheet(data);
+            XLSX.utils.book_append_sheet(workbook, worksheet, sheet_name);
+            const excelBuffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+            const objectStorage = new ObjectStorageService();
+            const privateDir = objectStorage.getPrivateObjectDir();
+            const fileId = randomUUID();
+            const safeFilename = filename.replace(/[^a-zA-Z0-9_-]/g, "_");
+            const fullFilename = `${fileId}-${safeFilename}.xlsx`;
+            const storagePath = `${privateDir}/excel/${fullFilename}`;
+            await objectStorage.saveFile(storagePath, excelBuffer);
+            await storage.createAiGeneratedFile({
+              organizationId,
+              userId,
+              filename: fullFilename,
+              originalFilename: `${safeFilename}.xlsx`,
+              storagePath,
+              fileType: "excel"
+            });
+            const downloadUrl = `/api/files/download/${fullFilename}`;
+            console.log(`[AI Excel] Saved to: ${storagePath}`);
+            console.log(`[AI Excel] Download URL: ${downloadUrl}`);
+            console.log(`[AI Excel] Metadata saved for org ${organizationId}, user ${userId}`);
+            return JSON.stringify({
+              success: true,
+              description,
+              filename: `${safeFilename}.xlsx`,
+              download_url: downloadUrl,
+              row_count: data.length,
+              message: `Excel file "${safeFilename}.xlsx" created successfully with ${data.length} rows.`
+            });
+          }
+          return JSON.stringify({
+            error: `Unknown function: ${functionName}`
+          });
+        } catch (error) {
+          console.error(`Error executing function ${functionName}:`, error);
+          return JSON.stringify({
+            error: `Failed to execute ${functionName}: ${error instanceof Error ? error.message : "Unknown error"}`
+          });
+        }
+      }
+      async generateInsight(organizationId, userId, query, conversationHistory = [], fileContext = "") {
+        const recentQueries = await storage.getAIQueries(organizationId, 100);
+        const thisMonthQueries = recentQueries.filter((q) => {
+          const queryDate = new Date(q.createdAt);
+          const now = /* @__PURE__ */ new Date();
+          return queryDate.getMonth() === now.getMonth() && queryDate.getFullYear() === now.getFullYear();
+        });
+        if (thisMonthQueries.length >= MONTHLY_QUERY_LIMIT) {
+          throw new Error(
+            `Monthly query limit of ${MONTHLY_QUERY_LIMIT} reached. Please upgrade your plan.`
+          );
+        }
+        const messages = [
+          {
+            role: "system",
+            content: `You are an AI assistant for analyzing Mindbody studio data. You have access to a SQL database query tool.
+
+${DATABASE_SCHEMA}
+
+INSTRUCTIONS:
+- For ANY question about the data, use the execute_sql_query tool to write and run a SQL SELECT query
+- Always include "WHERE organization_id = $1" in your queries for data isolation
+- Be creative with SQL - you can use JOINs, aggregations, subqueries, date functions, etc.
+- IMPORTANT: Try to answer questions in ONE tool call when possible to reduce API usage
+- After getting results, analyze them and provide clear, actionable insights
+- When users ask follow-up questions, refer to conversation history for context
+- When users ask to create a spreadsheet, export to Excel, or download data, use the create_excel_spreadsheet tool
+- You can combine both tools: first query data with execute_sql_query, then create a spreadsheet with the results
+${fileContext ? `- The user has uploaded files. Use their content to answer questions or cross-reference with database data` : ""}
+
+EXAMPLES:
+- "How many classes in 2025?" \u2192 SELECT COUNT(*) FROM class_schedules WHERE organization_id = $1 AND EXTRACT(YEAR FROM start_time) = 2025
+- "Top 10 students by attendance?" \u2192 SELECT s.first_name, s.last_name, COUNT(*) as classes FROM attendance a JOIN students s ON a.student_id = s.id WHERE a.organization_id = $1 AND a.status = 'attended' GROUP BY s.id, s.first_name, s.last_name ORDER BY classes DESC LIMIT 10
+- "Revenue this month?" \u2192 SELECT SUM(amount) FROM revenue WHERE organization_id = $1 AND EXTRACT(YEAR FROM transaction_date) = EXTRACT(YEAR FROM CURRENT_DATE) AND EXTRACT(MONTH FROM transaction_date) = EXTRACT(MONTH FROM CURRENT_DATE)
+- "How many intro offers sold?" \u2192 SELECT COUNT(*) FROM revenue WHERE organization_id = $1 AND description ILIKE '%intro%'
+- "Intro offers in last 60 days?" \u2192 SELECT COUNT(*) FROM revenue WHERE organization_id = $1 AND description ILIKE '%intro%' AND transaction_date >= CURRENT_DATE - INTERVAL '60 days'
+
+NOTES:
+- Use ILIKE for case-insensitive text matching (e.g., finding "intro" in descriptions)
+- The description field contains product/service names
+- Intro offers specifically include these products:
+  * "Intro Offer - 30 Days - (EYES ONLY) New Student" ($75)
+  * "Intro Offer - 30 Days - For New Students" ($75)
+  * "Intro Offer - Upgrade from $20 Drop In Class" ($55)
+  * "Intro Offer - Upgrade from single class $42" ($42)
+  * And any description containing "Intro" (case-insensitive)
+- Use INTERVAL for date calculations (e.g., CURRENT_DATE - INTERVAL '60 days' for last 60 days)
+
+You can answer ANY question about the data - just write the appropriate SQL query!${fileContext ? `
+
+UPLOADED FILE DATA:
+${fileContext}` : ""}`
+          }
+        ];
+        if (conversationHistory.length > 0) {
+          messages.push(...conversationHistory);
+        }
+        messages.push({
+          role: "user",
+          content: query
+        });
+        let totalTokensUsed = 0;
+        let finalResponse = "";
+        let iterationCount = 0;
+        const maxIterations = 5;
+        const downloadLinks = [];
+        while (iterationCount < maxIterations) {
+          let completion;
+          let retryCount = 0;
+          while (retryCount <= MAX_RETRIES) {
+            try {
+              completion = await openai.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages,
+                tools: QUERY_TOOLS,
+                tool_choice: "auto",
+                max_tokens: MAX_TOKENS_PER_QUERY,
+                temperature: 0.7
+              });
+              break;
+            } catch (error) {
+              if (error?.status === 429 && retryCount < MAX_RETRIES) {
+                const retryDelay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
+                console.log(`[OpenAI] Rate limit hit, retrying in ${retryDelay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})`);
+                await sleep(retryDelay);
+                retryCount++;
+              } else {
+                if (error?.status === 429) {
+                  throw new Error("OpenAI API is currently experiencing high demand. Please try again in a few moments.");
+                }
+                throw error;
+              }
+            }
+          }
+          if (!completion) {
+            throw new Error("Failed to get response from OpenAI after retries");
+          }
+          totalTokensUsed += completion.usage?.total_tokens || 0;
+          const message = completion.choices[0]?.message;
+          if (!message) {
+            throw new Error("No response from AI");
+          }
+          messages.push(message);
+          if (message.tool_calls && message.tool_calls.length > 0) {
+            for (const toolCall of message.tool_calls) {
+              if (toolCall.type !== "function") continue;
+              const functionName = toolCall.function.name;
+              const functionArgs = JSON.parse(toolCall.function.arguments);
+              const result = await this.executeFunctionCall(
+                functionName,
+                functionArgs,
+                organizationId,
+                userId
+              );
+              if (functionName === "create_excel_spreadsheet") {
+                try {
+                  const resultData = JSON.parse(result);
+                  if (resultData.success && resultData.download_url) {
+                    downloadLinks.push({
+                      filename: resultData.filename,
+                      url: resultData.download_url
+                    });
+                  }
+                } catch (e) {
+                  console.error("Failed to parse Excel creation result:", e);
+                }
+              }
+              messages.push({
+                role: "tool",
+                tool_call_id: toolCall.id,
+                content: result
+              });
+            }
+            iterationCount++;
+            continue;
+          }
+          finalResponse = message.content || "No response generated";
+          break;
+        }
+        if (downloadLinks.length > 0) {
+          finalResponse += "\n\n";
+          downloadLinks.forEach((link) => {
+            finalResponse += `[Download: ${link.filename}](${link.url})
+`;
+          });
+        }
+        await storage.createAIQuery({
+          organizationId,
+          userId,
+          query,
+          response: finalResponse,
+          tokensUsed: totalTokensUsed
+        });
+        return {
+          response: finalResponse,
+          tokensUsed: totalTokensUsed
+        };
+      }
+    };
+    openaiService = new OpenAIService();
+  }
+});
+
+// server/ai-worker.ts
+var ai_worker_exports = {};
+__export(ai_worker_exports, {
+  processAIQuery: () => processAIQuery,
+  recoverPendingMessages: () => recoverPendingMessages
+});
+async function recoverPendingMessages() {
+  try {
+    console.log("[AI Recovery] Checking for pending messages after server restart...");
+    const pendingMessages = await storage.getPendingConversationMessages();
+    if (pendingMessages.length === 0) {
+      console.log("[AI Recovery] No pending messages found");
+      return;
+    }
+    console.log(`[AI Recovery] Found ${pendingMessages.length} pending message(s), resuming processing...`);
+    for (const message of pendingMessages) {
+      console.log(`[AI Recovery] Resuming message ${message.id}`);
+      processAIQuery(message.id).catch((error) => {
+        console.error(`[AI Recovery] Failed to resume message ${message.id}:`, error);
+      });
+    }
+    console.log(`[AI Recovery] Successfully queued ${pendingMessages.length} message(s) for processing`);
+  } catch (error) {
+    console.error("[AI Recovery] Failed to recover pending messages:", error);
+  }
+}
+async function processAIQuery(messageId) {
+  try {
+    console.log(`[AI Worker] Starting background processing for message ${messageId}`);
+    const message = await storage.getConversationMessage(messageId);
+    if (!message) {
+      console.error(`[AI Worker] Message ${messageId} not found`);
+      return;
+    }
+    if (message.role !== "assistant") {
+      console.error(`[AI Worker] Message ${messageId} is not an assistant message`);
+      return;
+    }
+    if (message.status !== "pending") {
+      console.log(`[AI Worker] Message ${messageId} is not pending (status: ${message.status})`);
+      return;
+    }
+    const conversation = await storage.getConversation(message.conversationId);
+    if (!conversation) {
+      console.error(`[AI Worker] Conversation ${message.conversationId} not found`);
+      await storage.updateConversationMessageStatus(
+        messageId,
+        "failed",
+        void 0,
+        "Conversation not found"
+      );
+      return;
+    }
+    const allMessages = await storage.getConversationMessages(message.conversationId);
+    const conversationHistory = [];
+    let userMessageObj = null;
+    for (const msg of allMessages) {
+      if (msg.id === messageId) {
+        break;
+      }
+      if (msg.status === "completed") {
+        conversationHistory.push({
+          role: msg.role,
+          content: msg.content
+        });
+        if (msg.role === "user") {
+          userMessageObj = msg;
+        }
+      }
+    }
+    const userMessageInHistory = conversationHistory[conversationHistory.length - 1];
+    if (!userMessageInHistory || userMessageInHistory.role !== "user") {
+      console.error(`[AI Worker] Could not find user query for message ${messageId}`);
+      await storage.updateConversationMessageStatus(
+        messageId,
+        "failed",
+        void 0,
+        "User query not found"
+      );
+      return;
+    }
+    if (!userMessageObj) {
+      console.error(`[AI Worker] Could not find user message object for message ${messageId}`);
+      await storage.updateConversationMessageStatus(
+        messageId,
+        "failed",
+        void 0,
+        "User message object not found"
+      );
+      return;
+    }
+    const userQuery = userMessageInHistory.content;
+    const historyWithoutCurrentQuery = conversationHistory.slice(0, -1);
+    console.log(`[AI Worker] Processing query: "${userQuery.substring(0, 50)}..."`);
+    const fileIdsToProcess = userMessageObj.fileIds?.join(",") || "";
+    if (fileIdsToProcess) {
+      console.log(`[AI Worker] Processing with ${userMessageObj.fileIds?.length} attached files`);
+    }
+    const result = await openaiService.generateInsight(
+      conversation.organizationId,
+      conversation.userId,
+      userQuery,
+      historyWithoutCurrentQuery,
+      fileIdsToProcess
+    );
+    console.log(`[AI Worker] OpenAI response received, tokens used: ${result.tokensUsed}`);
+    await storage.updateConversationMessageStatus(
+      messageId,
+      "completed",
+      result.response,
+      void 0
+    );
+    await storage.updateConversation(message.conversationId, {});
+    console.log(`[AI Worker] Successfully completed processing for message ${messageId}`);
+  } catch (error) {
+    console.error(`[AI Worker] Error processing message ${messageId}:`, error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+    await storage.updateConversationMessageStatus(
+      messageId,
+      "failed",
+      void 0,
+      errorMessage
+    );
+  }
+}
+var init_ai_worker = __esm({
+  "server/ai-worker.ts"() {
+    "use strict";
+    init_storage();
+    init_openai();
   }
 });
 
@@ -3338,6 +4127,64 @@ function registerUserRoutes(app2) {
       res.status(500).json({ error: "Failed to update timezone" });
     }
   });
+  app2.patch("/api/organization/mindbody-credentials", requireAuth, async (req, res) => {
+    try {
+      const user = req.user;
+      const organizationId = user?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      if (user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const { siteId, apiKey, staffUsername, staffPassword } = req.body;
+      const org = await storage.getOrganization(organizationId);
+      const finalSiteId = siteId || org?.mindbodySiteId;
+      const finalApiKey = apiKey || org?.mindbodyApiKey;
+      const finalUsername = staffUsername || org?.mindbodyStaffUsername;
+      const finalPassword = staffPassword || org?.mindbodyStaffPassword;
+      if (!finalSiteId || !finalApiKey || !finalUsername || !finalPassword) {
+        return res.status(400).json({ error: "All Mindbody credentials are required (Site ID, API Key, Username, Password)" });
+      }
+      await storage.updateOrganizationMindbodyCredentials(
+        organizationId,
+        finalSiteId,
+        finalApiKey,
+        finalUsername,
+        finalPassword
+      );
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to update Mindbody credentials:", error);
+      res.status(500).json({ error: "Failed to update Mindbody credentials" });
+    }
+  });
+  app2.get("/api/organization/mindbody-credentials", requireAuth, async (req, res) => {
+    try {
+      const user = req.user;
+      const organizationId = user?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      if (user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const org = await storage.getOrganization(organizationId);
+      if (!org) {
+        return res.status(404).json({ error: "Organization not found" });
+      }
+      res.json({
+        siteId: org.mindbodySiteId || "",
+        apiKey: org.mindbodyApiKey ? "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022" : "",
+        staffUsername: org.mindbodyStaffUsername || "",
+        staffPassword: org.mindbodyStaffPassword ? "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022" : "",
+        hasCredentials: !!(org.mindbodyApiKey && org.mindbodySiteId && org.mindbodyStaffUsername && org.mindbodyStaffPassword)
+      });
+    } catch (error) {
+      console.error("Failed to fetch Mindbody credentials:", error);
+      res.status(500).json({ error: "Failed to fetch Mindbody credentials" });
+    }
+  });
 }
 
 // server/routes/students.ts
@@ -3605,28 +4452,6 @@ function registerRevenueRoutes(app2) {
     } catch (error) {
       console.error("Revenue integrity check error:", error);
       res.status(500).json({ error: "Failed to check revenue data integrity" });
-    }
-  });
-  app2.get("/api/revenue/import-progress", requireAuth, async (req, res) => {
-    try {
-      const organizationId = req.user?.organizationId;
-      if (!organizationId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
-      console.log(`[Progress Check] Org ${organizationId}, map size: ${importProgressMap.size}, has progress: ${importProgressMap.has(organizationId)}`);
-      const progress = importProgressMap.get(organizationId);
-      if (!progress) {
-        return res.status(404).json({ error: "No import in progress" });
-      }
-      const elapsed = (Date.now() - progress.startTime) / 1e3;
-      const percentage = progress.total > 0 ? Math.round(progress.processed / progress.total * 100) : 0;
-      res.json({
-        ...progress,
-        percentage,
-        elapsed
-      });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch import progress" });
     }
   });
   app2.get("/api/revenue", requireAuth, async (req, res) => {
@@ -4355,6 +5180,171 @@ function registerMindbodyRoutes(app2) {
       res.status(500).json({ error: errorMessage });
     }
   });
+  app2.post("/api/mindbody/test-saved-connection", requireAuth, async (req, res) => {
+    try {
+      const user = req.user;
+      const organizationId = user?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const org = await storage.getOrganization(organizationId);
+      if (!org?.mindbodyApiKey || !org?.mindbodySiteId || !org?.mindbodyStaffUsername || !org?.mindbodyStaffPassword) {
+        return res.status(400).json({
+          success: false,
+          error: "No saved credentials found. Please configure your Mindbody credentials first."
+        });
+      }
+      const mindbodyService2 = new MindbodyService();
+      try {
+        const isValid = await mindbodyService2.testCredentials({
+          siteId: org.mindbodySiteId,
+          apiKey: org.mindbodyApiKey,
+          username: org.mindbodyStaffUsername,
+          password: org.mindbodyStaffPassword
+        });
+        if (isValid) {
+          res.json({
+            success: true,
+            message: "Connection successful! Your saved credentials are valid."
+          });
+        } else {
+          res.status(401).json({
+            success: false,
+            error: "Failed to authenticate with saved credentials"
+          });
+        }
+      } catch (error) {
+        const statusCode = error.message?.includes("authenticate") || error.message?.includes("401") ? 401 : 400;
+        res.status(statusCode).json({
+          success: false,
+          error: error.message || "Failed to connect to Mindbody API"
+        });
+      }
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: "Internal server error during connection test"
+      });
+    }
+  });
+  app2.post("/api/mindbody/test-connection", requireAuth, async (req, res) => {
+    try {
+      const user = req.user;
+      const organizationId = user?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const { siteId, apiKey, staffUsername, staffPassword } = req.body;
+      if (!siteId || !apiKey || !staffUsername || !staffPassword) {
+        return res.status(400).json({
+          success: false,
+          error: "All credentials required for testing (Site ID, API Key, Staff Username, Staff Password)"
+        });
+      }
+      const mindbodyService2 = new MindbodyService();
+      try {
+        const isValid = await mindbodyService2.testCredentials({
+          siteId,
+          apiKey,
+          username: staffUsername,
+          password: staffPassword
+        });
+        if (isValid) {
+          res.json({
+            success: true,
+            message: "Connection successful! Credentials are valid."
+          });
+        } else {
+          res.status(401).json({
+            success: false,
+            error: "Failed to authenticate with provided credentials"
+          });
+        }
+      } catch (error) {
+        const statusCode = error.message?.includes("authenticate") || error.message?.includes("401") ? 401 : 400;
+        res.status(statusCode).json({
+          success: false,
+          error: error.message || "Failed to connect to Mindbody API"
+        });
+      }
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: "Internal server error during connection test"
+      });
+    }
+  });
+  app2.get("/api/mindbody/test-connection", requireAuth, async (req, res) => {
+    try {
+      const user = req.user;
+      const organizationId = user?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const mindbodyService2 = new MindbodyService();
+      const diagnostics = {
+        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        organizationId,
+        tests: {}
+      };
+      try {
+        diagnostics.tests.clients = { status: "testing" };
+        try {
+          const clientsEndpoint = `/client/clients?Limit=1&Offset=0`;
+          const clientsData = await mindbodyService2.makeAuthenticatedRequest(organizationId, clientsEndpoint);
+          diagnostics.tests.clients = {
+            status: "success",
+            message: `Successfully fetched clients (authentication working)`,
+            recordCount: clientsData?.PaginationResponse?.TotalResults || 0
+          };
+        } catch (error) {
+          diagnostics.tests.clients = { status: "failed", error: error.message };
+        }
+        diagnostics.tests.classes = { status: "testing" };
+        try {
+          const classesEndpoint = `/class/classes?Limit=1&Offset=0`;
+          const classesData = await mindbodyService2.makeAuthenticatedRequest(organizationId, classesEndpoint);
+          diagnostics.tests.classes = {
+            status: "success",
+            message: `Successfully fetched classes`,
+            recordCount: classesData?.PaginationResponse?.TotalResults || 0
+          };
+        } catch (error) {
+          diagnostics.tests.classes = { status: "failed", error: error.message };
+        }
+        diagnostics.tests.visits = { status: "testing" };
+        try {
+          const visitsEndpoint = `/client/clientvisits?StartDate=2024-01-01&EndDate=2024-01-31&Limit=1`;
+          const visitsData = await mindbodyService2.makeAuthenticatedRequest(organizationId, visitsEndpoint);
+          diagnostics.tests.visits = {
+            status: "success",
+            message: `Successfully fetched visits`,
+            recordCount: visitsData?.PaginationResponse?.TotalResults || 0
+          };
+        } catch (error) {
+          diagnostics.tests.visits = { status: "failed", error: error.message };
+        }
+        const failedTests = Object.values(diagnostics.tests).filter((t) => t.status === "failed");
+        if (failedTests.length === 0) {
+          diagnostics.overallStatus = "success";
+          diagnostics.message = "All Mindbody API tests passed successfully";
+        } else {
+          diagnostics.overallStatus = "partial";
+          diagnostics.message = `${failedTests.length} test(s) failed`;
+        }
+      } catch (error) {
+        diagnostics.overallStatus = "failed";
+        diagnostics.message = `Mindbody API connection test failed: ${error.message}`;
+      }
+      res.json(diagnostics);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to test connection";
+      res.status(500).json({
+        error: errorMessage,
+        overallStatus: "failed"
+      });
+    }
+  });
   app2.get("/api/mindbody/import/skipped-records", requireAuth, async (req, res) => {
     try {
       const organizationId = req.user?.organizationId;
@@ -4556,429 +5546,9 @@ function registerWebhookRoutes(app2) {
   });
 }
 
-// server/openai.ts
-init_storage();
-init_db();
-import OpenAI from "openai";
-import { sql as sql2 } from "drizzle-orm";
-import * as XLSX from "xlsx";
-
-// server/objectStorage.ts
-import { Storage } from "@google-cloud/storage";
-var REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
-var objectStorageClient = new Storage({
-  credentials: {
-    audience: "replit",
-    subject_token_type: "access_token",
-    token_url: `${REPLIT_SIDECAR_ENDPOINT}/token`,
-    type: "external_account",
-    credential_source: {
-      url: `${REPLIT_SIDECAR_ENDPOINT}/credential`,
-      format: {
-        type: "json",
-        subject_token_field_name: "access_token"
-      }
-    },
-    universe_domain: "googleapis.com"
-  },
-  projectId: ""
-});
-var ObjectNotFoundError = class _ObjectNotFoundError extends Error {
-  constructor() {
-    super("Object not found");
-    this.name = "ObjectNotFoundError";
-    Object.setPrototypeOf(this, _ObjectNotFoundError.prototype);
-  }
-};
-var ObjectStorageService = class {
-  constructor() {
-  }
-  getPrivateObjectDir() {
-    const dir = process.env.PRIVATE_OBJECT_DIR || "";
-    if (!dir) {
-      throw new Error(
-        "PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' tool."
-      );
-    }
-    return dir;
-  }
-  parseObjectPath(path4) {
-    if (!path4.startsWith("/")) {
-      path4 = `/${path4}`;
-    }
-    const pathParts = path4.split("/");
-    if (pathParts.length < 3) {
-      throw new Error("Invalid path: must contain at least a bucket name");
-    }
-    const bucketName = pathParts[1];
-    const objectName = pathParts.slice(2).join("/");
-    return { bucketName, objectName };
-  }
-  async saveFile(filePath, buffer) {
-    const { bucketName, objectName } = this.parseObjectPath(filePath);
-    const bucket = objectStorageClient.bucket(bucketName);
-    const file = bucket.file(objectName);
-    await file.save(buffer, {
-      resumable: false
-    });
-  }
-  async getFile(filePath) {
-    const { bucketName, objectName } = this.parseObjectPath(filePath);
-    const bucket = objectStorageClient.bucket(bucketName);
-    const file = bucket.file(objectName);
-    const [exists] = await file.exists();
-    if (!exists) {
-      throw new ObjectNotFoundError();
-    }
-    return file;
-  }
-  async downloadFile(filePath) {
-    const file = await this.getFile(filePath);
-    const [buffer] = await file.download();
-    return buffer;
-  }
-  async deleteFile(filePath) {
-    const file = await this.getFile(filePath);
-    await file.delete();
-  }
-  async downloadObject(file, res, cacheTtlSec = 3600) {
-    try {
-      const [metadata] = await file.getMetadata();
-      res.set({
-        "Content-Type": metadata.contentType || "application/octet-stream",
-        "Content-Length": metadata.size,
-        "Cache-Control": `private, max-age=${cacheTtlSec}`
-      });
-      const stream = file.createReadStream();
-      stream.on("error", (err) => {
-        console.error("Stream error:", err);
-        if (!res.headersSent) {
-          res.status(500).json({ error: "Error streaming file" });
-        }
-      });
-      stream.pipe(res);
-    } catch (error) {
-      console.error("Error downloading file:", error);
-      if (!res.headersSent) {
-        res.status(500).json({ error: "Error downloading file" });
-      }
-    }
-  }
-};
-
-// server/openai.ts
-import { randomUUID } from "crypto";
-var openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || ""
-});
-var MAX_TOKENS_PER_QUERY = 2e3;
-var MONTHLY_QUERY_LIMIT = 1e3;
-var DATABASE_SCHEMA = `
-DATABASE SCHEMA:
-
-1. students - Student/client information
-   - id (uuid), organization_id (uuid), mindbody_client_id, first_name, last_name
-   - email, phone, status, membership_type, join_date, created_at
-
-2. classes - Class types offered
-   - id (uuid), organization_id (uuid), mindbody_class_id, name, description
-   - instructor_name, capacity, duration, created_at
-
-3. class_schedules - Individual class sessions
-   - id (uuid), organization_id (uuid), class_id (uuid, FK to classes)
-   - mindbody_schedule_id, start_time, end_time, location, created_at
-
-4. attendance - Student attendance records
-   - id (uuid), organization_id (uuid), student_id (uuid, FK to students)
-   - schedule_id (uuid, FK to class_schedules), attended_at, status, created_at
-
-5. revenue - Financial transactions
-   - id (uuid), organization_id (uuid), student_id (uuid, FK to students)
-   - amount (decimal), type, description, transaction_date, created_at
-
-IMPORTANT: All queries must include "WHERE organization_id = $1" for data isolation.
-Use JOINs to combine tables. Aggregate functions (COUNT, SUM, AVG) are available.
-Use PostgreSQL functions like EXTRACT(YEAR FROM date), TO_CHAR(), etc.
-`;
-var QUERY_TOOLS = [
-  {
-    type: "function",
-    function: {
-      name: "execute_sql_query",
-      description: "Execute a custom SQL query to retrieve data from the database. You can query students, classes, class_schedules, attendance, and revenue tables. Always include WHERE organization_id = $1 for security.",
-      parameters: {
-        type: "object",
-        properties: {
-          sql_query: {
-            type: "string",
-            description: "The SQL SELECT query to execute. Must be a read-only SELECT statement. Use $1 for organization_id parameter. Example: SELECT COUNT(*) FROM class_schedules WHERE organization_id = $1 AND EXTRACT(YEAR FROM start_time) = 2025"
-          },
-          explanation: {
-            type: "string",
-            description: "Brief explanation of what this query does (for logging/debugging)"
-          }
-        },
-        required: ["sql_query", "explanation"]
-      }
-    }
-  },
-  {
-    type: "function",
-    function: {
-      name: "create_excel_spreadsheet",
-      description: "Create an Excel spreadsheet file (.xlsx) from structured data. Use this when the user asks to export data, create a spreadsheet, or download results as Excel. The data should be formatted as an array of objects where each object represents a row.",
-      parameters: {
-        type: "object",
-        properties: {
-          filename: {
-            type: "string",
-            description: "The filename for the Excel file (without extension). Example: 'student_roster' or 'revenue_report_2025'"
-          },
-          sheet_name: {
-            type: "string",
-            description: "The name of the worksheet/sheet. Example: 'Students' or 'Revenue Data'"
-          },
-          data: {
-            type: "array",
-            description: "Array of objects where each object represents a row. All objects should have the same keys which become column headers. Example: [{name: 'Alice', age: 25}, {name: 'Bob', age: 30}]",
-            items: {
-              type: "object"
-            }
-          },
-          description: {
-            type: "string",
-            description: "Brief description of what this spreadsheet contains (for the user)"
-          }
-        },
-        required: ["filename", "sheet_name", "data", "description"]
-      }
-    }
-  }
-];
-var OpenAIService = class {
-  // Execute database query functions called by AI
-  async executeFunctionCall(functionName, args, organizationId, userId) {
-    try {
-      if (functionName === "execute_sql_query") {
-        const { sql_query, explanation } = args;
-        const trimmedQuery = sql_query.trim().toUpperCase();
-        if (!trimmedQuery.startsWith("SELECT")) {
-          return JSON.stringify({
-            error: "Only SELECT queries are allowed for security reasons"
-          });
-        }
-        const dangerousKeywords = ["DROP", "DELETE", "UPDATE", "INSERT", "ALTER", "CREATE", "TRUNCATE"];
-        for (const keyword of dangerousKeywords) {
-          if (trimmedQuery.includes(keyword)) {
-            return JSON.stringify({
-              error: `Query contains forbidden keyword: ${keyword}`
-            });
-          }
-        }
-        if (!sql_query.includes("$1") && !sql_query.toLowerCase().includes("organization_id")) {
-          return JSON.stringify({
-            error: "Query must include organization_id filter using $1 parameter"
-          });
-        }
-        console.log(`[AI Query] Executing: ${explanation}`);
-        console.log(`[AI Query] SQL: ${sql_query}`);
-        const finalQuery = sql_query.replace(/\$1/g, `'${organizationId.replace(/'/g, "''")}'`);
-        const result = await db.execute(sql2.raw(finalQuery));
-        console.log(`[AI Query] Result rows: ${result.rows.length}`);
-        return JSON.stringify({
-          success: true,
-          explanation,
-          row_count: result.rows.length,
-          data: result.rows.slice(0, 100)
-          // Limit to 100 rows for response size
-        });
-      }
-      if (functionName === "create_excel_spreadsheet") {
-        const { filename, sheet_name, data, description } = args;
-        console.log(`[AI Excel] Creating spreadsheet: ${filename}`);
-        console.log(`[AI Excel] Data type:`, typeof data);
-        console.log(`[AI Excel] Data:`, JSON.stringify(data).substring(0, 200));
-        if (!data || !Array.isArray(data)) {
-          return JSON.stringify({
-            error: "Data must be a non-empty array",
-            received_type: typeof data
-          });
-        }
-        if (data.length === 0) {
-          return JSON.stringify({
-            error: "Data array cannot be empty"
-          });
-        }
-        console.log(`[AI Excel] Rows: ${data.length}`);
-        const workbook = XLSX.utils.book_new();
-        const worksheet = XLSX.utils.json_to_sheet(data);
-        XLSX.utils.book_append_sheet(workbook, worksheet, sheet_name);
-        const excelBuffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
-        const objectStorage = new ObjectStorageService();
-        const privateDir = objectStorage.getPrivateObjectDir();
-        const fileId = randomUUID();
-        const safeFilename = filename.replace(/[^a-zA-Z0-9_-]/g, "_");
-        const fullFilename = `${fileId}-${safeFilename}.xlsx`;
-        const storagePath = `${privateDir}/excel/${fullFilename}`;
-        await objectStorage.saveFile(storagePath, excelBuffer);
-        await storage.createAiGeneratedFile({
-          organizationId,
-          userId,
-          filename: fullFilename,
-          originalFilename: `${safeFilename}.xlsx`,
-          storagePath,
-          fileType: "excel"
-        });
-        const downloadUrl = `/api/files/download/${fullFilename}`;
-        console.log(`[AI Excel] Saved to: ${storagePath}`);
-        console.log(`[AI Excel] Download URL: ${downloadUrl}`);
-        console.log(`[AI Excel] Metadata saved for org ${organizationId}, user ${userId}`);
-        return JSON.stringify({
-          success: true,
-          description,
-          filename: `${safeFilename}.xlsx`,
-          download_url: downloadUrl,
-          row_count: data.length,
-          message: `Excel file "${safeFilename}.xlsx" created successfully with ${data.length} rows.`
-        });
-      }
-      return JSON.stringify({
-        error: `Unknown function: ${functionName}`
-      });
-    } catch (error) {
-      console.error(`Error executing function ${functionName}:`, error);
-      return JSON.stringify({
-        error: `Failed to execute ${functionName}: ${error instanceof Error ? error.message : "Unknown error"}`
-      });
-    }
-  }
-  async generateInsight(organizationId, userId, query, conversationHistory = [], fileContext = "") {
-    const recentQueries = await storage.getAIQueries(organizationId, 100);
-    const thisMonthQueries = recentQueries.filter((q) => {
-      const queryDate = new Date(q.createdAt);
-      const now = /* @__PURE__ */ new Date();
-      return queryDate.getMonth() === now.getMonth() && queryDate.getFullYear() === now.getFullYear();
-    });
-    if (thisMonthQueries.length >= MONTHLY_QUERY_LIMIT) {
-      throw new Error(
-        `Monthly query limit of ${MONTHLY_QUERY_LIMIT} reached. Please upgrade your plan.`
-      );
-    }
-    const messages = [
-      {
-        role: "system",
-        content: `You are an AI assistant for analyzing Mindbody studio data. You have access to a SQL database query tool.
-
-${DATABASE_SCHEMA}
-
-INSTRUCTIONS:
-- For ANY question about the data, use the execute_sql_query tool to write and run a SQL SELECT query
-- Always include "WHERE organization_id = $1" in your queries for data isolation
-- Be creative with SQL - you can use JOINs, aggregations, subqueries, date functions, etc.
-- After getting results, analyze them and provide clear, actionable insights
-- When users ask follow-up questions, refer to conversation history for context
-- When users ask to create a spreadsheet, export to Excel, or download data, use the create_excel_spreadsheet tool
-- You can combine both tools: first query data with execute_sql_query, then create a spreadsheet with the results
-${fileContext ? `- The user has uploaded files. Use their content to answer questions or cross-reference with database data` : ""}
-
-EXAMPLES:
-- "How many classes in 2025?" \u2192 SELECT COUNT(*) FROM class_schedules WHERE organization_id = $1 AND EXTRACT(YEAR FROM start_time) = 2025
-- "Top 10 students by attendance?" \u2192 SELECT s.first_name, s.last_name, COUNT(*) as classes FROM attendance a JOIN students s ON a.student_id = s.id WHERE a.organization_id = $1 AND a.status = 'attended' GROUP BY s.id, s.first_name, s.last_name ORDER BY classes DESC LIMIT 10
-- "Revenue this month?" \u2192 SELECT SUM(amount) FROM revenue WHERE organization_id = $1 AND EXTRACT(YEAR FROM transaction_date) = EXTRACT(YEAR FROM CURRENT_DATE) AND EXTRACT(MONTH FROM transaction_date) = EXTRACT(MONTH FROM CURRENT_DATE)
-
-You can answer ANY question about the data - just write the appropriate SQL query!${fileContext ? `
-
-UPLOADED FILE DATA:
-${fileContext}` : ""}`
-      }
-    ];
-    if (conversationHistory.length > 0) {
-      messages.push(...conversationHistory);
-    }
-    messages.push({
-      role: "user",
-      content: query
-    });
-    let totalTokensUsed = 0;
-    let finalResponse = "";
-    let iterationCount = 0;
-    const maxIterations = 5;
-    const downloadLinks = [];
-    while (iterationCount < maxIterations) {
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages,
-        tools: QUERY_TOOLS,
-        tool_choice: "auto",
-        max_tokens: MAX_TOKENS_PER_QUERY,
-        temperature: 0.7
-      });
-      totalTokensUsed += completion.usage?.total_tokens || 0;
-      const message = completion.choices[0]?.message;
-      if (!message) {
-        throw new Error("No response from AI");
-      }
-      messages.push(message);
-      if (message.tool_calls && message.tool_calls.length > 0) {
-        for (const toolCall of message.tool_calls) {
-          if (toolCall.type !== "function") continue;
-          const functionName = toolCall.function.name;
-          const functionArgs = JSON.parse(toolCall.function.arguments);
-          const result = await this.executeFunctionCall(
-            functionName,
-            functionArgs,
-            organizationId,
-            userId
-          );
-          if (functionName === "create_excel_spreadsheet") {
-            try {
-              const resultData = JSON.parse(result);
-              if (resultData.success && resultData.download_url) {
-                downloadLinks.push({
-                  filename: resultData.filename,
-                  url: resultData.download_url
-                });
-              }
-            } catch (e) {
-              console.error("Failed to parse Excel creation result:", e);
-            }
-          }
-          messages.push({
-            role: "tool",
-            tool_call_id: toolCall.id,
-            content: result
-          });
-        }
-        iterationCount++;
-        continue;
-      }
-      finalResponse = message.content || "No response generated";
-      break;
-    }
-    if (downloadLinks.length > 0) {
-      finalResponse += "\n\n";
-      downloadLinks.forEach((link) => {
-        finalResponse += `[Download: ${link.filename}](${link.url})
-`;
-      });
-    }
-    await storage.createAIQuery({
-      organizationId,
-      userId,
-      query,
-      response: finalResponse,
-      tokensUsed: totalTokensUsed
-    });
-    return {
-      response: finalResponse,
-      tokensUsed: totalTokensUsed
-    };
-  }
-};
-var openaiService = new OpenAIService();
-
 // server/routes/ai.ts
 init_storage();
+init_ai_worker();
 function registerAIRoutes(app2) {
   app2.post("/api/ai/query", requireAuth, async (req, res) => {
     try {
@@ -4987,13 +5557,14 @@ function registerAIRoutes(app2) {
       if (!organizationId || !userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
-      const { query, conversationHistory, fileIds, conversationId, saveToHistory } = req.body;
+      const { query, conversationId, fileIds } = req.body;
       if (!query || typeof query !== "string" || query.trim().length === 0) {
         return res.status(400).json({ error: "Query is required" });
       }
       if (query.length > 500) {
         return res.status(400).json({ error: "Query too long (max 500 characters)" });
       }
+      const validatedFileIds = Array.isArray(fileIds) ? fileIds.filter((id) => typeof id === "string") : [];
       let activeConversation = null;
       if (conversationId && typeof conversationId === "string") {
         activeConversation = await storage.getConversation(conversationId);
@@ -5005,79 +5576,73 @@ function registerAIRoutes(app2) {
           return res.status(404).json({ error: "Conversation not found" });
         }
       }
-      const history = [];
-      if (Array.isArray(conversationHistory)) {
-        if (conversationHistory.length > 20) {
-          return res.status(400).json({ error: "Conversation history too long (max 20 messages)" });
-        }
-        for (const entry of conversationHistory) {
-          if (typeof entry !== "object" || entry === null) {
-            return res.status(400).json({ error: "Invalid conversation history format" });
-          }
-          const { role, content } = entry;
-          if (role !== "user" && role !== "assistant") {
-            return res.status(400).json({ error: "Invalid role in conversation history. Only 'user' and 'assistant' are allowed." });
-          }
-          if (typeof content !== "string" || content.trim().length === 0) {
-            return res.status(400).json({ error: "Invalid content in conversation history" });
-          }
-          if (content.length > 2e3) {
-            return res.status(400).json({ error: "Conversation history message too long (max 2000 characters per message)" });
-          }
-          history.push({ role, content: content.trim() });
-        }
+      if (!activeConversation) {
+        const title = query.trim().substring(0, 50) + (query.length > 50 ? "..." : "");
+        activeConversation = await storage.createConversation({
+          organizationId,
+          userId,
+          title
+        });
       }
-      let fileContext = "";
-      if (Array.isArray(fileIds) && fileIds.length > 0) {
-        for (const fileId of fileIds) {
-          if (typeof fileId !== "string") continue;
-          const file = await storage.getUploadedFile(fileId);
-          if (!file || file.organizationId !== organizationId || file.userId !== userId) {
-            continue;
-          }
-          if (file.extractedText) {
-            fileContext += `
-
---- File: ${file.originalName} ---
-${file.extractedText}
-`;
-          }
-        }
-      }
-      const result = await openaiService.generateInsight(organizationId, userId, query, history, fileContext);
-      let savedConversationId;
-      if (saveToHistory !== false) {
-        try {
-          if (!activeConversation) {
-            const title = query.trim().substring(0, 50) + (query.length > 50 ? "..." : "");
-            activeConversation = await storage.createConversation({
-              organizationId,
-              userId,
-              title
-            });
-          }
-          await storage.createConversationMessage({
-            conversationId: activeConversation.id,
-            role: "user",
-            content: query.trim()
-          });
-          await storage.createConversationMessage({
-            conversationId: activeConversation.id,
-            role: "assistant",
-            content: result.response
-          });
-          await storage.updateConversation(activeConversation.id, {});
-          savedConversationId = activeConversation.id;
-        } catch (saveError) {
-          console.error("Error saving to conversation:", saveError);
-        }
-      }
+      const userMessage = await storage.createConversationMessage({
+        conversationId: activeConversation.id,
+        role: "user",
+        content: query.trim(),
+        fileIds: validatedFileIds.length > 0 ? validatedFileIds : void 0,
+        status: "completed"
+      });
+      const assistantMessage = await storage.createConversationMessage({
+        conversationId: activeConversation.id,
+        role: "assistant",
+        content: "",
+        status: "pending"
+      });
+      await storage.updateConversation(activeConversation.id, {});
+      processAIQuery(assistantMessage.id).catch((error) => {
+        console.error("[API] Background processing error:", error);
+      });
       res.json({
-        ...result,
-        ...savedConversationId && { conversationId: savedConversationId }
+        conversationId: activeConversation.id,
+        messageId: assistantMessage.id,
+        status: "pending"
       });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to generate AI insight";
+      const errorMessage = error instanceof Error ? error.message : "Failed to create AI query";
+      res.status(500).json({ error: errorMessage });
+    }
+  });
+  app2.get("/api/ai/message/:id", requireAuth, async (req, res) => {
+    try {
+      const organizationId = req.user?.organizationId;
+      const userId = req.user?.id;
+      if (!organizationId || !userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const messageId = req.params.id;
+      if (!messageId) {
+        return res.status(400).json({ error: "Message ID is required" });
+      }
+      const message = await storage.getConversationMessage(messageId);
+      if (!message) {
+        return res.status(404).json({ error: "Message not found" });
+      }
+      const conversation = await storage.getConversation(message.conversationId);
+      if (!conversation) {
+        return res.status(404).json({ error: "Conversation not found" });
+      }
+      if (conversation.organizationId !== organizationId || conversation.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      res.json({
+        id: message.id,
+        role: message.role,
+        content: message.content,
+        status: message.status,
+        error: message.error,
+        createdAt: message.createdAt
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to fetch message status";
       res.status(500).json({ error: errorMessage });
     }
   });
@@ -5733,6 +6298,22 @@ function registerScheduledImportRoutes(app2) {
       res.status(500).json({ error: "Failed to start import" });
     }
   });
+  app2.post("/api/scheduled-imports/clear-status", requireAuth, async (req, res) => {
+    try {
+      const organizationId = req.user?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      await storage.updateScheduledImport(organizationId, {
+        lastRunStatus: null,
+        lastRunError: null
+      });
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error clearing scheduled import status:", error);
+      res.status(500).json({ error: "Failed to clear status" });
+    }
+  });
 }
 
 // server/routes/backups.ts
@@ -6337,6 +6918,7 @@ Row ${i + 1}:
 }
 
 // server/routes/files.ts
+init_objectStorage();
 import { writeFileSync, unlinkSync } from "fs";
 import { join, basename } from "path";
 import { randomUUID as randomUUID2 } from "crypto";
@@ -6683,6 +7265,60 @@ function registerConversationRoutes(app2) {
   });
 }
 
+// server/routes/pricing-options.ts
+init_storage();
+init_mindbody();
+function registerPricingOptionRoutes(app2) {
+  app2.get("/api/pricing-options", requireAuth, async (req, res) => {
+    try {
+      const organizationId = req.user?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const pricingOptions2 = await storage.getPricingOptions(organizationId);
+      const count = await storage.getPricingOptionsCount(organizationId);
+      res.json({ pricingOptions: pricingOptions2, count });
+    } catch (error) {
+      console.error("Failed to fetch pricing options:", error);
+      res.status(500).json({ error: "Failed to fetch pricing options" });
+    }
+  });
+  app2.post("/api/pricing-options/import", requireAuth, async (req, res) => {
+    try {
+      const organizationId = req.user?.organizationId;
+      if (!organizationId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      let totalImported = 0;
+      let totalUpdated = 0;
+      let offset = 0;
+      let completed = false;
+      while (!completed) {
+        const result = await mindbodyService.importServicesResumable(
+          organizationId,
+          async (current, total) => {
+            console.log(`Importing pricing options: ${current}/${total}`);
+          },
+          offset
+        );
+        totalImported += result.imported;
+        totalUpdated += result.updated;
+        offset = result.nextOffset;
+        completed = result.completed;
+      }
+      res.json({
+        success: true,
+        imported: totalImported,
+        updated: totalUpdated,
+        total: totalImported + totalUpdated
+      });
+    } catch (error) {
+      console.error("Failed to import pricing options:", error);
+      res.status(500).json({ error: "Failed to import pricing options" });
+    }
+  });
+}
+
 // server/routes/index.ts
 async function registerRoutes(app2) {
   registerUserRoutes(app2);
@@ -6700,6 +7336,7 @@ async function registerRoutes(app2) {
   registerKPIRoutes(app2);
   registerFileRoutes(app2);
   registerConversationRoutes(app2);
+  registerPricingOptionRoutes(app2);
   const httpServer = createServer(app2);
   return httpServer;
 }
@@ -6888,6 +7525,12 @@ app.use((req, res, next) => {
     }
   } catch (error) {
     console.error("[Auto-Resume] Failed to auto-resume interrupted import jobs on startup:", error);
+  }
+  try {
+    const { recoverPendingMessages: recoverPendingMessages2 } = await Promise.resolve().then(() => (init_ai_worker(), ai_worker_exports));
+    await recoverPendingMessages2();
+  } catch (error) {
+    console.error("[AI Recovery] Failed to recover pending AI messages on startup:", error);
   }
   try {
     const { importScheduler: importScheduler2 } = await Promise.resolve().then(() => (init_scheduler(), scheduler_exports));
