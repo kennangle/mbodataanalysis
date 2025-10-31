@@ -636,10 +636,10 @@ export class MindbodyService {
     startOffset: number = 0,
     schedulesByTime?: Map<string, any> // Pass cached schedules to avoid reloading
   ): Promise<{ imported: number; nextStudentIndex: number; completed: boolean; schedulesByTime?: Map<string, any> }> {
-    // OPTIMIZED: Query visits by date range directly (not per-student) to avoid memory issues
-    // This reduces API calls from 1000s (one per student) to dozens (paginated by date range)
+    // MEMORY-OPTIMIZED: Process clients in small batches (Mindbody requires ClientId parameter)
+    // This prevents memory exhaustion while allowing resumable imports
     
-    const VISITS_BATCH_SIZE = 200; // Fetch 200 visits per API call
+    const CLIENTS_PER_BATCH = 50; // Process 50 clients at a time
     const BATCH_DELAY = 0; // No delay for faster imports
     
     // Load schedules once, reuse on subsequent batches
@@ -654,99 +654,94 @@ export class MindbodyService {
       }
     }
 
-    // Load all students once for quick lookup by Mindbody Client ID
+    // Get total student count for progress tracking
     const allStudents = await storage.getStudents(organizationId, 100000);
-    const studentsByMindbodyId = new Map(
-      allStudents
-        .filter(s => s.mindbodyClientId)
-        .map(s => [s.mindbodyClientId!, s])
-    );
-    console.log(`[Visits] Loaded ${studentsByMindbodyId.size} students for ID matching`);
+    const totalStudents = allStudents.length;
+    
+    // Get batch of students to process (CRITICAL: Don't process all at once)
+    const studentsToProcess = allStudents
+      .filter(s => s.mindbodyClientId)
+      .slice(startOffset, startOffset + CLIENTS_PER_BATCH);
+      
+    console.log(`[Visits] Processing clients ${startOffset} to ${startOffset + studentsToProcess.length} of ${totalStudents}`);
     
     // Mindbody API requires YYYY-MM-DD format
     const startDateStr = startDate.toISOString().split("T")[0];
     const endDateStr = endDate.toISOString().split("T")[0];
     
-    // Query visits by date range (NOT per-student) - this is the key optimization
-    // NOTE: Don't include Limit/Offset here - fetchPage adds them automatically
-    const endpoint = `/client/clientvisits?StartDate=${startDateStr}&EndDate=${endDateStr}`;
-    
-    console.log(`[Visits] Fetching batch: offset ${startOffset}, limit ${VISITS_BATCH_SIZE}`);
-    
     let imported = 0;
     let skippedNoSchedule = 0;
-    let skippedNoStudent = 0;
     
     try {
-      const { results: visits, totalResults } = await this.fetchPage<MindbodyVisit>(
-        organizationId,
-        endpoint,
-        "Visits",
-        startOffset,
-        VISITS_BATCH_SIZE
-      );
-      
-      console.log(`[Visits] Processing ${visits.length} visits from total ${totalResults}`);
-      
-      // Process each visit
-      for (const visit of visits) {
+      // Process each client in this batch
+      for (const student of studentsToProcess) {
         try {
-          if (!visit.StartDateTime || !visit.ClientId) {
-            continue;
+          const endpoint = `/client/clientvisits?ClientId=${student.mindbodyClientId}&StartDate=${startDateStr}&EndDate=${endDateStr}`;
+          const data = await this.makeAuthenticatedRequest(organizationId, endpoint);
+          
+          const visits: MindbodyVisit[] = data.Visits || [];
+          
+          // Process visits for this client
+          for (const visit of visits) {
+            try {
+              if (!visit.StartDateTime) {
+                continue;
+              }
+              
+              // Match visit to schedule by start time
+              const visitStartTime = new Date(visit.StartDateTime).toISOString();
+              const schedule = schedulesByTime.get(visitStartTime);
+              
+              if (!schedule) {
+                skippedNoSchedule++;
+                // Log skipped record
+                await storage.createSkippedImportRecord({
+                  organizationId,
+                  dataType: "visits",
+                  mindbodyId: student.mindbodyClientId || "unknown",
+                  reason: "No matching class schedule found",
+                  rawData: JSON.stringify({
+                    clientId: student.mindbodyClientId,
+                    startDateTime: visit.StartDateTime,
+                    className: visit.ClassId || "Unknown"
+                  }),
+                }).catch(err => {
+                  console.error(`[Visits] Failed to log skipped record:`, err);
+                });
+                continue;
+              }
+              
+              // Create attendance record
+              await storage.createAttendance({
+                organizationId,
+                studentId: student.id,
+                scheduleId: schedule.id,
+                attendedAt: new Date(visit.StartDateTime),
+                status: visit.SignedIn ? "attended" : "noshow",
+              });
+              
+              imported++;
+            } catch (error) {
+              console.error(`[Visits] Failed to import visit for client ${student.mindbodyClientId}:`, error);
+            }
           }
-          
-          // Look up student by Mindbody Client ID
-          const student = studentsByMindbodyId.get(visit.ClientId);
-          if (!student) {
-            skippedNoStudent++;
-            continue;
+        } catch (error: any) {
+          // Skip clients that cause errors (they may not exist in Mindbody anymore)
+          if (error.message?.includes("404") || error.message?.includes("Not Found")) {
+            console.log(`[Visits] Client ${student.mindbodyClientId} not found in Mindbody, skipping`);
+          } else {
+            console.error(`[Visits] Error fetching visits for client ${student.mindbodyClientId}:`, error);
           }
-          
-          // Match visit to schedule by start time
-          const visitStartTime = new Date(visit.StartDateTime).toISOString();
-          const schedule = schedulesByTime.get(visitStartTime);
-          
-          if (!schedule) {
-            skippedNoSchedule++;
-            // Log skipped record for debugging
-            await storage.createSkippedImportRecord({
-              organizationId,
-              dataType: "visits",
-              mindbodyId: visit.ClientId || "unknown",
-              reason: "No matching class schedule found",
-              rawData: JSON.stringify({
-                clientId: visit.ClientId,
-                startDateTime: visit.StartDateTime,
-                className: visit.ClassId || "Unknown"
-              }),
-            }).catch(err => {
-              console.error(`[Visits] Failed to log skipped record:`, err);
-            });
-            continue;
-          }
-          
-          // Create attendance record
-          await storage.createAttendance({
-            organizationId,
-            studentId: student.id,
-            scheduleId: schedule.id,
-            attendedAt: new Date(visit.StartDateTime),
-            status: visit.SignedIn ? "attended" : "noshow",
-          });
-          
-          imported++;
-        } catch (error) {
-          console.error(`[Visits] Failed to import visit:`, error);
         }
       }
       
-      const nextOffset = startOffset + visits.length;
-      const completed = nextOffset >= totalResults;
+      const nextOffset = startOffset + studentsToProcess.length;
+      const completed = nextOffset >= totalStudents;
       
-      console.log(`[Visits] Batch complete: imported ${imported}, skipped (no schedule: ${skippedNoSchedule}, no student: ${skippedNoStudent})`);
+      console.log(`[Visits] Batch complete: imported ${imported}, skipped (no schedule: ${skippedNoSchedule})`);
       
       // Update progress
-      await onProgress(nextOffset, totalResults);
+      await onProgress(nextOffset, totalStudents);
       
       // Delay before next batch (unless completed)
       if (!completed) {
@@ -760,7 +755,7 @@ export class MindbodyService {
         schedulesByTime 
       };
     } catch (error) {
-      console.error(`[Visits] Error fetching visits batch:`, error);
+      console.error(`[Visits] Error in batch processing:`, error);
       throw error;
     }
   }
