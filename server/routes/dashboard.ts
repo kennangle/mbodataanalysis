@@ -67,6 +67,8 @@ export function registerDashboardRoutes(app: Express) {
         [startDate, endDate] = [endDate, startDate];
       }
 
+      console.log(`[Dashboard Stats] Using date range: ${startDate.toISOString()} to ${endDate.toISOString()}`);
+
       // Determine if this is a year-to-date comparison (starts on Jan 1)
       const isYearToDate = startDate.getUTCMonth() === 0 && startDate.getUTCDate() === 1;
       
@@ -133,6 +135,8 @@ export function registerDashboardRoutes(app: Express) {
       res.setHeader("Expires", "0");
 
       console.log(`[Dashboard Stats] Attendance records count: ${attendanceRecords.length}`);
+      console.log(`[Dashboard Stats] Current period revenue: $${currentPeriodRevenue.total.toFixed(2)} (${currentPeriodRevenue.count} transactions)`);
+      console.log(`[Dashboard Stats] Previous period revenue: $${previousPeriodRevenue.total.toFixed(2)} (${previousPeriodRevenue.count} transactions)`);
 
       res.json({
         totalRevenue: currentPeriodRevenue.total,

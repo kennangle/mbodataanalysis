@@ -731,7 +731,7 @@ export class MindbodyService {
       schedules.map(s => [s.startTime.toISOString(), s])
     );
     const schedulesByClassScheduleId = new Map(
-      schedules.filter(s => s.mindbodyClassId).map(s => [s.mindbodyClassId!, s])
+      schedules.filter(s => s.mindbodyScheduleId).map(s => [s.mindbodyScheduleId!, s])
     );
     
     let imported = 0;
