@@ -1235,6 +1235,72 @@ export class MindbodyService {
                       });
                       imported++;
                     }
+                    
+                    // Capture processing fees if present (typically transaction fees charged by payment processor)
+                    const processingFee = sale.ProcessingFee || sale.ProcessingFeeAmount || sale.PaymentProcessingFee;
+                    if (processingFee && processingFee > 0) {
+                      await storage.upsertRevenue({
+                        organizationId,
+                        studentId: studentId || null,
+                        mindbodySaleId: saleId,
+                        mindbodyItemId: "fee-processing",
+                        amount: processingFee.toString(),
+                        type: "Processing Fee",
+                        description: "Payment processing fee",
+                        transactionDate,
+                      });
+                      imported++;
+                    }
+                    
+                    // Capture service fees if present
+                    const serviceFee = sale.ServiceFee || sale.ServiceFeeAmount;
+                    if (serviceFee && serviceFee > 0) {
+                      await storage.upsertRevenue({
+                        organizationId,
+                        studentId: studentId || null,
+                        mindbodySaleId: saleId,
+                        mindbodyItemId: "fee-service",
+                        amount: serviceFee.toString(),
+                        type: "Service Fee",
+                        description: "Service fee",
+                        transactionDate,
+                      });
+                      imported++;
+                    }
+                    
+                    // Capture discounts as negative revenue (if they reduce the total)
+                    const discountAmount = sale.DiscountAmount || sale.TotalDiscounts || sale.Discount;
+                    if (discountAmount && discountAmount !== 0) {
+                      // Discounts are typically positive numbers representing the amount reduced
+                      // We store them as negative to show the reduction in revenue
+                      await storage.upsertRevenue({
+                        organizationId,
+                        studentId: studentId || null,
+                        mindbodySaleId: saleId,
+                        mindbodyItemId: "discount",
+                        amount: (-Math.abs(discountAmount)).toString(),
+                        type: "Discount",
+                        description: "Sale discount applied",
+                        transactionDate,
+                      });
+                      imported++;
+                    }
+                    
+                    // Capture tax if present (optional - for complete revenue tracking)
+                    const taxAmount = sale.TaxTotal || sale.Tax || sale.TaxAmount;
+                    if (taxAmount && taxAmount > 0) {
+                      await storage.upsertRevenue({
+                        organizationId,
+                        studentId: studentId || null,
+                        mindbodySaleId: saleId,
+                        mindbodyItemId: "tax",
+                        amount: taxAmount.toString(),
+                        type: "Tax",
+                        description: "Sales tax",
+                        transactionDate,
+                      });
+                      imported++;
+                    }
                   } else {
                     // No line items, fall back to payment transaction record
                     throw new Error("No purchased items in sale");
@@ -1405,6 +1471,70 @@ export class MindbodyService {
             } catch (error) {
               console.error(`Failed to import purchased item from sale ${sale.Id}:`, error);
             }
+          }
+          
+          // Capture processing fees if present
+          const processingFee = sale.ProcessingFee || sale.ProcessingFeeAmount || sale.PaymentProcessingFee;
+          if (processingFee && processingFee > 0) {
+            await storage.upsertRevenue({
+              organizationId,
+              studentId,
+              mindbodySaleId: sale.Id?.toString() || null,
+              mindbodyItemId: "fee-processing",
+              amount: processingFee.toString(),
+              type: "Processing Fee",
+              description: "Payment processing fee",
+              transactionDate: new Date(sale.SaleDateTime),
+            });
+            imported++;
+          }
+          
+          // Capture service fees if present
+          const serviceFee = sale.ServiceFee || sale.ServiceFeeAmount;
+          if (serviceFee && serviceFee > 0) {
+            await storage.upsertRevenue({
+              organizationId,
+              studentId,
+              mindbodySaleId: sale.Id?.toString() || null,
+              mindbodyItemId: "fee-service",
+              amount: serviceFee.toString(),
+              type: "Service Fee",
+              description: "Service fee",
+              transactionDate: new Date(sale.SaleDateTime),
+            });
+            imported++;
+          }
+          
+          // Capture discounts as negative revenue
+          const discountAmount = sale.DiscountAmount || sale.TotalDiscounts || sale.Discount;
+          if (discountAmount && discountAmount !== 0) {
+            await storage.upsertRevenue({
+              organizationId,
+              studentId,
+              mindbodySaleId: sale.Id?.toString() || null,
+              mindbodyItemId: "discount",
+              amount: (-Math.abs(discountAmount)).toString(),
+              type: "Discount",
+              description: "Sale discount applied",
+              transactionDate: new Date(sale.SaleDateTime),
+            });
+            imported++;
+          }
+          
+          // Capture tax if present
+          const taxAmount = sale.TaxTotal || sale.Tax || sale.TaxAmount;
+          if (taxAmount && taxAmount > 0) {
+            await storage.upsertRevenue({
+              organizationId,
+              studentId,
+              mindbodySaleId: sale.Id?.toString() || null,
+              mindbodyItemId: "tax",
+              amount: taxAmount.toString(),
+              type: "Tax",
+              description: "Sales tax",
+              transactionDate: new Date(sale.SaleDateTime),
+            });
+            imported++;
           }
         } catch (error) {
           console.error(`Failed to process sale ${sale.Id}:`, error);
