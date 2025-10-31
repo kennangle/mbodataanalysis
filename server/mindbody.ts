@@ -620,109 +620,131 @@ export class MindbodyService {
     startOffset: number = 0,
     schedulesByTime?: Map<string, any> // Pass cached schedules to avoid reloading
   ): Promise<{ imported: number; nextStudentIndex: number; completed: boolean; schedulesByTime?: Map<string, any> }> {
+    // OPTIMIZED: Query visits by date range directly (not per-student) to avoid memory issues
+    // This reduces API calls from 1000s (one per student) to dozens (paginated by date range)
+    
+    const VISITS_BATCH_SIZE = 200; // Fetch 200 visits per API call
+    const BATCH_DELAY = 0; // No delay for faster imports
+    
     // Load schedules once, reuse on subsequent batches
     if (!schedulesByTime) {
       try {
         const schedules = await storage.getClassSchedules(organizationId);
         schedulesByTime = new Map(schedules.map((s) => [s.startTime.toISOString(), s]));
+        console.log(`[Visits] Loaded ${schedules.length} class schedules for matching`);
       } catch (error) {
         console.error(`[Visits] CRITICAL ERROR loading schedules:`, error);
         throw new Error(`Failed to load class schedules: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
 
-    // Load all students into a map for quick lookup by Mindbody Client ID
-    const allStudents = await storage.getStudents(organizationId, 100000); // Get all students
+    // Load all students once for quick lookup by Mindbody Client ID
+    const allStudents = await storage.getStudents(organizationId, 100000);
     const studentsByMindbodyId = new Map(
       allStudents
         .filter(s => s.mindbodyClientId)
         .map(s => [s.mindbodyClientId!, s])
     );
+    console.log(`[Visits] Loaded ${studentsByMindbodyId.size} students for ID matching`);
     
-    // Convert Map to Array for iteration
-    const studentsArray = Array.from(allStudents).filter(s => s.mindbodyClientId);
-    const totalStudents = studentsArray.length;
-    
-    // Process students in parallel batches for speed
-    const CLIENTS_PER_BATCH = 10; // Process 10 clients at once
-    // Mindbody API requires YYYY-MM-DD format, not full ISO timestamp
+    // Mindbody API requires YYYY-MM-DD format
     const startDateStr = startDate.toISOString().split("T")[0];
     const endDateStr = endDate.toISOString().split("T")[0];
     
+    // Query visits by date range (NOT per-student) - this is the key optimization
+    const endpoint = `/client/clientvisits?StartDate=${startDateStr}&EndDate=${endDateStr}&Limit=${VISITS_BATCH_SIZE}&Offset=${startOffset}`;
+    
+    console.log(`[Visits] Fetching batch: offset ${startOffset}, limit ${VISITS_BATCH_SIZE}`);
+    
     let imported = 0;
     let skippedNoSchedule = 0;
+    let skippedNoStudent = 0;
     
-    // Get batch of clients to process (resumable)
-    const batchEnd = Math.min(startOffset + CLIENTS_PER_BATCH, totalStudents);
-    const clientBatch = studentsArray.slice(startOffset, batchEnd);
-    
-    // Process clients in parallel using /client/clientvisits endpoint
-    const results = await Promise.allSettled(
-      clientBatch.map(async (student) => {
+    try {
+      const { results: visits, totalResults } = await this.fetchPage<MindbodyVisit>(
+        organizationId,
+        endpoint,
+        "Visits",
+        startOffset,
+        VISITS_BATCH_SIZE
+      );
+      
+      console.log(`[Visits] Processing ${visits.length} visits from total ${totalResults}`);
+      
+      // Process each visit
+      for (const visit of visits) {
         try {
-          const { results: visits } = await this.fetchPage<MindbodyVisit>(
-            organizationId,
-            `/client/clientvisits?ClientId=${student.mindbodyClientId}&StartDate=${startDateStr}&EndDate=${endDateStr}`,
-            "Visits",
-            0,
-            1000 // Get up to 1000 visits for this client in date range
-          );
-          
-          let clientImported = 0;
-          let clientSkipped = 0;
-          
-          for (const visit of visits) {
-            try {
-              if (!visit.StartDateTime) continue;
-              
-              // Match visit to schedule by start time
-              const visitStartTime = new Date(visit.StartDateTime).toISOString();
-              const schedule = schedulesByTime.get(visitStartTime);
-              
-              if (!schedule) {
-                clientSkipped++;
-                continue;
-              }
-              
-              await storage.createAttendance({
-                organizationId,
-                studentId: student.id,
-                scheduleId: schedule.id,
-                attendedAt: new Date(visit.StartDateTime),
-                status: visit.SignedIn ? "attended" : "noshow",
-              });
-              
-              clientImported++;
-            } catch (error) {
-              console.error(`[Visits] Failed to import visit for client ${student.mindbodyClientId}:`, error);
-            }
+          if (!visit.StartDateTime || !visit.ClientId) {
+            continue;
           }
           
-          return { imported: clientImported, skipped: clientSkipped };
+          // Look up student by Mindbody Client ID
+          const student = studentsByMindbodyId.get(visit.ClientId);
+          if (!student) {
+            skippedNoStudent++;
+            continue;
+          }
+          
+          // Match visit to schedule by start time
+          const visitStartTime = new Date(visit.StartDateTime).toISOString();
+          const schedule = schedulesByTime.get(visitStartTime);
+          
+          if (!schedule) {
+            skippedNoSchedule++;
+            // Log skipped record for debugging
+            await storage.createSkippedImportRecord({
+              organizationId,
+              dataType: "visits",
+              reason: "No matching class schedule found",
+              rawData: JSON.stringify({
+                clientId: visit.ClientId,
+                startDateTime: visit.StartDateTime,
+                className: visit.ClassId || "Unknown"
+              }),
+            }).catch(err => {
+              console.error(`[Visits] Failed to log skipped record:`, err);
+            });
+            continue;
+          }
+          
+          // Create attendance record
+          await storage.createAttendance({
+            organizationId,
+            studentId: student.id,
+            scheduleId: schedule.id,
+            attendedAt: new Date(visit.StartDateTime),
+            status: visit.SignedIn ? "attended" : "noshow",
+          });
+          
+          imported++;
         } catch (error) {
-          // Log error but don't fail entire batch
-          console.error(`[Visits] Failed to fetch visits for client ${student.mindbodyClientId}:`, error);
-          return { imported: 0, skipped: 0 };
+          console.error(`[Visits] Failed to import visit:`, error);
         }
-      })
-    );
-    
-    // Aggregate results from parallel processing
-    for (const result of results) {
-      if (result.status === 'fulfilled') {
-        imported += result.value.imported;
-        skippedNoSchedule += result.value.skipped;
       }
+      
+      const nextOffset = startOffset + visits.length;
+      const completed = nextOffset >= totalResults;
+      
+      console.log(`[Visits] Batch complete: imported ${imported}, skipped (no schedule: ${skippedNoSchedule}, no student: ${skippedNoStudent})`);
+      
+      // Update progress
+      await onProgress(nextOffset, totalResults);
+      
+      // Delay before next batch (unless completed)
+      if (!completed) {
+        await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY));
+      }
+      
+      return { 
+        imported, 
+        nextStudentIndex: nextOffset, 
+        completed, 
+        schedulesByTime 
+      };
+    } catch (error) {
+      console.error(`[Visits] Error fetching visits batch:`, error);
+      throw error;
     }
-    
-    const completed = batchEnd >= totalStudents;
-    const nextOffset = completed ? 0 : batchEnd;
-    
-    // Update progress
-    await onProgress(batchEnd, totalStudents);
-    
-    
-    return { imported, nextStudentIndex: nextOffset, completed, schedulesByTime };
   }
 
   async importSalesResumable(
