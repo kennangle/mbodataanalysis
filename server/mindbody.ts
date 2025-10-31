@@ -652,7 +652,8 @@ export class MindbodyService {
     const endDateStr = endDate.toISOString().split("T")[0];
     
     // Query visits by date range (NOT per-student) - this is the key optimization
-    const endpoint = `/client/clientvisits?StartDate=${startDateStr}&EndDate=${endDateStr}&Limit=${VISITS_BATCH_SIZE}&Offset=${startOffset}`;
+    // NOTE: Don't include Limit/Offset here - fetchPage adds them automatically
+    const endpoint = `/client/clientvisits?StartDate=${startDateStr}&EndDate=${endDateStr}`;
     
     console.log(`[Visits] Fetching batch: offset ${startOffset}, limit ${VISITS_BATCH_SIZE}`);
     
@@ -695,6 +696,7 @@ export class MindbodyService {
             await storage.createSkippedImportRecord({
               organizationId,
               dataType: "visits",
+              mindbodyId: visit.ClientId || "unknown",
               reason: "No matching class schedule found",
               rawData: JSON.stringify({
                 clientId: visit.ClientId,
