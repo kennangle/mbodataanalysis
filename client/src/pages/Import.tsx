@@ -8,7 +8,6 @@ import { DataImportCard } from "@/components/DataImportCard";
 import { CsvImportCard } from "@/components/CsvImportCard";
 import { AttendanceCsvImportCard } from "@/components/AttendanceCsvImportCard";
 import { ScheduledImportCard } from "@/components/ScheduledImportCard";
-import { UtilityFunctionTestCard } from "@/components/UtilityFunctionTestCard";
 
 export default function Import() {
   const { user, isLoading } = useAuth();
@@ -46,10 +45,9 @@ export default function Import() {
           <main className="flex-1 overflow-y-auto p-6">
             <div className="max-w-screen-2xl mx-auto space-y-6">
               <div className="max-w-2xl space-y-6">
-                <UtilityFunctionTestCard />
+                <DataImportCard />
                 <ScheduledImportCard />
                 <AttendanceCsvImportCard />
-                <DataImportCard />
                 <CsvImportCard />
               </div>
             </div>
