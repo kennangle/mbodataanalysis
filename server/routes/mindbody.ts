@@ -348,6 +348,10 @@ export function registerMindbodyRoutes(app: Express) {
         return res.status(400).json({ error: "At least one data type must be selected" });
       }
 
+      // Extract useUtilityFunction flag (default: true for new imports)
+      const useUtilityFunction = config?.useUtilityFunction !== false;
+      console.log("[Import Start] Fast Mode (Utility Function):", useUtilityFunction);
+
       // Create import job
       const job = await storage.createImportJob({
         organizationId,
@@ -359,6 +363,7 @@ export function registerMindbodyRoutes(app: Express) {
         currentDataType: null,
         currentOffset: 0,
         error: null,
+        useUtilityFunction,
       });
 
       // Start processing in background (don't await)

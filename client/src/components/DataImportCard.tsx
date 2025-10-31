@@ -3,12 +3,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Upload, CheckCircle, AlertCircle, Loader2, Database, Play, History, ChevronDown, ChevronUp, X } from "lucide-react";
+import { Upload, CheckCircle, AlertCircle, Loader2, Database, Play, History, ChevronDown, ChevronUp, X, Zap } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { format } from "date-fns";
 import { formatDateTime, formatDateShort } from "@/lib/timezone";
 import { useAuth } from "@/lib/auth";
@@ -29,6 +30,7 @@ interface ImportConfig {
     visits: boolean;
     sales: boolean;
   };
+  useUtilityFunction: boolean;
 }
 
 interface JobProgress {
@@ -258,6 +260,7 @@ export function DataImportCard() {
       visits: false,
       sales: false,
     },
+    useUtilityFunction: true, // Default to Fast Mode
   });
 
   // Poll for job status
@@ -706,6 +709,40 @@ export function DataImportCard() {
                       Visits (Attendance Records)
                     </label>
                   </div>
+                  
+                  {/* Fast Mode toggle - only show when visits is selected */}
+                  {importConfig.dataTypes.visits && (
+                    <div className="ml-6 p-3 rounded-md bg-blue-500/5 border border-blue-500/20 space-y-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          <Zap className="h-4 w-4 text-blue-600" />
+                          <Label htmlFor="fast-mode" className="text-sm font-medium cursor-pointer">
+                            Fast Mode
+                          </Label>
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-blue-500/30 text-blue-700">
+                            ~5,400x faster
+                          </Badge>
+                        </div>
+                        <Switch
+                          id="fast-mode"
+                          checked={importConfig.useUtilityFunction}
+                          onCheckedChange={(checked) =>
+                            setImportConfig((prev) => ({
+                              ...prev,
+                              useUtilityFunction: checked,
+                            }))
+                          }
+                          data-testid="switch-fast-mode"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {importConfig.useUtilityFunction
+                          ? "Uses Mindbody's UtilityFunction_VisitsV4 (1-2 API calls, seconds instead of hours)"
+                          : "Uses per-client API calls (slower but proven)"}
+                      </p>
+                    </div>
+                  )}
+                  
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="sales"
