@@ -673,13 +673,20 @@ export class MindbodyService {
     let skippedNoSchedule = 0;
     
     try {
-      // Process each client in this batch
-      for (const student of studentsToProcess) {
+      // PARALLEL PROCESSING: Process multiple clients simultaneously for faster imports
+      // Using p-limit to control concurrency and avoid overwhelming Mindbody API
+      const pLimit = (await import('p-limit')).default;
+      const limit = pLimit(10); // Process 10 clients in parallel
+      
+      const processClient = async (student: any) => {
         try {
           const endpoint = `/client/clientvisits?ClientId=${student.mindbodyClientId}&StartDate=${startDateStr}&EndDate=${endDateStr}`;
           const data = await this.makeAuthenticatedRequest(organizationId, endpoint);
           
           const visits: MindbodyVisit[] = data.Visits || [];
+          
+          let clientImported = 0;
+          let clientSkipped = 0;
           
           // Process visits for this client
           for (const visit of visits) {
@@ -693,7 +700,7 @@ export class MindbodyService {
               const schedule = schedulesByTime.get(visitStartTime);
               
               if (!schedule) {
-                skippedNoSchedule++;
+                clientSkipped++;
                 // Log skipped record
                 await storage.createSkippedImportRecord({
                   organizationId,
@@ -720,11 +727,13 @@ export class MindbodyService {
                 status: visit.SignedIn ? "attended" : "noshow",
               });
               
-              imported++;
+              clientImported++;
             } catch (error) {
               console.error(`[Visits] Failed to import visit for client ${student.mindbodyClientId}:`, error);
             }
           }
+          
+          return { imported: clientImported, skipped: clientSkipped };
         } catch (error: any) {
           // Skip clients that cause errors (they may not exist in Mindbody anymore)
           if (error.message?.includes("404") || error.message?.includes("Not Found")) {
@@ -732,7 +741,19 @@ export class MindbodyService {
           } else {
             console.error(`[Visits] Error fetching visits for client ${student.mindbodyClientId}:`, error);
           }
+          return { imported: 0, skipped: 0 };
         }
+      };
+      
+      // Process all clients in parallel with concurrency limit
+      const results = await Promise.all(
+        studentsToProcess.map(student => limit(() => processClient(student)))
+      );
+      
+      // Aggregate results
+      for (const result of results) {
+        imported += result.imported;
+        skippedNoSchedule += result.skipped;
       }
       
       const nextOffset = startOffset + studentsToProcess.length;
