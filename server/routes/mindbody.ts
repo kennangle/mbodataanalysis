@@ -811,4 +811,53 @@ export function registerMindbodyRoutes(app: Express) {
       res.status(500).json({ error: errorMessage });
     }
   });
+
+  // TEMPORARY: Debug endpoint to view recent console logs
+  // Access at: /api/mindbody/debug/logs
+  const recentLogs: { timestamp: string; message: string; level: string }[] = [];
+  const MAX_LOGS = 100;
+  
+  // Intercept console.log for Sales Import logs only
+  const originalLog = console.log;
+  console.log = function(...args: any[]) {
+    originalLog.apply(console, args);
+    
+    // Only capture Sales Import logs
+    const message = args.map(arg => 
+      typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+    ).join(' ');
+    
+    if (message.includes('[Sales Import]')) {
+      recentLogs.push({
+        timestamp: new Date().toISOString(),
+        message,
+        level: 'log'
+      });
+      
+      // Keep only last MAX_LOGS entries
+      if (recentLogs.length > MAX_LOGS) {
+        recentLogs.shift();
+      }
+    }
+  };
+
+  app.get("/api/mindbody/debug/logs", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as User;
+      
+      // Only allow admin users to view logs
+      if (user.role !== 'admin') {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      res.json({
+        logs: recentLogs,
+        count: recentLogs.length,
+        note: "Showing Sales Import diagnostic logs only. For full logs, use Replit's Publishing → Logs tab."
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to fetch logs";
+      res.status(500).json({ error: errorMessage });
+    }
+  });
 }
