@@ -891,7 +891,7 @@ export class MindbodyService {
           // Try matching schedule by ClassScheduleID first (most reliable)
           let schedule = null;
           if (visit.ClassScheduleID) {
-            schedule = schedulesByClassScheduleId.get(Number(visit.ClassScheduleID));
+            schedule = schedulesByClassScheduleId.get(String(visit.ClassScheduleID));
           }
           
           // Fallback: try matching by timestamp
