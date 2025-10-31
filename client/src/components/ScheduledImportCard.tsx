@@ -562,12 +562,6 @@ export function ScheduledImportCard() {
               </Select>
             </div>
 
-            {config?.schedule && (
-              <div className="rounded-md bg-muted p-3 text-sm">
-                <span className="text-muted-foreground">Cron expression: </span>
-                <code className="font-mono">{generateCronSchedule(dayOfWeek, hour, minute)}</code>
-              </div>
-            )}
 
             {config?.lastRunAt && (
               <div className="text-sm text-muted-foreground">
