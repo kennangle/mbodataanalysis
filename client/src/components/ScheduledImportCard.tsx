@@ -170,7 +170,7 @@ export function ScheduledImportCard() {
   const [dataTypes, setDataTypes] = useState<string[]>(["students", "classes", "visits", "sales"]);
   
   // Track active import job for progress display
-  const { jobStatus, isJobActive, progressPercentage } = useActiveImportJob({ showToasts: false });
+  const { jobStatus, isJobActive, progressPercentage, refreshActiveJob } = useActiveImportJob({ showToasts: false });
 
   const { data: config, isLoading } = useQuery<ScheduledImportConfig>({
     queryKey: ["/api/scheduled-imports"],
@@ -226,6 +226,8 @@ export function ScheduledImportCard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/scheduled-imports"] });
+      // Refresh active job to show progress meter
+      refreshActiveJob();
       toast({
         title: "Import started",
         description: "The scheduled import has been triggered manually.",
