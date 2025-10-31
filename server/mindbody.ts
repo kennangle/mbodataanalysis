@@ -639,7 +639,7 @@ export class MindbodyService {
     // MEMORY-OPTIMIZED: Process clients in small batches (Mindbody requires ClientId parameter)
     // This prevents memory exhaustion while allowing resumable imports
     
-    const CLIENTS_PER_BATCH = 50; // Process 50 clients at a time
+    const CLIENTS_PER_BATCH = 200; // Process 200 clients at a time
     const BATCH_DELAY = 0; // No delay for faster imports
     
     // Load schedules once, reuse on subsequent batches
