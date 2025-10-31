@@ -6,6 +6,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { AppHeader } from "@/components/AppHeader";
 import { DataImportCard } from "@/components/DataImportCard";
 import { CsvImportCard } from "@/components/CsvImportCard";
+import { AttendanceCsvImportCard } from "@/components/AttendanceCsvImportCard";
 import { ScheduledImportCard } from "@/components/ScheduledImportCard";
 
 export default function Import() {
@@ -45,6 +46,7 @@ export default function Import() {
             <div className="max-w-screen-2xl mx-auto space-y-6">
               <div className="max-w-2xl space-y-6">
                 <ScheduledImportCard />
+                <AttendanceCsvImportCard />
                 <DataImportCard />
                 <CsvImportCard />
               </div>
