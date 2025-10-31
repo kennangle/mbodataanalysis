@@ -83,20 +83,13 @@ const parseDateSafe = (dateStr: string): Date => {
 export function DataImportCard() {
   const { user } = useAuth();
   const timezone = user?.timezone || "UTC";
+  const [currentJobId, setCurrentJobId] = useState<string | null>(null);
+  const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
+  const [isLoadingActiveJob, setIsLoadingActiveJob] = useState(true);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isDismissedError, setIsDismissedError] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  
-  // Use the active import job hook
-  const {
-    jobStatus,
-    isLoading: isLoadingActiveJob,
-    progressPercentage,
-    apiMetrics,
-    refreshActiveJob,
-    calculateApiMetrics: calculateApiMetricsFromHook,
-  } = useActiveImportJob();
 
   // Fetch scheduled import config to show last run errors
   const { data: scheduledImportConfig } = useQuery<ScheduledImportConfig>({
@@ -561,7 +554,7 @@ export function DataImportCard() {
     return Math.min(Math.round(avgProgress), 100);
   };
   
-  const isDisplayJobActive = displayJob?.status === "running" || displayJob?.status === "pending";
+  const isJobActive = displayJob?.status === "running" || displayJob?.status === "pending";
   const isJobResumable = displayJob?.status === "failed" || displayJob?.status === "paused";
   const isJobCompleted = displayJob?.status === "completed";
   const isJobCancelled = displayJob?.status === "cancelled";
@@ -604,7 +597,7 @@ export function DataImportCard() {
           </Alert>
         )}
         
-        {!isDisplayJobActive && !isJobResumable && !isJobCompleted && !isJobCancelled && (
+        {!isJobActive && !isJobResumable && !isJobCompleted && !isJobCancelled && (
           <div className="space-y-6">
             <p className="text-sm text-muted-foreground">
               Import your students, classes, schedules, attendance records, and revenue data from
@@ -770,7 +763,7 @@ export function DataImportCard() {
           </div>
         )}
 
-        {isDisplayJobActive && displayJob && (
+        {isJobActive && displayJob && (
           <div className="space-y-4">
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
