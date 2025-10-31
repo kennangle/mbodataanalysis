@@ -769,24 +769,53 @@ export class MindbodyService {
           
           if (visit.VisitDate && visit.StartTime) {
             try {
-              // Parse US date format (M/D/YYYY or MM/DD/YYYY)
               const dateStr = String(visit.VisitDate);
               const timeStr = String(visit.StartTime);
               
-              // Check if it's ISO format (YYYY-MM-DD) or US format (M/D/YYYY)
-              if (dateStr.includes('/')) {
-                // US format: "2/1/2024 10:00 AM"
-                const [month, day, year] = dateStr.split('/').map(Number);
-                
-                // Parse time (handle both 12-hour and 24-hour formats)
+              // Extract date components from VisitDate (handles ISO or US format)
+              let year: number, month: number, day: number;
+              
+              if (dateStr.includes('T')) {
+                // ISO format: "2024-02-29T00:00:00"
+                const dateObj = new Date(dateStr);
+                year = dateObj.getFullYear();
+                month = dateObj.getMonth(); // 0-indexed
+                day = dateObj.getDate();
+              } else if (dateStr.includes('/')) {
+                // US format: "2/1/2024"
+                const parts = dateStr.split('/').map(Number);
+                month = parts[0] - 1; // 0-indexed
+                day = parts[1];
+                year = parts[2];
+              } else if (dateStr.includes('-') && !dateStr.includes('T')) {
+                // ISO date only: "2024-02-01"
+                const parts = dateStr.split('-').map(Number);
+                year = parts[0];
+                month = parts[1] - 1; // 0-indexed
+                day = parts[2];
+              } else {
+                throw new Error(`Unrecognized date format: ${dateStr}`);
+              }
+              
+              // Extract time components from StartTime
+              let hours: number, minutes: number, seconds: number;
+              
+              if (timeStr.includes('T') || timeStr.includes('-')) {
+                // Full datetime: "1899-12-30T16:30:00" - extract just the time part
+                const timeObj = new Date(timeStr);
+                hours = timeObj.getHours();
+                minutes = timeObj.getMinutes();
+                seconds = timeObj.getSeconds();
+              } else {
+                // Time string: "10:00 AM" or "10:00:00"
                 const timeParts = timeStr.match(/(\d+):(\d+)(?::(\d+))?\s*(AM|PM)?/i);
                 if (!timeParts) {
                   throw new Error(`Invalid time format: ${timeStr}`);
                 }
                 
-                let hours = parseInt(timeParts[1]);
-                const minutes = parseInt(timeParts[2]);
-                const seconds = timeParts[3] ? parseInt(timeParts[3]) : 0;
+                hours = parseInt(timeParts[1]);
+                minutes = parseInt(timeParts[2]);
+                seconds = timeParts[3] ? parseInt(timeParts[3]) : 0;
                 const ampm = timeParts[4];
                 
                 // Convert to 24-hour format if needed
@@ -797,17 +826,14 @@ export class MindbodyService {
                     hours = 0;
                   }
                 }
-                
-                // Create date in local timezone (Mindbody returns local studio time)
-                visitDateTime = new Date(year, month - 1, day, hours, minutes, seconds);
-              } else {
-                // ISO format: "2024-02-01 10:00 AM" or "2024-02-01T10:00:00"
-                visitDateTime = new Date(`${dateStr} ${timeStr}`);
               }
+              
+              // Combine date and time components
+              visitDateTime = new Date(year, month, day, hours, minutes, seconds);
               
               // Validate the date
               if (isNaN(visitDateTime.getTime())) {
-                throw new Error(`Invalid date: ${dateStr} ${timeStr}`);
+                throw new Error(`Invalid combined date/time: ${dateStr} + ${timeStr}`);
               }
             } catch (error) {
               skipped++;
