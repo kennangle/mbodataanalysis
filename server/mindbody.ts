@@ -1219,6 +1219,8 @@ export class MindbodyService {
                       firstItemSample: sale.PurchasedItems && sale.PurchasedItems[0] ? {
                         Name: sale.PurchasedItems[0].Name,
                         Amount: sale.PurchasedItems[0].Amount,
+                        CategoryId: sale.PurchasedItems[0].CategoryId,
+                        categoryIdType: typeof sale.PurchasedItems[0].CategoryId,
                         hasDiscount: !!sale.PurchasedItems[0].Discount,
                         hasDiscountAmount: !!sale.PurchasedItems[0].DiscountAmount,
                         hasDiscountPercent: !!sale.PurchasedItems[0].DiscountPercent
