@@ -1217,10 +1217,11 @@ export class MindbodyService {
                       } : null) : null,
                       firstItemKeys: sale.PurchasedItems && sale.PurchasedItems[0] ? Object.keys(sale.PurchasedItems[0]).sort() : null,
                       firstItemSample: sale.PurchasedItems && sale.PurchasedItems[0] ? {
-                        Name: sale.PurchasedItems[0].Name,
-                        Amount: sale.PurchasedItems[0].Amount,
-                        CategoryId: sale.PurchasedItems[0].CategoryId,
+                        Name: sale.PurchasedItems[0].Name ?? 'UNDEFINED',
+                        Amount: sale.PurchasedItems[0].Amount ?? 'UNDEFINED',
+                        CategoryId: sale.PurchasedItems[0].CategoryId ?? 'UNDEFINED',
                         categoryIdType: typeof sale.PurchasedItems[0].CategoryId,
+                        Description: sale.PurchasedItems[0].Description ?? 'UNDEFINED',
                         hasDiscount: !!sale.PurchasedItems[0].Discount,
                         hasDiscountAmount: !!sale.PurchasedItems[0].DiscountAmount,
                         hasDiscountPercent: !!sale.PurchasedItems[0].DiscountPercent
@@ -1256,12 +1257,14 @@ export class MindbodyService {
 
                       // Diagnostic logging for CategoryId values
                       if (!this.loggedCategoryIds) {
-                        console.log('[Fee Detection] Sample item with CategoryId:', {
+                        console.log('[Fee Detection] Sample item details:', {
                           name: itemDescription,
-                          categoryId: item.CategoryId,
+                          categoryId: item.CategoryId ?? 'NULL/UNDEFINED',
                           categoryIdType: typeof item.CategoryId,
+                          categoryIdValue: item.CategoryId,
                           amount: itemAmount,
                           isService: item.IsService,
+                          description: item.Description,
                           allKeys: Object.keys(item).sort()
                         });
                         this.loggedCategoryIds = true;
