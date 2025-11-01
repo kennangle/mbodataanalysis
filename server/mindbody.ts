@@ -62,8 +62,8 @@ function getRedirectUri(): string {
 export class MindbodyService {
   private tokenCache: Map<string, { token: string; expiryTime: number }> = new Map();
   private apiCallCounter: number = 0;
-  private loggedSaleStructure: boolean = false;
-  private loggedCategoryIds: boolean = false;
+  private loggedSaleStructure: boolean = false; // Reset to false to force fresh logging
+  private loggedCategoryIds: boolean = false; // Reset to false to force fresh logging
 
   async exchangeCodeForTokens(code: string, organizationId: string): Promise<void> {
     const redirectUri = getRedirectUri();
