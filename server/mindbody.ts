@@ -63,6 +63,7 @@ export class MindbodyService {
   private tokenCache: Map<string, { token: string; expiryTime: number }> = new Map();
   private apiCallCounter: number = 0;
   private loggedSaleStructure: boolean = false;
+  private loggedCategoryIds: boolean = false;
 
   async exchangeCodeForTokens(code: string, organizationId: string): Promise<void> {
     const redirectUri = getRedirectUri();
@@ -1251,8 +1252,30 @@ export class MindbodyService {
                         itemDescription = `${itemDescription} (Qty: ${item.Quantity})`;
                       }
 
+                      // Diagnostic logging for CategoryId values
+                      if (!this.loggedCategoryIds) {
+                        console.log('[Fee Detection] Sample item with CategoryId:', {
+                          name: itemDescription,
+                          categoryId: item.CategoryId,
+                          categoryIdType: typeof item.CategoryId,
+                          amount: itemAmount,
+                          isService: item.IsService,
+                          allKeys: Object.keys(item).sort()
+                        });
+                        this.loggedCategoryIds = true;
+                      }
+
                       // Identify fees by CategoryId === -16 (Mindbody system category for fees)
                       const isFee = item.CategoryId === -16;
+                      
+                      // Log when a fee is detected
+                      if (isFee) {
+                        console.log('[Fee Detection] Fee item detected:', {
+                          name: itemDescription,
+                          categoryId: item.CategoryId,
+                          amount: itemAmount
+                        });
+                      }
 
                       await storage.upsertRevenue({
                         organizationId,
