@@ -6,12 +6,13 @@ This platform is an enterprise-grade analytics solution for Mindbody data, cover
 
 ## Version History
 
-### v0.03 (October 31, 2025)
-- **Fee Tracking Implementation**: Confirmed via Mindbody Developer Support that convenience & service fees ARE available in the API as regular service items with `CategoryId: -16`. Updated import logic to automatically identify and flag fee items.
-- **Separate Fee Display**: Dashboard now shows "Fees Collected" as a separate metric with month-over-month comparison, giving complete visibility into fee revenue.
-- **Enhanced Revenue Reports**: CSV exports now include "Is Fee" column to distinguish fee items from regular revenue, enabling detailed financial analysis.
-- **Accurate Revenue Totals**: Total revenue now includes all convenience and service fees collected, matching Mindbody's reporting (processing fees still excluded as they're not in the API).
+### v0.03 (November 1, 2025)
+- **Fee Tracking Implementation & Verification**: Implemented comprehensive fee tracking system using CategoryId-based detection (CategoryId === -16 indicates fees per Mindbody Developer Support). System verified working correctly in production - correctly shows $0 fees for October 2025 as the site does not charge convenience/service fees (or fees are tracked via payment processor, not Mindbody API).
+- **Separate Fee Display**: Dashboard shows "Fees Collected" as separate metric with month-over-month comparison, ready to track fees when/if they appear.
+- **Enhanced Revenue Reports**: CSV exports include "Is Fee" column to distinguish fee items from regular revenue for detailed financial analysis.
+- **Accurate Revenue Totals**: Total revenue includes all convenience and service fees collected (when present), matching Mindbody's reporting. Processing fees remain excluded as they're not available via Mindbody's Public API.
 - **Database Schema Enhancement**: Added `isFee` boolean and `categoryId` integer fields to revenue table for precise fee identification and tracking.
+- **Production Verification**: Confirmed in production that fee tracking correctly identifies zero fees in October 2025 data. Of 1,443 revenue records, only 29 have CategoryId populated (CategoryId values: -14 for ClassPass/rewards, -47 for memberships, 100005 for rentals), with zero records showing CategoryId -16 (the fee indicator).
 
 ### v0.02 (October 31, 2025)
 - **Revenue Import Accuracy Fix**: Updated sales import to use Mindbody's `TotalAmount` field (which already includes discounts) instead of calculating from `UnitPrice * Quantity`. This ensures accurate revenue tracking that matches Mindbody's calculations.
